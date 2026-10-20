@@ -19,11 +19,14 @@
                     <dt>Cash</dt><dd>@UiHelpers.Money(p.Cash)</dd>
                     <dt>Net worth</dt><dd>@UiHelpers.Money(p.NetWorth)</dd>
                     <dt>Properties</dt><dd>@View.Properties.Values.Count(x => x.OwnerId == p.Id)</dd>
+                    <dt>Momentum</dt><dd><span aria-hidden="true">@(new string('●', p.Momentum))</span> @p.Momentum</dd>
                     @if (p.Loans > 0) { <dt>Loans</dt><dd>@p.Loans (repay @UiHelpers.Money(p.Loans * Session.Content.Rules.LoanRepay))</dd> }
                     @{ var pending = View.Properties.Values.Where(x => x.OwnerId == p.Id && x.IsPending).ToList(); }
                     @if (pending.Count > 0) { <dt>Pending</dt><dd>@pending.Count (owes @UiHelpers.Money(pending.Sum(x => x.PendingBalance)) at GO)</dd> }
                 </dl>
-                @if (p.InJail) { <p class="status">▦ In Jail@(p.JailTurns > 0 ? $" (turn {p.JailTurns})" : "")</p> }
+                @if (p.InJail) { <p class="status">▦ In Jail@(p.JailTurns > 0 ? $" (turn {p.JailTurns})" : ""): rent halved</p> }
+                @if (p.IsInsured) { <p class="status">✚ Insured</p> }
+                @if (p.IsRecovering) { <p class="status">✚ Recovering: rolls 1 die next turn</p> }
             }
         </article>
     }

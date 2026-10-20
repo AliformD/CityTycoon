@@ -5,7 +5,7 @@ using CityTycoon.Engine.State;
 
 namespace CityTycoon.Engine.Steps;
 
-public enum PaymentReason { Rent, Tax, Bail }
+public enum PaymentReason { Rent, Tax, Bail, Hospital }
 
 /// <summary>
 /// One player pays money to another player or to the bank.
@@ -46,6 +46,7 @@ public sealed class PaymentStep : Step
             {
                 PaymentReason.Rent => new RentPaid(FromId, ToId!.Value, SpaceId!, Amount),
                 PaymentReason.Tax => new TaxPaid(FromId, SpaceId!, Amount),
+                PaymentReason.Hospital => new HospitalBillPaid(FromId, Amount),
                 _ => new BailPaid(FromId, Amount),
             });
             return StepResult.Done;

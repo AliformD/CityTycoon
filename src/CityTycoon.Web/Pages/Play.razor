@@ -17,7 +17,8 @@ else
     var view = Session.PublicView;
     var request = Session.Request;
     <div class="game">
-        <BoardView View="view" Content="Session.Content" HighlightSpaceId="selectedSpaceId" OnSelect="Select">
+        <BoardView View="view" Content="Session.Content" HighlightSpaceId="@selectedSpaceId" OnSelect="Select"
+                   PreviewSpaceIds="PreviewSpots(request)" PreviewFocusId="@previewFocusId">
             <DiceView View="view" />
             @if (Session.Error != null)
             {
@@ -29,7 +30,7 @@ else
             }
             else if (request != null && !Session.ShowPassScreen)
             {
-                <DecisionPanel Request="request" Content="Session.Content" Session="Session" OnAnswer="Session.Answer" />
+                <DecisionPanel Request="request" Content="Session.Content" Session="Session" OnAnswer="Answer" OnPreview="id => previewFocusId = id" />
             }
             else if (request == null)
             {
@@ -43,6 +44,10 @@ else
                 <strong>Round @view.Round@(view.Mode == GameMode.Timed ? $" of {view.MaxRounds}" : "")</strong>
                 <span>@(view.Mode == GameMode.Timed ? "Timed game" : "Classic game")</span>
                 <span class="permits">Permits left: @view.HotelPermitsLeft hotel, @view.SkyscraperPermitsLeft skyscraper</span>
+                @foreach (var boost in view.StadiumBoosts)
+                {
+                    <span class="boost">🏟️ @Session.Content.Groups[boost.GroupId].Name rent doubled by @view.Player(boost.ChosenById).Name</span>
+                }
                 <details>
                     <summary>Zoning by district</summary>
                     <ul class="zoning">
@@ -88,6 +93,27 @@ else
 
 @code {
     private string? selectedSpaceId;
+    private string? previewFocusId;
+
+    private void Answer(GameAction action)
+    {
+        previewFocusId = null;
+        Session.Answer(action);
+    }
+
+    /// <summary>While choosing a Nudge or Precision dice, every space the player could land on is outlined on the board.</summary>
+    private IReadOnlyCollection<string>? PreviewSpots(HumanRequest? request)
+    {
+        if (request == null || Session.ShowPassScreen) return null;
+        var d = request.Decision;
+        if (d.Kind == DecisionKind.ChooseNudge && d.Dice != null)
+            return request.LegalActions.OfType<Nudge>()
+                .Select(n => UiHelpers.LandingSpace(request.View, request.PlayerId, d.Dice.Sum() + n.Spaces).Id).ToHashSet();
+        if (d.Kind == DecisionKind.ChoosePrecisionDice && d.Dice is { Count: 3 } dice)
+            return request.LegalActions.OfType<ChooseDice>()
+                .Select(c => UiHelpers.LandingSpace(request.View, request.PlayerId, dice[c.First] + dice[c.Second]).Id).ToHashSet();
+        return null;
+    }
 
     protected override void OnInitialized() => Session.Changed += Redraw;
 
@@ -109,6 +135,10 @@ else
             SpaceKind.Tax => $"{space.Name}: pay {UiHelpers.Money(space.Id == "income-tax" ? Session.Content.Rules.IncomeTax : Session.Content.Rules.LuxuryTax)} to the bank.",
             SpaceKind.GovernmentTile when space.IsHiddenTile => "A hidden Government tile. Nobody knows what it is yet. (Tile effects arrive in a later phase.)",
             SpaceKind.GovernmentTile => $"{UiHelpers.DisplayName(space, Session.Content)}: {Session.Content.GovTile(space.TileId!).NeighborText}",
+            SpaceKind.CityPark => $"City Park: land here to gain {Session.Content.Rules.CityParkMomentum} Momentum token. (The Opportunity card arrives in a later phase.)",
+            SpaceKind.Landmark when space.Id == "hospital" => $"Hospital: visitors may buy an Insured marker for {UiHelpers.Money(Session.Content.Rules.InsuredMarkerCost)}. It cancels your next hospital bill.",
+            SpaceKind.Landmark when space.Id == "casino" => "Casino: make one bet. High/Low against the bank, or a Dice Duel against another player.",
+            SpaceKind.Landmark when space.Id == "stadium" => "Stadium: pick a color group. Its rent doubles until your next turn.",
             _ => $"{space.Name}. (This space's effect arrives in a later phase.)",
         };
     }

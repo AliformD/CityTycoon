@@ -1,0 +1,89 @@
+@* The Casino (Section 13.2): one bet per visit. Bet on High/Low against the bank, challenge someone to a Dice Duel, or walk on by. *@
+<div class="decision casino">
+    <h2>@Me.Name, welcome to the Casino</h2>
+    <p>
+        Roll two dice. <strong>High</strong> wins on @Content.Rules.CasinoHighMin or more, <strong>Low</strong> wins on @Content.Rules.CasinoLowMax or less, and a 7 always loses.
+        Call it right with doubles and you win @(Content.Rules.CasinoDoublesPayout)× your bet. You have <strong>@UiHelpers.Money(Me.Cash)</strong>.
+    </p>
+
+    <div class="bid-entry">
+        <label>
+            Bet $<input type="number" min="1" max="@Request.Decision.MaxBet" step="1" @bind="bet" @bind:event="oninput" />
+        </label>
+        <button class="small" @onclick="() => bet = Math.Max(1, Request.Decision.MaxBet / 10)">10%</button>
+        <button class="small" @onclick="() => bet = Math.Max(1, Request.Decision.MaxBet / 2)">Half</button>
+        <button class="small" @onclick="() => bet = Request.Decision.MaxBet">All in</button>
+    </div>
+    @if (BetProblem is string problem)
+    {
+        <p class="error" role="alert">@problem</p>
+    }
+    <div class="buttons">
+        <button class="big" disabled="@(BetProblem != null)" @onclick="() => OnAnswer.InvokeAsync(new BetHighLow(bet, true))">Bet @UiHelpers.Money(bet) on High</button>
+        <button class="big" disabled="@(BetProblem != null)" @onclick="() => OnAnswer.InvokeAsync(new BetHighLow(bet, false))">Bet @UiHelpers.Money(bet) on Low</button>
+    </div>
+
+    @if (Opponents.Count > 0)
+    {
+        <fieldset class="duel-setup">
+            <legend>Or challenge someone to a Dice Duel</legend>
+            <label>
+                Opponent
+                <select @bind="opponentId">
+                    @foreach (var p in Opponents)
+                    {
+                        <option value="@p.Id">@p.Name (@UiHelpers.Money(p.Cash))</option>
+                    }
+                </select>
+            </label>
+            <p class="hint">The stake can be up to @UiHelpers.Money(DuelMax), the smaller of your two cash piles. They can say no.</p>
+            <button class="big" disabled="@(DuelProblem != null)" @onclick="() => OnAnswer.InvokeAsync(new ChallengeDuel(opponentId, bet))">Duel for @UiHelpers.Money(bet)</button>
+            @if (DuelProblem is string duelProblem)
+            {
+                <p class="hint">@duelProblem</p>
+            }
+        </fieldset>
+    }
+
+    <div class="buttons">
+        <button class="big primary" @onclick="() => OnAnswer.InvokeAsync(new NoThanks())">No thanks</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public HumanRequest Request { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+    [Parameter] public EventCallback<GameAction> OnAnswer { get; set; }
+
+    private int bet;
+    private int opponentId;
+    private HumanRequest? shownFor;
+
+    private PlayerInfo Me => Request.View.Me;
+
+    // The legal list names every player you may challenge.
+    private List<PlayerInfo> Opponents =>
+        Request.LegalActions.OfType<ChallengeDuel>().Select(d => Request.View.Player(d.OpponentId)).ToList();
+
+    private int DuelMax => Math.Min(Me.Cash, Opponents.FirstOrDefault(p => p.Id == opponentId)?.Cash ?? 0);
+
+    private string? BetProblem =>
+        bet < 1 ? "Bets start at $1."
+        : bet > Request.Decision.MaxBet ? $"You only have {UiHelpers.Money(Request.Decision.MaxBet)}."
+        : null;
+
+    private string? DuelProblem =>
+        bet < 1 ? "Stakes start at $1."
+        : bet > DuelMax ? $"Lower the amount to {UiHelpers.Money(DuelMax)} or less to duel this player."
+        : null;
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(shownFor, Request))
+        {
+            shownFor = Request;
+            bet = Math.Min(10, Request.Decision.MaxBet);
+            opponentId = Opponents.FirstOrDefault()?.Id ?? 0;
+        }
+    }
+}

@@ -131,7 +131,8 @@ public sealed class GameSession
         bool isPrivate = request.Decision.Kind == DecisionKind.SubmitBid;
         bool severalHumans = Seats.Count(s => s.Value == SeatKind.Human) > 1;
         // A trade offer from one person to another means handing the device over too.
-        bool tradeBetweenHumans = request.Decision.Trade is { } offer && IsHuman(offer.FromId);
+        bool tradeBetweenHumans = (request.Decision.Trade is { } offer && IsHuman(offer.FromId))
+            || (request.Decision.Duel is { } duel && IsHuman(duel.ChallengerId));
         ShowPassScreen = severalHumans
             && ((isPrivate && Engine!.State.Settings.Privacy == PrivacyMode.Hidden) || tradeBetweenHumans);
         Changed?.Invoke();

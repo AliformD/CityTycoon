@@ -24,7 +24,7 @@ Run `CityTycoon.Web` and the game opens in your browser. On the **New game** scr
 - With two or more humans in **Hidden** mode, a "Pass to ..." screen covers the board before each secret bid, so the next person can take the device without anyone peeking.
 - Tick **Fast bots** to stop the short pause between bot moves.
 
-Right now the game has movement, auctions, rent, taxes, Jail and scoring. Buildings, cards, Government tiles, characters and the City Council arrive in later phases (see Section 29 of the design doc).
+Right now the game has movement, auctions, rent, taxes, Jail, scoring, buildings, mortgages, loans, trades, Momentum tokens (Nudge and Precision Roll) and the Hospital, Casino, Stadium and City Park. Cards, the Mall, Government tile effects, characters and the City Council arrive in later phases (see Section 29 of the design doc).
 
 ## Running the tests in Visual Studio
 

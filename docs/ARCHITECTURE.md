@@ -120,6 +120,16 @@ All the "manage money" actions inherit from one base class, `ManagementAction`. 
 
 Every rule that can say "no" has a `WhyCant...` method that returns a plain-English reason (or `null` for "yes"). The screen uses the same methods to grey out buttons and explain why, so the screen and the engine can never disagree.
 
+## Momentum and landmarks (Phase 4)
+
+`Rules/MomentumRules.cs` is the one place that gives or spends Momentum tokens. `Gain` always respects the cap (5), and `CanSpend` says no in Jail, so no other code has to remember those rules.
+
+A turn now has a few more stages in `TurnStep`: choose how to move (normal roll or Precision Roll), keep two of three dice if it was a Precision Roll, then choose a Nudge (−2 to +2, or 0 for no Nudge), then move. Each stage is just another question the step asks and waits on, the same pattern as everything else.
+
+Each landmark that asks a question is its own small step in `Steps/LandmarkSteps.cs` (`HospitalVisitStep`, `CasinoStep`, `StadiumStep`). `ResolveSpaceStep` pushes the right one onto the stack when you land. A Dice Duel is the one place where the Casino asks a **different** player a question (the opponent), and that works because a `PendingDecision` always names who must answer.
+
+Rent changes from the Stadium (×2) and Jail (×½) live in `RentCalculator`, so every place that charges rent gets them for free.
+
 ## The browser app (Phase 2)
 
 The Web project draws the game and passes clicks to the engine. It never changes the game state itself.
@@ -133,6 +143,9 @@ The Web project draws the game and passes clicks to the engine. It never changes
 | `Services/HumanUiController.cs` | The controller for a person. |
 | `Components/PropertyActions.razor` | Build, sell, mortgage and unmortgage buttons for one of your properties (Phase 3). |
 | `Components/TradeBuilder.razor` | The "offer a trade" form (Phase 3). |
+| `Components/CasinoPanel.razor` | The Casino: bet High/Low or challenge someone to a Dice Duel (Phase 4). |
+
+While you choose a Nudge or Precision dice, `Play.razor` works out every space you could land on and gives them to the board, which outlines them. Pointing at a button outlines its space more strongly, so you can see where you'd land before you click.
 
 ### How a click reaches the engine
 

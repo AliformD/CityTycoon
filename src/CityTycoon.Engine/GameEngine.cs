@@ -68,6 +68,7 @@ public sealed class GameEngine
                 Id = seat,
                 Name = setup.Players[seat].Name,
                 Cash = rules.StartingCash,
+                Momentum = rules.StartingMomentum,
             });
         }
 

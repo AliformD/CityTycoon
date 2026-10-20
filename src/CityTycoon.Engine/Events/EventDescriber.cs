@@ -15,11 +15,14 @@ public static class EventDescriber
         string Name(int id) => view.Player(id).Name;
         string Space(string id) => content.Properties.TryGetValue(id, out var p) ? p.Name : view.Spaces.First(s => s.Id == id).Name;
         string SpaceAt(int index) => view.Spaces[index].Name;
+        string GroupName(string id) => content.Groups[id].Name;
+        static string Tokens(int n) => n == 1 ? "1 Momentum token" : $"{n} Momentum tokens";
 
         return e switch
         {
             GameStarted g => $"New game (seed {g.Seed}). Turn order: {string.Join(", ", g.TurnOrder.Select(Name))}.",
             TurnStarted t => $"Round {t.Round}: {Name(t.PlayerId)}'s turn.",
+            DiceRolled { IsOneDie: true } d => $"{Name(d.PlayerId)} rolled 1 die: {d.Die1}.",
             DiceRolled d => $"{Name(d.PlayerId)} rolled {d.Die1} + {d.Die2} = {d.Total}{(d.IsDoubles ? " (doubles!)" : "")}.",
             PlayerMoved m => $"{Name(m.PlayerId)} moved to {SpaceAt(m.To)}.",
             PassedGo g => $"{Name(g.PlayerId)} passed GO and collected ${g.Salary}.",
@@ -50,6 +53,22 @@ public static class EventDescriber
             TradeCompleted t => $"{Name(t.Offer.ToId)} accepted the trade from {Name(t.Offer.FromId)}."
                 + (t.MortgageFees > 0 ? $" Mortgage fees paid: ${t.MortgageFees}." : ""),
             TradeDeclined t => $"The trade between {Name(t.Offer.FromId)} and {Name(t.Offer.ToId)} didn't happen ({t.Reason}).",
+            MomentumGained m => $"{Name(m.PlayerId)} gained {Tokens(m.Amount)} ({m.Source}).",
+            PrecisionRolled p => $"{Name(p.PlayerId)} spent {Tokens(p.TokensSpent)} on a Precision Roll: {string.Join(", ", p.Dice)}.",
+            Nudged n => $"{Name(n.PlayerId)} spent {Tokens(n.TokensSpent)} to move {Math.Abs(n.Spaces)} space{(Math.Abs(n.Spaces) == 1 ? "" : "s")} {(n.Spaces > 0 ? "further" : "less")}.",
+            InsuranceBought i => $"{Name(i.PlayerId)} bought an Insured marker for ${i.Cost}.",
+            InsuranceUsed i => $"{Name(i.PlayerId)}'s Insured marker paid the Hospital bill.",
+            SentToHospital h => $"{Name(h.PlayerId)} went to the Hospital ({h.Reason}).",
+            HospitalBillPaid h => $"{Name(h.PlayerId)} paid a ${h.Amount} Hospital bill and rolls 1 die next turn.",
+            CasinoHighLow c => $"{Name(c.PlayerId)} bet ${c.Bet} on {(c.CalledHigh ? "High" : "Low")} and rolled {c.Die1} + {c.Die2} = {c.Total}: "
+                + (c.Net > 0 ? $"won ${c.Net}!" : $"lost ${-c.Net}."),
+            DuelChallenged d => $"{Name(d.ChallengerId)} challenged {Name(d.OpponentId)} to a ${d.Stake} Dice Duel.",
+            DuelDeclined d => $"{Name(d.OpponentId)} said no to the Dice Duel.",
+            DuelRolled d => $"Duel: {Name(d.ChallengerId)} rolled {d.ChallengerTotal}, {Name(d.OpponentId)} rolled {d.OpponentTotal}"
+                + (d.ChallengerTotal == d.OpponentTotal ? " (a tie, roll again)." : "."),
+            DuelWon d => $"{Name(d.WinnerId)} won the duel and takes ${d.Stake} from {Name(d.LoserId)}.",
+            StadiumChosen s => $"{Name(s.PlayerId)} filled the Stadium: {GroupName(s.GroupId)} rent is doubled until their next turn.",
+            StadiumEnded s => $"The Stadium boost on {GroupName(s.GroupId)} is over.",
             RoundEnded r => $"Round {r.Round} is over.",
             GameEnded g => $"Game over: {g.Reason} Winner: {string.Join(" and ", g.WinnerIds.Select(Name))}.",
             _ => e.ToString(),

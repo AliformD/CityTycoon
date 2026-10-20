@@ -54,3 +54,18 @@ A running list of rulings and design decisions, so nobody has to rediscover them
 | 31 | If someone can't pay a pending balance at GO but could raise it, they choose: raise the money, or give the property up. | Builder | Section 8.5 says "you may raise money", so it's a choice, not forced. |
 | 32 | The pass-the-device screen also appears when one person offers another person a trade. | Builder | The other person needs the device to answer. |
 | 33 | The Sim plays half Easy bots and half Random bots by default (`--bots random`, `easy` or `mixed`). | Builder | Random bots test odd situations; Easy bots test sensible play. |
+
+## Phase 4: Momentum, Jail and landmarks (2026-10-20)
+
+| # | Decision | Who | Why |
+| --- | --- | --- | --- |
+| 34 | You can't Nudge a Jail roll (trying for doubles). | Builder | Nudging a Jail roll would let you change where you walk out to, which the spec doesn't mention. Momentum can't be spent in Jail anyway (Section 10.4). |
+| 35 | City Park only gives a Momentum token for now. The "draw an Opportunity card" choice arrives with the cards in Phase 5. | Builder | There are no cards yet. |
+| 36 | If two players boost the same color group at the Stadium, its rent is still only doubled once. | Builder | "Doubled" stacking to ×4 would be very swingy, and the spec doesn't say it stacks. |
+| 37 | Each player has at most one Stadium boost. Landing on the Stadium again moves it to the new group. Boosts end at the start of the chooser's next turn. | Builder | Section 13.3 says "until your next turn". |
+| 38 | Casino bets are whole dollars, at least $1, up to all your cash (no betting limit). A Dice Duel stake is capped by the smaller of the two players' cash. | Builder | Angel asked for no betting limit. The duel cap means nobody can lose money they don't have. |
+| 39 | Easy bots always walk past the Casino and only accept small duels (up to 1/20 of their cash). | Builder | Gambling has no edge for them, so "basic sense" (Section 23.2) says skip it. |
+| 40 | The "send to Hospital" rule (pay the bill, then one die next turn, or use up an Insured marker) is built and tested, but nothing sends you there until Event cards in Phase 5. Landing on the Hospital is just a visit where you may buy a marker. | Builder | The things that send you to Hospital are cards. |
+| 41 | When someone goes bankrupt to another player, that player also gets their Momentum tokens (up to the cap). Going bankrupt to the bank, the tokens are lost. | Builder | It matches "the creditor gets everything". |
+| 42 | Utility rent uses the dice total, not the nudged total. | Builder | Utility rent is "dice × a number", and the dice didn't change. |
+| 43 | Jail half rent rounds down, but is always at least $1. Stadium doubling is applied before Jail halving. | Builder | Keeps rent whole numbers; the order doesn't change the result except for rounding. |

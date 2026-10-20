@@ -94,9 +94,21 @@ public static class UiHelpers
             ForfeitProperty => "Give the property up",
             AcceptTrade => "Accept the trade",
             DeclineTrade => "Decline",
+            PrecisionRoll => $"🎯 Precision Roll ({rules.PrecisionRollCost} tokens: roll {rules.PrecisionRollDice} dice, keep 2)",
+            Nudge { Spaces: 0 } => "Don't Nudge",
+            Nudge n => $"Nudge {(n.Spaces > 0 ? "+" : "−")}{Math.Abs(n.Spaces)} ({rules.NudgeCost} token)",
+            NoThanks => "No thanks",
+            BuyInsurance => $"Buy an Insured marker ({Money(rules.InsuredMarkerCost)})",
+            AcceptDuel => "Accept the duel",
+            DeclineDuel => "No thanks",
+            PickStadiumGroup g => content.Groups[g.GroupId].Name,
             _ => action.GetType().Name,
         };
     }
+
+    /// <summary>The board space a player would land on after moving this many spaces.</summary>
+    public static SpaceInfo LandingSpace(PlayerView view, int playerId, int spaces) =>
+        view.Spaces[(view.Player(playerId).Position + spaces) % view.Spaces.Count];
 
     /// <summary>A short marker for a building level on the board: 1-4 houses, H for hotel, S for skyscraper.</summary>
     public static string LevelMarker(int level) => level switch

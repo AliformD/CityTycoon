@@ -96,6 +96,18 @@ public sealed class RulesConfig
     /// <summary>A limit so a player (or a bot) can't flood others with trade offers in one turn.</summary>
     public required int MaxTradeProposalsPerTurn { get; init; }
 
+    // Section 7.3 and 15.3: Precision Roll and landmarks.
+    /// <summary>How many dice a Precision Roll rolls (you keep 2).</summary>
+    public required int PrecisionRollDice { get; init; }
+    /// <summary>High/Low at the Casino: "Low" is 2 up to this total, "High" is this total up to 12. Anything between loses.</summary>
+    public required int CasinoLowMax { get; init; }
+    public required int CasinoHighMin { get; init; }
+    /// <summary>A right High/Low call with doubles wins this many times the bet.</summary>
+    public required int CasinoDoublesPayout { get; init; }
+    public required int StadiumRentMultiplier { get; init; }
+    /// <summary>Momentum tokens gained at City Park.</summary>
+    public required int CityParkMomentum { get; init; }
+
     /// <summary>The tallest building level allowed under a zoning level (Section 10.1).</summary>
     public int MaxBuildingLevel(ZoningLevel level) =>
         ZoningLevels.First(z => z.Level == level).MaxBuildingLevel;

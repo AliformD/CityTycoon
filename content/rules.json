@@ -72,5 +72,12 @@
   "skyscraperLevel": 6,
   "buildingSellPercent": 50,
   "buildDiscountRoundTo": 5,
-  "maxTradeProposalsPerTurn": 3
+  "maxTradeProposalsPerTurn": 3,
+
+  "precisionRollDice": 3,
+  "casinoLowMax": 6,
+  "casinoHighMin": 8,
+  "casinoDoublesPayout": 2,
+  "stadiumRentMultiplier": 2,
+  "cityParkMomentum": 1
 }

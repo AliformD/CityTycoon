@@ -149,6 +149,22 @@ Some effects need to change the thing they react to. Rent Strike halves a rent p
 
 Opportunity cards are secret. The log only says "Angel drew an Opportunity card", and `PlayerView.MyHand` shows the cards to their owner only. Everyone else just sees how many cards each player holds.
 
+## Rule modifiers and Government tiles (Phase 6)
+
+Lots of things in City Tycoon *change* a rule: a Landfill lowers its neighbors' rent, a School makes building cheaper, and later characters, color perks and ordinances will do the same. Instead of writing `if (tile == "landfill")` inside the rent code, each of them is a **rule modifier** (`Modifiers/IRuleModifier.cs`, Section 20.6).
+
+A modifier answers a few fixed questions, called **hook points**: "how much does this property's rent change?", "how much cheaper is building here?", "can a card target this?", "is this safe from Fire!?". Each answer has a "no change" default, so a modifier only answers what it cares about. `RuleModifiers.Active` gathers every modifier in play, and the rent, building, card and Fire! code just asks them all. A new kind of modifier is a new class; the rent code never has to change. This is the **Open/Closed Principle**: open to new rules, closed to edits.
+
+| Piece | Job |
+| --- | --- |
+| `Modifiers/IRuleModifier.cs` | The hook points, and `RuleModifiers`, which gathers the active modifiers and adds up their answers. |
+| `Tiles/TileModifier.cs` | A revealed tile's neighbor effect. One class serves all 7 tiles; the numbers come from the tile's `"neighbor"` settings in `govtiles.json`. Hidden tiles aren't in the list at all, so they can't have an effect. |
+| `Tiles/TileLandings.cs` | Landing effects (pay the bank, gain a token, ride to a railroad...), registered like card effects: a tile names a type plus settings in JSON. |
+| `Tiles/TileRules.cs` | Finds a tile's two neighbors, and reveals a tile when someone lands on it. |
+| `Steps/TileSteps.cs` | The Transit Hub's two questions: hop instead of paying rent, or ride to a railroad. |
+
+`RentCalculator.Explain` works out rent one step at a time and keeps a line for each step ("Base rent $10", "City Hall next door +25%", "Stadium boost ×2"). The game uses the total; the screen shows the lines, so players can see *why* rent is what it is.
+
 ## The browser app (Phase 2)
 
 The Web project draws the game and passes clicks to the engine. It never changes the game state itself.

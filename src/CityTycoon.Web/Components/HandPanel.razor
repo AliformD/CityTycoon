@@ -54,7 +54,7 @@
 @{ var peeked = view.Spaces.Where(s => s.IsHiddenTile && s.TileId != null).ToList(); }
 @if (peeked.Count > 0)
 {
-    <p class="hint secret">Only you know: @string.Join(", ", peeked.Select(s => $"{s.Name} is {Content.GovTile(s.TileId!).Name}")).</p>
+    <p class="hint secret">Only you know: @string.Join(", ", peeked.Select(s => $"the hidden tile in {DistrictName(s)} is the {Content.GovTile(s.TileId!).Name}")).</p>
 }
 
 @code {
@@ -63,4 +63,7 @@
     [Parameter] public EventCallback<GameAction> OnAnswer { get; set; }
 
     private int duelStake = 50;
+
+    private string DistrictName(SpaceInfo space) =>
+        Content.Board.Districts.FirstOrDefault(d => d.Id == space.DistrictId)?.Name ?? space.Name;
 }

@@ -33,6 +33,8 @@ namespace CityTycoon.Engine.Steps;
 [JsonDerivedType(typeof(ArrangeEventsStep), nameof(ArrangeEventsStep))]
 [JsonDerivedType(typeof(DiceDuelStep), nameof(DiceDuelStep))]
 [JsonDerivedType(typeof(HandLimitStep), nameof(HandLimitStep))]
+[JsonDerivedType(typeof(TransitHopStep), nameof(TransitHopStep))]
+[JsonDerivedType(typeof(TransitRideStep), nameof(TransitRideStep))]
 public abstract class Step
 {
     /// <summary>Called whenever this step is on top of the stack. Do some work, then say what's next.</summary>

@@ -1,5 +1,6 @@
 using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Events;
+using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.State;
 using CityTycoon.Engine.Steps;
 
@@ -18,7 +19,6 @@ public static class BuildingRules
     /// <summary>
     /// Applies a building discount (Section 9.4): discounts add up to at most
     /// 75% off, and the result is rounded down to the nearest $5.
-    /// Characters, tiles and cards that give discounts arrive in later phases.
     /// </summary>
     public static int ApplyDiscount(RulesConfig rules, int cost, int discountPercent)
     {
@@ -28,12 +28,20 @@ public static class BuildingRules
     }
 
     /// <summary>What the next building level on this property would cost its owner (with any discount this turn).</summary>
-    public static int NextLevelCost(EngineContext ctx, string propertyId)
+    public static int NextLevelCost(EngineContext ctx, string propertyId) => NextLevelCost(ctx.State, ctx.Content, propertyId);
+
+    /// <summary>
+    /// The next level's cost with every discount added up: the owner's
+    /// Construction Permit this turn, plus modifiers such as a School or
+    /// Power Plant next door.
+    /// </summary>
+    public static int NextLevelCost(GameState state, GameContent content, string propertyId, IReadOnlyList<IRuleModifier>? active = null)
     {
-        PropertyDefinition def = ctx.Content.Property(propertyId);
-        PropertyState owned = ctx.State.Properties[propertyId];
-        int discount = owned.OwnerId is int ownerId ? ctx.Player(ownerId).BuildDiscountThisTurn : 0;
-        return ApplyDiscount(ctx.Rules, LevelCost(ctx.Content, def, owned.Level + 1), discount);
+        PropertyDefinition def = content.Property(propertyId);
+        PropertyState owned = state.Properties[propertyId];
+        int discount = owned.OwnerId is int ownerId ? state.Player(ownerId).BuildDiscountThisTurn : 0;
+        discount += RuleModifiers.BuildDiscountPercent(state, content, propertyId, active);
+        return ApplyDiscount(content.Rules, LevelCost(content, def, owned.Level + 1), discount);
     }
 
     /// <summary>How many levels this player may build this turn (the build limit plus any Construction Permit).</summary>

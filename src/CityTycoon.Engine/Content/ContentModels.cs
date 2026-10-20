@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace CityTycoon.Engine.Content;
 
 // These "records" are plain data shapes that match the JSON files in /content.
@@ -56,4 +58,34 @@ public sealed record PerkDefinition(string Id, string Name, string Text);
 /// <summary>govtiles.json: the 7 Government tiles (Section 12).</summary>
 public sealed record GovTilesFile(int ContentVersion, int TilesPerGame, IReadOnlyList<GovTileDefinition> Tiles);
 
-public sealed record GovTileDefinition(string Id, string Name, string NeighborText, string LandingText);
+/// <summary>
+/// One Government tile. <see cref="Neighbor"/> is what it does to the properties
+/// either side of it once revealed; <see cref="Landing"/> names a landing effect
+/// type (a small C# class in Tiles/TileLandings.cs) plus its settings.
+/// </summary>
+public sealed record GovTileDefinition(string Id, string Name, string NeighborText, string LandingText,
+    TileNeighborEffect? Neighbor = null, JsonElement Landing = default)
+{
+    /// <summary>The landing effect's type name, like "PayBank".</summary>
+    public string LandingType => Landing.ValueKind == JsonValueKind.Object && Landing.TryGetProperty("type", out JsonElement t) ? t.GetString() ?? "" : "";
+
+    /// <summary>A whole-number landing setting, like "amount".</summary>
+    public int Int(string name, int? fallback = null) =>
+        Landing.ValueKind == JsonValueKind.Object && Landing.TryGetProperty(name, out JsonElement v) && v.TryGetInt32(out int i) ? i
+        : fallback ?? throw new ContentException($"Government tile '{Id}' needs a whole number \"{name}\" in its landing effect.");
+
+    public string Setting(string name) =>
+        Landing.ValueKind == JsonValueKind.Object && Landing.TryGetProperty(name, out JsonElement v) && v.ValueKind == JsonValueKind.String ? v.GetString()!
+        : throw new ContentException($"Government tile '{Id}' needs a text setting \"{name}\" in its landing effect.");
+
+    public bool Flag(string name) =>
+        Landing.ValueKind == JsonValueKind.Object && Landing.TryGetProperty(name, out JsonElement v) && v.ValueKind == JsonValueKind.True;
+}
+
+/// <summary>What a revealed tile does to its two neighbors (Section 12.3). Anything left out does nothing.</summary>
+public sealed record TileNeighborEffect(
+    int RentPercent = 0,
+    int BuildDiscountPercent = 0,
+    bool ProtectFromCards = false,
+    bool ProtectFromFire = false,
+    int TransitHopCost = 0);

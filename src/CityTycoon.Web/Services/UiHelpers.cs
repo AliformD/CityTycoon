@@ -102,6 +102,8 @@ public static class UiHelpers
             AcceptDuel => "Accept the duel",
             DeclineDuel => "No thanks",
             PickStadiumGroup g => content.Groups[g.GroupId].Name,
+            HopToTransitHub => "Hop onto the Transit Hub instead",
+            RideToRailroad r => $"Ride to {Name(r.PropertyId)}",
             PlayCard play => $"Play {content.Card(play.CardId).Name}{PlayTarget(play, view, content)}",
             DiscardCard d => $"Discard {content.Card(d.CardId).Name}",
             TakeMomentum => $"Take {rules.CityParkMomentum} Momentum token",
@@ -115,11 +117,8 @@ public static class UiHelpers
         };
     }
 
-    /// <summary>What the next building level costs this player, including a Construction Permit discount.</summary>
-    public static int BuildCost(string propertyId, PlayerView view, GameContent content) =>
-        BuildingRules.ApplyDiscount(content.Rules,
-            BuildingRules.LevelCost(content, content.Property(propertyId), view.Properties[propertyId].Level + 1),
-            view.Me.BuildDiscountThisTurn);
+    /// <summary>What the next building level costs its owner, with every discount (Construction Permit, School, Power Plant).</summary>
+    public static int BuildCost(string propertyId, PlayerView view, GameContent content) => view.Properties[propertyId].NextLevelCost;
 
     /// <summary>The " on Bo" or " (+1 space)" part of a card's button: what the play is aimed at.</summary>
     public static string PlayTarget(PlayCard play, PlayerView view, GameContent content)

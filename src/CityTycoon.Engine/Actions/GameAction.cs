@@ -45,6 +45,8 @@ namespace CityTycoon.Engine.Actions;
 [JsonDerivedType(typeof(ChooseProperty), nameof(ChooseProperty))]
 [JsonDerivedType(typeof(ArrangeCards), nameof(ArrangeCards))]
 [JsonDerivedType(typeof(ClearRoadWork), nameof(ClearRoadWork))]
+[JsonDerivedType(typeof(HopToTransitHub), nameof(HopToTransitHub))]
+[JsonDerivedType(typeof(RideToRailroad), nameof(RideToRailroad))]
 public abstract record GameAction;
 
 /// <summary>Roll the normal 2 dice.</summary>
@@ -131,6 +133,12 @@ public sealed record BuyCard(int Slot) : GameAction;
 
 /// <summary>At the Mall: sell this card from your hand to the bank.</summary>
 public sealed record SellCard(string CardId) : GameAction;
+
+/// <summary>Next to a revealed Transit Hub: pay the hop fee and move onto the hub instead of paying rent (Section 12.3).</summary>
+public sealed record HopToTransitHub : GameAction;
+
+/// <summary>On the Transit Hub: pay the fare and move to this railroad.</summary>
+public sealed record RideToRailroad(string PropertyId) : GameAction;
 
 /// <summary>Pick one property (for example which building the Fire! card hits when there's a tie).</summary>
 public sealed record ChooseProperty(string PropertyId) : GameAction;
@@ -220,6 +228,8 @@ public enum DecisionKind
     MallVisit,
     ChooseFireProperty,
     ArrangeEvents,
+    TransitHop,
+    TransitRide,
 }
 
 /// <summary>

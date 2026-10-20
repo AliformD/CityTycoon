@@ -168,6 +168,14 @@ public sealed class GameEngine
     /// <summary>What one player is allowed to see (Section 20.1).</summary>
     public PlayerView GetView(int viewerId) => PlayerView.Create(State, Content, viewerId);
 
+    /// <summary>
+    /// How a property's rent is worked out right now, line by line, for the
+    /// screen. Only public things count (hidden tiles have no effect), so it
+    /// is safe to show anyone. Utilities need a dice total; 7 is the most common roll.
+    /// </summary>
+    public RentBreakdown ExplainRent(string propertyId, int diceTotal = 7) =>
+        RentCalculator.Explain(State, Content, propertyId, diceTotal);
+
     private PendingDecision? DecisionFor(int playerId) => State.Pending.FirstOrDefault(d => d.PlayerId == playerId);
 
     private Step TopStep => State.Stack[^1];

@@ -2,6 +2,7 @@ using CityTycoon.Engine.Actions;
 using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Events;
 using CityTycoon.Engine.Rules;
+using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.State;
 
 namespace CityTycoon.Engine.Views;
@@ -61,9 +62,13 @@ public sealed record PlayerView(
             TileId: s.IsRevealed || known.Contains(s.Id) ? s.TileId : null,
             IsHiddenTile: s.Kind == SpaceKind.GovernmentTile && !s.IsRevealed)).ToList();
 
+        var modifiers = RuleModifiers.Active(state, content);
         var properties = state.Properties.Values.ToDictionary(
             p => p.PropertyId,
-            p => new PropertyInfo(p.PropertyId, p.OwnerId, p.Level, p.IsMortgaged, p.IsPending, p.PendingBalance));
+            p => new PropertyInfo(p.PropertyId, p.OwnerId, p.Level, p.IsMortgaged, p.IsPending, p.PendingBalance,
+                // Only revealed tiles change these, so they hold no secrets.
+                RentPercent: Math.Clamp(RuleModifiers.RentPercents(state, content, p.PropertyId, modifiers).Sum(x => x.Percent), content.Rules.MinRentPercent, content.Rules.MaxRentPercent),
+                NextLevelCost: BuildingRules.NextLevelCost(state, content, p.PropertyId, modifiers)));
 
         return new PlayerView(
             viewerId, state.Round, state.Settings.Mode, state.Settings.MaxRounds, state.ActivePlayer.Id,
@@ -96,4 +101,7 @@ public sealed record SpaceInfo(
     int Index, string Id, string Name, SpaceKind Kind, string? DistrictId, string? TileId, bool IsHiddenTile);
 
 /// <param name="IsPending">Won with a down payment and not fully paid yet (Section 8.5).</param>
-public sealed record PropertyInfo(string Id, int? OwnerId, int Level, bool IsMortgaged, bool IsPending, int PendingBalance);
+/// <param name="RentPercent">The total percentage rent change from revealed tiles (and later other modifiers).</param>
+/// <param name="NextLevelCost">What the next building level costs its owner right now, with every discount.</param>
+public sealed record PropertyInfo(string Id, int? OwnerId, int Level, bool IsMortgaged, bool IsPending, int PendingBalance,
+    int RentPercent = 0, int NextLevelCost = 0);

@@ -83,7 +83,7 @@ else
                     {
                         <PropertyActions PropertyId="@selectedSpaceId" Request="request" Content="Session.Content" Session="Session" OnAnswer="Session.Answer" />
                     }
-                    <PropertyCard PropertyId="@selectedSpaceId" View="view" Content="Session.Content" />
+                    <PropertyCard PropertyId="@selectedSpaceId" View="view" Content="Session.Content" Breakdown="Session.Engine!.ExplainRent(selectedSpaceId)" />
                     <button class="small" @onclick="() => selectedSpaceId = null">Close</button>
                 </section>
             }
@@ -151,8 +151,8 @@ else
             SpaceKind.Jail => "Jail. Landing here by a normal move is just visiting.",
             SpaceKind.GoToJail => "Go straight to Jail. You don't pass GO.",
             SpaceKind.Tax => $"{space.Name}: pay {UiHelpers.Money(space.Id == "income-tax" ? Session.Content.Rules.IncomeTax : Session.Content.Rules.LuxuryTax)} to the bank.",
-            SpaceKind.GovernmentTile when space.IsHiddenTile => "A hidden Government tile. Nobody knows what it is yet. (Tile effects arrive in a later phase.)",
-            SpaceKind.GovernmentTile => $"{UiHelpers.DisplayName(space, Session.Content)}: {Session.Content.GovTile(space.TileId!).NeighborText}",
+            SpaceKind.GovernmentTile when space.IsHiddenTile => "A hidden Government tile. It does nothing until someone lands on it and reveals it. Then it changes the properties either side of it.",
+            SpaceKind.GovernmentTile => $"{UiHelpers.DisplayName(space, Session.Content)}. Next door: {Session.Content.GovTile(space.TileId!).NeighborText} Landing here: {Session.Content.GovTile(space.TileId!).LandingText}",
             SpaceKind.CityPark => $"City Park: land here to take {Session.Content.Rules.CityParkMomentum} Momentum token or draw an Opportunity card.",
             SpaceKind.Opportunity => "Opportunity: draw an Opportunity card. Only you see it; keep it in your hand to play later.",
             SpaceKind.Event => "Event: draw an Event card. It happens straight away, and everyone sees it.",

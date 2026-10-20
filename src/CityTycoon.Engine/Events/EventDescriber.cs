@@ -18,6 +18,7 @@ public static class EventDescriber
         string GroupName(string id) => content.Groups[id].Name;
         static string Tokens(int n) => n == 1 ? "1 Momentum token" : $"{n} Momentum tokens";
         string Card(string id) => content.Cards.TryGetValue(id, out var c) ? c.Name : id;
+        string Tile(string id) => content.GovTile(id).Name;
         static string Spaces(int n) => n == 1 ? "1 space" : $"{n} spaces";
 
         return e switch
@@ -99,6 +100,11 @@ public static class EventDescriber
             EventsArranged a => $"{Name(a.PlayerId)} looked at the top {a.Count} Event cards and put them back.",
             RecoverySkipped r => $"{Name(r.PlayerId)} skips the Hospital recovery and rolls 2 dice.",
             CardNotReadyYet c => $"{Card(c.CardId)} needs the City Council, which arrives in a later phase. Nothing happens.",
+            TileRevealed t => $"{Name(t.PlayerId)} revealed the Government tile: it's the {Tile(t.TileId)}!",
+            TileFeePaid f => $"{Name(f.FromId)} paid ${f.Amount} to {(f.ToId is int to ? Name(to) : "the bank")} ({Tile(f.TileId)}).",
+            TileNotReadyYet t => $"The {Tile(t.TileId)}'s Emergency Council session arrives in a later phase. Nothing more happens.",
+            TransitHopped h => $"{Name(h.PlayerId)} paid ${h.Cost} and hopped onto the Transit Hub instead of paying rent for {Space(h.PropertyId)}.",
+            TransitRidden r => $"{Name(r.PlayerId)} paid ${r.Cost} to ride the Transit Hub to {Space(r.RailroadId)}.",
             RoundEnded r => $"Round {r.Round} is over.",
             GameEnded g => $"Game over: {g.Reason} Winner: {string.Join(" and ", g.WinnerIds.Select(Name))}.",
             _ => e.ToString(),

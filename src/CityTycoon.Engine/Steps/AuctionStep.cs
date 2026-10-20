@@ -24,7 +24,11 @@ public enum AuctionKind
 }
 
 /// <summary>
-/// A sealed-bid auction (Section 8.2). Everyone secretly bids or passes at the
+/// An auction for one property. Usually it is a sealed-bid auction (Section 8.2), but when someone
+/// lands on a color property whose group already has an owner, it is an open auction instead
+/// (docs/DECISIONS.md #91): players take turns to raise or drop out.
+///
+/// Sealed-bid: Everyone secretly bids or passes at the
 /// same time, then all bids are revealed together and the highest bid wins.
 /// Each bid is either "pay in full" or a down payment (Section 8.4 and 8.5).
 /// Bidders may take a loan while the auction is open, so they can bid more.
@@ -46,6 +50,20 @@ public sealed class AuctionStep : Step
     public bool Started { get; set; }
     public int MinBid { get; set; }
 
+    /// <summary>True for an open (ascending) auction, where players take turns to raise or drop out.</summary>
+    public bool Open { get; set; }
+
+    /// <summary>Open auction: players who have dropped out (or couldn't afford to go on).</summary>
+    public HashSet<int> Out { get; set; } = [];
+
+    /// <summary>Open auction: the highest bid so far, who made it, and how they will pay.</summary>
+    public int HighBid { get; set; }
+    public int? HighBidderId { get; set; }
+    public bool HighBidIsDownPayment { get; set; }
+
+    /// <summary>Open auction: the position in <see cref="Bidders"/> of the player whose turn it is.</summary>
+    public int Turn { get; set; }
+
     /// <summary>Who may bid, in turn order.</summary>
     public List<int> Bidders { get; set; } = [];
 
@@ -59,6 +77,8 @@ public sealed class AuctionStep : Step
     {
         if (!Started)
             Start(ctx);
+        if (Open)
+            return RunOpen(ctx);
 
         var waitingOn = Bidders.Where(id => !Bids.ContainsKey(id)).ToList();
         if (waitingOn.Count > 0)
@@ -85,6 +105,16 @@ public sealed class AuctionStep : Step
         // Every player who isn't bankrupt may bid, including players in Jail.
         Bidders = ctx.State.ActivePlayers.Where(p => p.Id != ExcludedPlayerId).Select(p => p.Id).ToList();
 
+        Open = ShouldBeOpen(ctx, Kind, PropertyId);
+        if (Open)
+        {
+            // The player who landed bids first, then the others in turn order.
+            int first = Bidders.IndexOf(TieBreakStartId);
+            Bidders = Bidders.Skip(Math.Max(first, 0)).Concat(Bidders.Take(Math.Max(first, 0))).ToList();
+            ctx.Emit(new AuctionStarted(PropertyId, MinBid, Open: true));
+            return;
+        }
+
         // Players who can't reach the minimum bid, even with every loan they
         // could still take and a down payment, pass automatically. That way
         // nobody is asked a question with only one answer (docs/DECISIONS.md).
@@ -92,6 +122,22 @@ public sealed class AuctionStep : Step
             Bids[id] = null;
 
         ctx.Emit(new AuctionStarted(PropertyId, MinBid));
+    }
+
+    /// <summary>
+    /// Open or sealed? The first property of a set to be sold is sealed-bid; once any other
+    /// property of that set has an owner, the rest are open auctions. A set is a color group,
+    /// all the railroads, or both utilities. Only a landing auction can be open; the other kinds
+    /// of auction stay sealed (docs/DECISIONS.md #91).
+    /// </summary>
+    public static bool ShouldBeOpen(EngineContext ctx, AuctionKind kind, string propertyId)
+    {
+        if (kind != AuctionKind.Normal)
+            return false;
+        PropertyDefinition def = ctx.Content.Property(propertyId);
+        return ctx.Content.Properties.Values
+            .Where(p => p.Id != propertyId && (def.Group != null ? p.Group == def.Group : p.Group == null && p.Type == def.Type))
+            .Any(p => ctx.State.Properties[p.Id].OwnerId != null);
     }
 
     /// <summary>The minimum bid, rounded up to the bid step (Section 8.3).</summary>
@@ -161,7 +207,9 @@ public sealed class AuctionStep : Step
     }
 
     /// <summary>Could this player reach the minimum bid if they took every loan they still can?</summary>
-    private bool CouldEverBid(EngineContext ctx, int playerId)
+    private bool CouldEverBid(EngineContext ctx, int playerId) => CouldBid(ctx, playerId, MinBid);
+
+    private bool CouldBid(EngineContext ctx, int playerId, int minimum)
     {
         PlayerState player = ctx.Player(playerId);
         int loansLeft = Math.Max(0, MoneyRules.MaxLoans(ctx, playerId) - player.Loans);
@@ -169,7 +217,7 @@ public sealed class AuctionStep : Step
         int best = MaxFullBid(ctx.Rules, bestCash);
         if (AllowsDownPayment && HasFreePendingSlot(ctx, playerId))
             best = Math.Max(best, MaxDepositBid(ctx.Rules, bestCash));
-        return best >= MinBid;
+        return best >= minimum;
     }
 
     public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision)
@@ -187,7 +235,7 @@ public sealed class AuctionStep : Step
     {
         if (action is PassBid)
             return true;
-        if (action is not PlaceBid bid || bid.Amount < MinBid || bid.Amount % ctx.Rules.BidIncrement != 0)
+        if (action is not PlaceBid bid || bid.Amount < decision.MinBid || bid.Amount % ctx.Rules.BidIncrement != 0)
             return false;
 
         // Check against the player's cash right now, not when the decision was
@@ -200,6 +248,11 @@ public sealed class AuctionStep : Step
 
     public override void Receive(EngineContext ctx, PendingDecision decision, GameAction action)
     {
+        if (Open)
+        {
+            ReceiveOpen(ctx, decision, action);
+            return;
+        }
         Bids[decision.PlayerId] = action is PlaceBid bid ? bid.Amount : null;
         if (action is PlaceBid { DownPayment: true })
             DownPaymentBidders.Add(decision.PlayerId);
@@ -238,8 +291,15 @@ public sealed class AuctionStep : Step
         if (highest < topBid)
             ctx.Emit(new BidEdgeWon(winnerId, PropertyId, highest, topBid));
 
-        // The winner pays their own bid to the bank: all of it now, or just the
-        // deposit now and the rest at their next GO (Section 8.5).
+        Award(ctx, winnerId, highest);
+    }
+
+    /// <summary>
+    /// The winner pays their own bid to the bank: all of it now, or just the
+    /// deposit now and the rest at their next GO (Section 8.5).
+    /// </summary>
+    private void Award(EngineContext ctx, int winnerId, int highest)
+    {
         PropertyState owned = ctx.State.Properties[PropertyId];
         int assessed = ctx.Content.Property(PropertyId).AssessedValue;
         if (Kind == AuctionKind.Forced)
@@ -268,6 +328,74 @@ public sealed class AuctionStep : Step
             ctx.Player(winnerId).Cash -= highest;
             ctx.Emit(new AuctionWon(PropertyId, winnerId, highest, assessed, PaidNow: highest));
         }
+    }
+
+    // ----- Open auction -----
+
+    /// <summary>The lowest bid that is allowed next: the opening bid, or a step above the highest bid.</summary>
+    private int CurrentMin(EngineContext ctx) => HighBidderId == null ? MinBid : HighBid + ctx.Rules.BidIncrement;
+
+    private StepResult RunOpen(EngineContext ctx)
+    {
+        while (true)
+        {
+            var contenders = Bidders.Where(id => !Out.Contains(id)).ToList();
+            if (HighBidderId is int leader)
+            {
+                if (contenders.All(id => id == leader))
+                {
+                    if (HighBidIsDownPayment)
+                        DownPaymentBidders.Add(leader);
+                    Award(ctx, leader, HighBid);
+                    return StepResult.Done;
+                }
+            }
+            else if (contenders.Count == 0)
+            {
+                ctx.Emit(new AuctionNoBids(PropertyId));
+                return StepResult.Done;
+            }
+
+            // The next player still in who isn't already winning.
+            while (Out.Contains(Bidders[Turn % Bidders.Count]) || Bidders[Turn % Bidders.Count] == HighBidderId)
+                Turn++;
+            int id = Bidders[Turn % Bidders.Count];
+
+            // Someone who couldn't reach the next bid, even with every loan, drops out quietly.
+            if (!CouldBid(ctx, id, CurrentMin(ctx)))
+            {
+                Out.Add(id);
+                ctx.Emit(new AuctionPassed(PropertyId, id));
+                continue;
+            }
+
+            string name = ctx.Content.Property(PropertyId).Name;
+            string state = HighBidderId is int h ? $"{ctx.Player(h).Name} leads with ${HighBid}." : "Nobody has bid yet.";
+            return StepResult.WaitFor(new PendingDecision(
+                id, DecisionKind.SubmitBid, $"Open auction for {name}. {state} Raise to at least ${CurrentMin(ctx)}, or drop out.",
+                PropertyId, CurrentMin(ctx), MaxBidFor(ctx, id), ctx.Rules.BidIncrement,
+                MaxDownPaymentBid: MaxDownPaymentBidFor(ctx, id),
+                Management: ManagementOptions.TakeLoan,
+                OpenAuction: true, HighBidderId: HighBidderId, HighBid: HighBid));
+        }
+    }
+
+    private void ReceiveOpen(EngineContext ctx, PendingDecision decision, GameAction action)
+    {
+        int id = decision.PlayerId;
+        if (action is PlaceBid bid)
+        {
+            HighBid = bid.Amount;
+            HighBidderId = id;
+            HighBidIsDownPayment = bid.DownPayment;
+            ctx.Emit(new BidRaised(PropertyId, id, bid.Amount, bid.DownPayment));
+        }
+        else
+        {
+            Out.Add(id);
+            ctx.Emit(new AuctionPassed(PropertyId, id));
+        }
+        Turn++;
     }
 
     /// <summary>How many seats after the tie-break start player this player sits (0 = that player).</summary>

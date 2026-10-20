@@ -154,9 +154,9 @@ public sealed class GameSession
         Request = request;
         // Hidden mode (Section 25): every question can show the player's secret
         // hand, so cover the screen whenever the device passes to a different
-        // person, and before every sealed bid. Not needed with only one human.
+        // person, and before every sealed bid (open auctions are public, so they need no cover). Not needed with only one human.
         bool hidden = Engine!.State.Settings.Privacy == PrivacyMode.Hidden;
-        bool isBid = request.Decision.Kind == DecisionKind.SubmitBid;
+        bool isBid = request.Decision.Kind == DecisionKind.SubmitBid && !request.Decision.OpenAuction;
         bool newPerson = request.PlayerId != lastHumanId;
         bool severalHumans = Seats.Count(s => s.Value == SeatKind.Human) > 1;
         // A trade offer from one person to another means handing the device over too.

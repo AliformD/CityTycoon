@@ -153,7 +153,10 @@ public sealed class EasyBot : IPlayerController
         int affordable = view.Me.Cash - SafetyReserve;
         int limit = Math.Min(affordable, worth) / inc * inc;
         if (limit >= decision.MinBid)
-            return new PlaceBid(PickBetween(decision.MinBid, limit, inc));
+        {
+            // In an open auction the bot raises one step at a time, so it climbs to its limit and stops.
+            return new PlaceBid(decision.OpenAuction ? decision.MinBid : PickBetween(decision.MinBid, limit, inc));
+        }
 
         // Short on cash: a down payment, if the deposit still leaves half the reserve.
         int dpLimit = Math.Min(decision.MaxDownPaymentBid, worth) / inc * inc;

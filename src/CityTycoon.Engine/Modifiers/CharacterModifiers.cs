@@ -13,6 +13,12 @@ public sealed class BidBonusModifier(ModifierContext c) : OwnedModifier(c), IRul
     public int BidBonus(GameState s, int playerId) => Mine(playerId) ? Value : 0;
 }
 
+/// <summary>The Mogul: wins ties when two players roll dice against each other.</summary>
+public sealed class DiceTieBreakerModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+{
+    public bool WinsDiceTies(GameState s, int playerId) => Mine(playerId);
+}
+
 /// <summary>The Hustler: one reroll per Casino visit.</summary>
 public sealed class CasinoRerollModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
 {

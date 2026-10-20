@@ -110,6 +110,46 @@ public class CharacterTests
         Assert.Equal(1400, game.Player(0).Cash);
     }
 
+    [Fact]
+    public void Mogul_WinsATieInADiceDuel_InsteadOfRollingAgain()
+    {
+        var game = With("mogul", seat: 1);
+        game.GiveCard(0, "dice-duel");
+        game.Do(0, new PlayCard("dice-duel", TargetPlayerId: 1, Number: 100));
+        game.Dice.Add(3, 4, 5, 2); // 7 against 7: a tie
+        game.Do(1, new AcceptDuel());
+        game.Do(0, new NoThanks()); // player 0 is a Hustler here, and may keep the tie-losing roll
+
+        Assert.Equal(1600, game.Player(1).Cash);
+        Assert.Equal(1400, game.Player(0).Cash);
+        Assert.Contains(game.State.Log, e => e is DiceTieWon { PlayerId: 1 });
+        Assert.Single(game.State.Log.OfType<DuelRolled>());
+    }
+
+    [Fact]
+    public void Mogul_ChallengingAndTying_AlsoWins()
+    {
+        var game = With("mogul", seat: 0);
+        game.GiveCard(0, "dice-duel");
+        game.Do(0, new PlayCard("dice-duel", TargetPlayerId: 1, Number: 100));
+        game.Dice.Add(6, 1, 3, 4);
+        game.Do(1, new AcceptDuel());
+        game.Do(1, new NoThanks()); // player 1 is a Hustler here, and may keep the tie-losing roll
+        Assert.Equal(1600, game.Player(0).Cash);
+    }
+
+    [Fact]
+    public void Mogul_DoesNotWinADiceDuel_TheyActuallyLose()
+    {
+        var game = With("mogul", seat: 1);
+        game.GiveCard(0, "dice-duel");
+        game.Do(0, new PlayCard("dice-duel", TargetPlayerId: 1, Number: 100));
+        game.Dice.Add(6, 6, 1, 2);
+        game.Do(1, new AcceptDuel());
+        Assert.Equal(1400, game.Player(1).Cash);
+        Assert.DoesNotContain(game.State.Log, e => e is DiceTieWon);
+    }
+
     // ----- The Commuter -----
 
     [Fact]

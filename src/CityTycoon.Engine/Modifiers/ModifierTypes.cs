@@ -45,6 +45,7 @@ public static class ModifierTypes
 
         // Characters (Section 5)
         ["BidBonus"] = new(c => new BidBonusModifier(c), NeedsValue: true),
+        ["DiceTieBreaker"] = new(c => new DiceTieBreakerModifier(c)),
         ["CasinoReroll"] = new(c => new CasinoRerollModifier(c)),
         ["StartingMomentum"] = new(c => new StartingMomentumModifier(c), NeedsValue: true),
         ["FreeBail"] = new(c => new FreeBailModifier(c)),

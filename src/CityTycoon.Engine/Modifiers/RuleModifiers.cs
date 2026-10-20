@@ -276,6 +276,10 @@ public static class RuleModifiers
     public static int BidBonus(GameState state, GameContent content, int playerId) =>
         Active(state, content).Sum(m => m.BidBonus(state, playerId));
 
+    /// <summary>The name of the modifier that wins this player's dice ties, or null if they have none (the Mogul).</summary>
+    public static string? DiceTieBreaker(GameState state, GameContent content, int playerId) =>
+        Active(state, content).FirstOrDefault(m => m.WinsDiceTies(state, playerId))?.Source;
+
     public static bool CasinoReroll(GameState state, GameContent content, int playerId) =>
         Active(state, content).Any(m => m.CasinoReroll(state, playerId));
 

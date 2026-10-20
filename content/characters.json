@@ -7,8 +7,8 @@
     {
       "id": "mogul",
       "name": "The Mogul",
-      "text": "When auction bids are compared, your bid counts as $10 higher than it is. You still pay your real bid. You win ties and any auction where you're within $10 of the top bid.",
-      "modifiers": [ { "type": "BidBonus", "value": 10 } ]
+      "text": "In secret-bid auctions, your bid counts as $10 higher than it is when bids are compared, and you win ties. You still pay your real bid. When two players roll dice against each other and tie, you win the tie.",
+      "modifiers": [ { "type": "BidBonus", "value": 10 }, { "type": "DiceTieBreaker" } ]
     },
     {
       "id": "hustler",

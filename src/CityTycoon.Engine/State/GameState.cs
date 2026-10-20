@@ -31,6 +31,15 @@ public sealed class GameState
     /// <summary>Who owns what, keyed by property ID.</summary>
     public Dictionary<string, PropertyState> Properties { get; set; } = [];
 
+    /// <summary>Each district's zoning level, keyed by district ID (Section 10).</summary>
+    public Dictionary<string, ZoningLevel> Zoning { get; set; } = [];
+
+    /// <summary>Hotel permits left in the citywide supply (Section 10.3).</summary>
+    public int HotelPermits { get; set; }
+
+    /// <summary>Skyscraper permits left in the citywide supply.</summary>
+    public int SkyscraperPermits { get; set; }
+
     public int Round { get; set; } = 1;
 
     /// <summary>Position in <see cref="Players"/> of the player whose turn it is.</summary>
@@ -102,6 +111,15 @@ public sealed class PlayerState
 
     /// <summary>Doubles rolled in a row this turn. Three sends you to Jail.</summary>
     public int DoublesInARow { get; set; }
+
+    /// <summary>Unpaid bank loans (Section 15.7).</summary>
+    public int Loans { get; set; }
+
+    /// <summary>Building levels added this turn, for the build limit (Section 9.2, rule 6).</summary>
+    public int BuildsThisTurn { get; set; }
+
+    /// <summary>Trade offers made this turn (a limit stops offer spam).</summary>
+    public int TradesProposedThisTurn { get; set; }
 }
 
 public sealed class PropertyState
@@ -115,6 +133,19 @@ public sealed class PropertyState
     public int Level { get; set; }
 
     public bool IsMortgaged { get; set; }
+
+    /// <summary>
+    /// Won with a down payment and not fully paid yet (Section 8.5). A pending
+    /// property collects no rent, can't be built on, mortgaged or traded, and
+    /// doesn't count towards sets.
+    /// </summary>
+    public bool IsPending { get; set; }
+
+    /// <summary>For a pending property: what's still owed, due at the owner's next GO.</summary>
+    public int PendingBalance { get; set; }
+
+    /// <summary>True if the owner can count this property: owned, and not pending.</summary>
+    public bool IsOwnedOutright(int playerId) => OwnerId == playerId && !IsPending;
 }
 
 /// <summary>One space on this game's generated board.</summary>

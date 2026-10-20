@@ -51,6 +51,8 @@ public sealed class TurnStep : Step
             case TurnStage.Start:
                 ctx.Emit(new TurnStarted(PlayerId, ctx.State.Round));
                 player.DoublesInARow = 0;
+                player.BuildsThisTurn = 0;
+                player.TradesProposedThisTurn = 0;
                 if (player.InJail)
                     player.JailTurns++;
                 Stage = player.InJail ? TurnStage.JailChoice : TurnStage.ChooseMove;
@@ -58,10 +60,12 @@ public sealed class TurnStep : Step
 
             case TurnStage.JailChoice:
                 return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.JailChoice,
-                    $"You're in Jail (turn {player.JailTurns} of {ctx.Rules.MaxJailTurns}). Pay bail or try for doubles?"));
+                    $"You're in Jail (turn {player.JailTurns} of {ctx.Rules.MaxJailTurns}). Pay bail or try for doubles?",
+                    Management: ManagementOptions.InJail));
 
             case TurnStage.ChooseMove:
-                return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.ChooseMoveMethod, "How do you want to move?"));
+                return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.ChooseMoveMethod, "How do you want to move?",
+                    Management: ManagementOptions.OwnTurn));
 
             case TurnStage.Roll:
                 return RollAndMove(ctx, player);
@@ -80,7 +84,8 @@ public sealed class TurnStep : Step
                 // Going to Jail ends your turn straight away (Section 14.1).
                 if (player.InJail)
                     return StepResult.Done;
-                return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.PostMoveActions, "Anything else before you end your turn?"));
+                return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.PostMoveActions, "Anything else before you end your turn?",
+                    Management: ManagementOptions.OwnTurn));
 
             case TurnStage.AfterPostMove:
                 // Doubles: take another turn from the pre-roll phase (Section 7.2, step 9).
@@ -104,7 +109,7 @@ public sealed class TurnStep : Step
         {
             DecisionKind.ChooseMoveMethod => [new RollDice()],
             DecisionKind.PostMoveActions => [new EndTurn()],
-            // Bail can only be paid with cash on hand (loans and mortgages arrive in Phase 3).
+            // Bail is paid with cash on hand. Short? Take a loan or mortgage something first.
             DecisionKind.JailChoice => player.Cash >= ctx.Rules.JailBail
                 ? [new PayBail(), new RollForDoubles()]
                 : [new RollForDoubles()],
@@ -192,9 +197,12 @@ public sealed class TurnStep : Step
     private StepResult MoveAndResolve(EngineContext ctx, PlayerState player, int spaces)
     {
         LastDiceTotal = spaces;
-        Movement.MoveForward(ctx, player, spaces);
         Stage = TurnStage.PostMove;
+        // Push "resolve the space" first, then move. Anything passing GO pushes
+        // (like a down payment falling due) lands on top, so it's dealt with
+        // before the landing space, in the order it happened.
         ctx.Push(new ResolveSpaceStep { PlayerId = PlayerId, DiceTotal = spaces });
+        Movement.MoveForward(ctx, player, spaces);
         return StepResult.Continue;
     }
 }

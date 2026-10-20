@@ -10,8 +10,8 @@ public static class RentCalculator
     public static int Calculate(GameState state, GameContent content, string propertyId, int diceTotal)
     {
         PropertyState owned = state.Properties[propertyId];
-        if (owned.OwnerId is not int ownerId || owned.IsMortgaged)
-            return 0; // Unowned and mortgaged properties collect no rent.
+        if (owned.OwnerId is not int ownerId || owned.IsMortgaged || owned.IsPending)
+            return 0; // Unowned, mortgaged and pending properties collect no rent.
 
         PropertyDefinition def = content.Property(propertyId);
         int rent = def.Type switch
@@ -33,11 +33,12 @@ public static class RentCalculator
         return rent;
     }
 
-    /// <summary>True when the player owns every property in the group and none of it is mortgaged.</summary>
+    /// <summary>True when the player owns every property in the group and none of it is mortgaged or pending.</summary>
     public static bool OwnsFullGroup(GameState state, GameContent content, int playerId, string groupId) =>
         content.GroupMembers(groupId).All(id =>
-            state.Properties[id].OwnerId == playerId && !state.Properties[id].IsMortgaged);
+            state.Properties[id].IsOwnedOutright(playerId) && !state.Properties[id].IsMortgaged);
 
+    /// <summary>How many railroads or utilities a player owns. Pending ones don't count (Section 13.1).</summary>
     public static int CountOwned(GameState state, GameContent content, int playerId, PropertyType type) =>
-        state.Properties.Values.Count(p => p.OwnerId == playerId && content.Property(p.PropertyId).Type == type);
+        state.Properties.Values.Count(p => p.IsOwnedOutright(playerId) && content.Property(p.PropertyId).Type == type);
 }

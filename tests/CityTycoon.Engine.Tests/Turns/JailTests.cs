@@ -12,7 +12,7 @@ public class JailTests
         var game = new TestGame();
         game.JailThenStartTheirTurn(1);
         Assert.Equal(DecisionKind.JailChoice, game.DecisionFor(1)!.Kind);
-        Assert.Equal([new PayBail(), new RollForDoubles()], game.Engine.GetLegalActions(1));
+        Assert.Equal([new PayBail(), new RollForDoubles()], game.MainActions(1));
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class JailTests
         var game = new TestGame();
         game.Player(1).Cash = 30;
         game.JailThenStartTheirTurn(1);
-        Assert.Equal([new RollForDoubles()], game.Engine.GetLegalActions(1));
+        Assert.Equal([new RollForDoubles()], game.MainActions(1));
     }
 
     [Fact]

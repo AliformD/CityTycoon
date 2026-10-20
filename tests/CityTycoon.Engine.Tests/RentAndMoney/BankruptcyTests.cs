@@ -4,7 +4,10 @@ using CityTycoon.Engine.Tests.Helpers;
 
 namespace CityTycoon.Engine.Tests.RentAndMoney;
 
-/// <summary>Section 15.10 (Phase 1 basics: no mortgages or loans yet, so short on cash means bankrupt).</summary>
+/// <summary>
+/// Section 15.10. In these tests the player has already used up their loans and
+/// has nothing left to mortgage, so they can't raise enough and go bankrupt at once.
+/// </summary>
 public class BankruptcyTests
 {
     [Fact]
@@ -14,10 +17,13 @@ public class BankruptcyTests
         game.Give(1, "platinum-row");
         game.Give(0, "mill-street");
         game.Player(0).Cash = 30;
+        game.Player(0).Loans = 2;
+        game.Property("mill-street").IsMortgaged = true;
         game.RollOnto(0, "platinum-row"); // rent $50
 
         Assert.True(game.Player(0).IsBankrupt);
-        Assert.Equal(1500 + 30, game.Player(1).Cash);
+        // The $30 went to the bank first, to pay back the two loans (Section 15.10).
+        Assert.Equal(1500, game.Player(1).Cash);
         Assert.Equal(1, game.Property("mill-street").OwnerId);
     }
 
@@ -27,6 +33,8 @@ public class BankruptcyTests
         var game = new TestGame(players: 3);
         game.Give(0, "market-street");
         game.Player(0).Cash = 150;
+        game.Player(0).Loans = 2;
+        game.Property("market-street").IsMortgaged = true;
         game.RollOnto(0, "income-tax"); // $200
 
         Assert.True(game.Player(0).IsBankrupt);
@@ -41,6 +49,7 @@ public class BankruptcyTests
         var game = new TestGame(players: 3);
         game.SkipTurn(0);
         game.Player(1).Cash = 100;
+        game.Player(1).Loans = 2;
         game.RollOnto(1, "income-tax");
 
         Assert.True(game.Player(1).IsBankrupt);

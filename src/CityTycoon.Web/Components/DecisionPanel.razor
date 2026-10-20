@@ -1,32 +1,105 @@
 @* The big buttons in the middle of the board for whatever the current person must decide. *@
-@if (Request.Decision.Kind == DecisionKind.SubmitBid)
+@{
+    var decision = Request.Decision;
+    var view = Request.View;
+    var main = Request.LegalActions.Where(a => a is not ManagementAction).ToList();
+    var manage = Request.LegalActions.OfType<ManagementAction>().ToList();
+}
+@if (decision.Kind == DecisionKind.SubmitBid)
 {
     <AuctionPanel Request="Request" Content="Content" OnAnswer="OnAnswer" />
+}
+else if (decision.Kind == DecisionKind.RaiseMoney)
+{
+    @* Owes more than they have (Section 15.10): every way to raise cash is listed as a button. *@
+    <div class="decision raise-money">
+        <h2>@view.Me.Name, you need to raise money</h2>
+        <p>@decision.Prompt</p>
+        <p>Still needed: <strong>@UiHelpers.Money(Math.Max(0, decision.AmountOwed - view.Me.Cash))</strong>.</p>
+        <div class="buttons stacked">
+            @foreach (var action in manage)
+            {
+                <button class="big" @onclick="() => OnAnswer.InvokeAsync(action)">@UiHelpers.ActionLabel(action, view, Content)</button>
+            }
+            @foreach (var action in main)
+            {
+                <button class="big danger" @onclick="() => OnAnswer.InvokeAsync(action)">@UiHelpers.ActionLabel(action, view, Content)</button>
+            }
+        </div>
+    </div>
+}
+else if (decision.Kind == DecisionKind.RespondToTrade && decision.Trade is { } offer)
+{
+    <div class="decision trade-offer">
+        <h2>@view.Me.Name, @view.Player(offer.FromId).Name offers you a trade</h2>
+        <div class="trade-sides">
+            <div><h3>You get</h3>@TradeSide(offer.GiveCash, offer.GiveProperties)</div>
+            <div><h3>You give</h3>@TradeSide(offer.GetCash, offer.GetProperties)</div>
+        </div>
+        <div class="buttons">
+            @foreach (var action in main)
+            {
+                <button class="big @(action is AcceptTrade ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)">@UiHelpers.ActionLabel(action, view, Content)</button>
+            }
+        </div>
+    </div>
 }
 else
 {
     <div class="decision">
-        <h2>@Request.View.Me.Name, @Request.Decision.Prompt</h2>
+        <h2>@view.Me.Name, @decision.Prompt</h2>
         <div class="buttons">
-            @foreach (var action in Request.LegalActions)
+            @foreach (var action in main)
             {
-                <button class="big @(action == Request.LegalActions[0] ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)">@Label(action)</button>
+                <button class="big @(action == main[0] ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)">@UiHelpers.ActionLabel(action, view, Content)</button>
             }
         </div>
+
+        @if (decision.Management != ManagementOptions.None)
+        {
+            @* The "in between" actions you can take before answering (Section 7.2). *@
+            <div class="money-tools" aria-label="Manage your money">
+                @foreach (var action in manage.Where(a => a is TakeLoan or RepayLoan))
+                {
+                    <button class="small" @onclick="() => OnAnswer.InvokeAsync(action)">@UiHelpers.ActionLabel(action, view, Content)</button>
+                }
+                @if (Session.Engine!.CanProposeTrade(Request.PlayerId))
+                {
+                    <button class="small" aria-expanded="@showTrade" @onclick="() => showTrade = !showTrade">@(showTrade ? "Close trade" : "Offer a trade…")</button>
+                }
+                @if (decision.Management.HasFlag(ManagementOptions.Build) || decision.Management.HasFlag(ManagementOptions.Mortgage))
+                {
+                    <p class="hint">Click one of your properties on the board to build, sell or mortgage.</p>
+                }
+            </div>
+            @if (showTrade)
+            {
+                <TradeBuilder Request="Request" Content="Content" Session="Session" OnPropose="Propose" />
+            }
+        }
     </div>
 }
 
 @code {
     [Parameter, EditorRequired] public HumanRequest Request { get; set; } = default!;
     [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+    [Parameter, EditorRequired] public GameSession Session { get; set; } = default!;
     [Parameter] public EventCallback<GameAction> OnAnswer { get; set; }
 
-    private string Label(GameAction action) => action switch
+    private bool showTrade;
+
+    private RenderFragment TradeSide(int cash, IReadOnlyList<string> properties) => __builder =>
     {
-        RollDice => "🎲 Roll dice",
-        EndTurn => "End turn",
-        PayBail => $"Pay {UiHelpers.Money(Content.Rules.JailBail)} bail",
-        RollForDoubles => "Try for doubles",
-        _ => action.GetType().Name,
+        <ul>
+            @if (cash > 0) { <li>@UiHelpers.Money(cash) cash</li> }
+            @foreach (var id in properties) { <li>@Content.Property(id).Name@(Request.View.Properties[id].IsMortgaged ? " (mortgaged)" : "")</li> }
+            @if (cash == 0 && properties.Count == 0) { <li>Nothing</li> }
+        </ul>
     };
+
+    private async Task Propose(TradeOffer offer)
+    {
+        showTrade = false;
+        await OnAnswer.InvokeAsync(new ProposeTrade(offer));
+    }
 }

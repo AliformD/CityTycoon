@@ -38,6 +38,7 @@ public class GameEndTests
         var game = new TestGame(players: 2, mode: GameMode.Classic);
         game.Give(1, "platinum-row");
         game.Player(0).Cash = 10;
+        game.Player(0).Loans = 2; // no loans left, so they can't raise the rent
         game.RollOnto(0, "platinum-row");
 
         Assert.True(game.State.IsOver);

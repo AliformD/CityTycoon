@@ -105,7 +105,9 @@ public class AuctionTests
     public void PlayersWhoCantAffordTheMinimum_PassAutomatically()
     {
         var game = new TestGame(players: 3);
-        game.Player(2).Cash = 50;
+        // $10 can't cover even a down payment on $90, and they have no loans left.
+        game.Player(2).Cash = 10;
+        game.Player(2).Loans = 2;
         game.RollOnto(0, "market-street"); // minimum $90
         Assert.Null(game.DecisionFor(2));
     }

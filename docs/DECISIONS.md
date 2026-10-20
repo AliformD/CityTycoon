@@ -36,3 +36,21 @@ A running list of rulings and design decisions, so nobody has to rediscover them
 | 18 | Bots pause for 0.35 seconds before each move so people can follow along. "Fast bots" turns the pause off. | Builder | Section 24.2 asks for a fast-bots option. Proper animations come later. |
 | 19 | Easy bots won't bid into a safety reserve ($100 to $250, random per bot) or much past assessed value (90% to 130%, random per bot). In Jail they pay bail only when they have plenty of cash. | Builder | Section 23.2 "basic sense", plus a small personality so bots don't all play alike. |
 | 20 | The board and log are drawn from a "spectator" view (no secrets), and the log text is built from a view too, so the screen can never show a hidden tile or an unrevealed bid. | Builder | Fair play (Section 23.1) applies to what's on a shared screen as well. |
+
+## Phase 3: building and money (2026-10-20)
+
+| # | Decision | Who | Why |
+| --- | --- | --- | --- |
+| 21 | Only the player whose turn it is can offer a trade, and only at the "choose how to move" or "anything else before you end your turn?" moments (or in Jail). | Builder | Section 15.9 says "any player at any time the game is waiting on a normal turn action". With one shared screen, letting every player interrupt at once gets confusing. Easy to widen later. |
+| 22 | No counter-offers: the other player accepts or declines. To change a deal, decline and offer again. | Builder | Keeps the first version simple. |
+| 23 | A player can offer at most 3 trades per turn (`maxTradeProposalsPerTurn` in `rules.json`). | Builder | Stops a player (or a bot) flooding someone with offers. |
+| 24 | A trade is checked again at the moment it's accepted. If something changed (for example the cash is gone), it's cancelled with a reason in the log. | Builder | The world can change between offer and answer. |
+| 25 | Selling a building gives back half of its full cost before any discounts. | Builder | Section 9.3 says "half of what that level cost". Discounts arrive with characters and tiles, and this stops "build cheap, sell high" tricks. |
+| 26 | Unmortgaging and the 10% trade fee round **up** to a whole dollar. Mortgage values themselves are always whole numbers. | Builder | The spec doesn't say; rounding up means the bank never loses a dollar. |
+| 27 | When someone goes bankrupt, their pending properties go back to the bank and are auctioned, even if they owed another player. | Builder | A pending property was never fully paid for, so it isn't theirs to hand over. |
+| 28 | Replaces #11: a player passes an auction automatically only if they couldn't reach the minimum bid **even after taking every loan they can and using a down payment**. | Builder | Loans and down payments now let people bid above their cash. |
+| 29 | Replaces #14: owing more cash than you have now opens a "raise money" choice (mortgage, sell buildings, take loans). You go bankrupt only when even all of that wouldn't be enough. | Builder | Section 15.10. |
+| 30 | During an auction, the only "manage money" action allowed is taking a loan. | Builder | Section 8.4. |
+| 31 | If someone can't pay a pending balance at GO but could raise it, they choose: raise the money, or give the property up. | Builder | Section 8.5 says "you may raise money", so it's a choice, not forced. |
+| 32 | The pass-the-device screen also appears when one person offers another person a trade. | Builder | The other person needs the device to answer. |
+| 33 | The Sim plays half Easy bots and half Random bots by default (`--bots random`, `easy` or `mixed`). | Builder | Random bots test odd situations; Easy bots test sensible play. |

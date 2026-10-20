@@ -1,4 +1,7 @@
+using CityTycoon.Engine.Actions;
 using CityTycoon.Engine.Content;
+using CityTycoon.Engine.Events;
+using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.Views;
 
 namespace CityTycoon.Web.Services;
@@ -68,5 +71,45 @@ public static class UiHelpers
         SpaceKind.Landmark => "◆",
         SpaceKind.GovernmentTile => "?",
         _ => "",
+    };
+
+    /// <summary>A button label for any action, with the money it costs or brings in.</summary>
+    public static string ActionLabel(GameAction action, PlayerView view, GameContent content)
+    {
+        string Name(string id) => content.Property(id).Name;
+        int Level(string id) => view.Properties[id].Level;
+        RulesConfig rules = content.Rules;
+        return action switch
+        {
+            RollDice => "🎲 Roll dice",
+            EndTurn => "End turn",
+            PayBail => $"Pay {Money(rules.JailBail)} bail",
+            RollForDoubles => "Try for doubles",
+            Build b => $"Build {EventDescriber.LevelName(Level(b.PropertyId) + 1)} on {Name(b.PropertyId)} ({Money(BuildingRules.LevelCost(content, content.Property(b.PropertyId), Level(b.PropertyId) + 1))})",
+            SellBuilding s => $"Sell a building on {Name(s.PropertyId)} (+{Money(BuildingRules.SellValue(content, content.Property(s.PropertyId), Level(s.PropertyId)))})",
+            Mortgage m => $"Mortgage {Name(m.PropertyId)} (+{Money(NetWorth.MortgageValue(content, content.Property(m.PropertyId)))})",
+            Unmortgage u => $"Unmortgage {Name(u.PropertyId)} ({Money(MoneyRules.UnmortgageCost(content, content.Property(u.PropertyId)))})",
+            TakeLoan => $"Take a loan (+{Money(rules.LoanAmount)}, repay {Money(rules.LoanRepay)})",
+            RepayLoan => $"Repay a loan ({Money(rules.LoanRepay)})",
+            ForfeitProperty => "Give the property up",
+            AcceptTrade => "Accept the trade",
+            DeclineTrade => "Decline",
+            _ => action.GetType().Name,
+        };
+    }
+
+    /// <summary>A short marker for a building level on the board: 1-4 houses, H for hotel, S for skyscraper.</summary>
+    public static string LevelMarker(int level) => level switch
+    {
+        0 => "",
+        <= 4 => $"⌂{level}",
+        5 => "H",
+        _ => "S",
+    };
+
+    public static string ZoningName(ZoningLevel level) => level switch
+    {
+        ZoningLevel.HighRise => "High-rise",
+        _ => level.ToString(),
     };
 }

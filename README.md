@@ -36,7 +36,7 @@ Open **Test > Test Explorer** and click **Run All Tests** (the double green arro
 dotnet build                                  # build everything
 dotnet test                                   # run every test
 dotnet run --project src/CityTycoon.Web       # start the game, then open the address it prints
-dotnet run --project src/CityTycoon.Sim       # run bot games
+dotnet run --project src/CityTycoon.Sim       # run bot games (add --bots easy, random or mixed)
 ```
 
 ## How the folders fit together

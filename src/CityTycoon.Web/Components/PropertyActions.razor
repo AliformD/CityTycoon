@@ -1,0 +1,24 @@
+@* Build, sell and mortgage buttons for one of your own properties (Sections 9 and 15.8).
+   A button you can't use right now stays visible but greyed out, with the reason under it. *@
+@{
+    var actions = new ManagementAction[] { new Build(PropertyId), new SellBuilding(PropertyId), new Mortgage(PropertyId), new Unmortgage(PropertyId) };
+}
+<div class="property-actions" aria-label="Manage this property">
+    @foreach (var action in actions)
+    {
+        bool legal = Request.LegalActions.Contains(action);
+        string? why = legal ? null : Session.Engine!.WhyIllegal(Request.PlayerId, action);
+        <div class="action-row">
+            <button class="small" disabled="@(!legal)" @onclick="() => OnAnswer.InvokeAsync(action)">@UiHelpers.ActionLabel(action, Request.View, Content)</button>
+            @if (why != null) { <small class="why">@why</small> }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string PropertyId { get; set; } = "";
+    [Parameter, EditorRequired] public HumanRequest Request { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+    [Parameter, EditorRequired] public GameSession Session { get; set; } = default!;
+    [Parameter] public EventCallback<GameAction> OnAnswer { get; set; }
+}

@@ -58,5 +58,19 @@
   "maxPlayers": 6,
   "railroadRents": [ 25, 50, 100, 200 ],
   "utilityRentMultipliers": [ 4, 10 ],
-  "maxDoublesBeforeJail": 3
+  "maxDoublesBeforeJail": 3,
+
+  "zoningLevels": [
+    { "level": "restricted", "maxBuildingLevel": 2 },
+    { "level": "residential", "maxBuildingLevel": 4 },
+    { "level": "commercial", "maxBuildingLevel": 5 },
+    { "level": "highRise", "maxBuildingLevel": 6 }
+  ],
+  "startingZoning": "residential",
+  "startingCommercialDistricts": 1,
+  "hotelLevel": 5,
+  "skyscraperLevel": 6,
+  "buildingSellPercent": 50,
+  "buildDiscountRoundTo": 5,
+  "maxTradeProposalsPerTurn": 3
 }

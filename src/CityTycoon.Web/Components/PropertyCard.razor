@@ -14,6 +14,21 @@
         · Assessed value <strong>@UiHelpers.Money(def.AssessedValue)</strong>
     </p>
     <p>Owner: <strong>@(owned?.OwnerId is int o ? View.Player(o).Name : "the bank")</strong>@(owned?.IsMortgaged == true ? " (mortgaged)" : "")</p>
+    @if (owned?.IsPending == true)
+    {
+        <p>Pending: @UiHelpers.Money(owned.PendingBalance) is still owed at the owner's next GO. It collects no rent until then.</p>
+    }
+    @if (def.Type == PropertyType.Color && owned != null)
+    {
+        var district = View.Spaces.First(s => s.Id == PropertyId).DistrictId;
+        <p>
+            Buildings: <strong>@EventDescriber.LevelName(owned.Level)</strong>
+            @if (district != null && View.Zoning.TryGetValue(district, out var zoning))
+            {
+                <span> · Zoning: <strong>@UiHelpers.ZoningName(zoning)</strong> (up to @EventDescriber.LevelName(Content.Rules.MaxBuildingLevel(zoning)))</span>
+            }
+        </p>
+    }
     <table class="rents">
         <caption class="visually-hidden">Rent table</caption>
         <tbody>

@@ -16,10 +16,24 @@ public static class NetWorth
         foreach (PropertyState owned in state.Properties.Values.Where(p => p.OwnerId == playerId))
         {
             PropertyDefinition def = content.Property(owned.PropertyId);
-            total += owned.IsMortgaged ? def.AssessedValue - MortgageValue(content, def) : def.AssessedValue;
+            total += PropertyValue(content, def, owned);
             total += BuildingValue(content, def, owned.Level);
         }
+        total -= player.Loans * content.Rules.LoanRepay;
         return total;
+    }
+
+    /// <summary>
+    /// What a property adds to net worth: its assessed value, minus the mortgage
+    /// if mortgaged, minus the unpaid balance if pending (Section 16.3).
+    /// </summary>
+    public static int PropertyValue(GameContent content, PropertyDefinition def, PropertyState owned)
+    {
+        if (owned.IsMortgaged)
+            return def.AssessedValue - MortgageValue(content, def);
+        if (owned.IsPending)
+            return def.AssessedValue - owned.PendingBalance;
+        return def.AssessedValue;
     }
 
     public static int MortgageValue(GameContent content, PropertyDefinition def) =>
@@ -30,7 +44,7 @@ public static class NetWorth
     {
         int value = 0;
         for (int l = 1; l <= level; l++)
-            value += l == 6 ? def.HouseCost * content.Rules.SkyscraperCostMultiplier : def.HouseCost;
+            value += BuildingRules.LevelCost(content, def, l);
         return value;
     }
 

@@ -29,7 +29,7 @@ else
             }
             else if (request != null && !Session.ShowPassScreen)
             {
-                <DecisionPanel Request="request" Content="Session.Content" OnAnswer="Session.Answer" />
+                <DecisionPanel Request="request" Content="Session.Content" Session="Session" OnAnswer="Session.Answer" />
             }
             else if (request == null)
             {
@@ -42,11 +42,27 @@ else
             <section class="city" aria-label="City">
                 <strong>Round @view.Round@(view.Mode == GameMode.Timed ? $" of {view.MaxRounds}" : "")</strong>
                 <span>@(view.Mode == GameMode.Timed ? "Timed game" : "Classic game")</span>
+                <span class="permits">Permits left: @view.HotelPermitsLeft hotel, @view.SkyscraperPermitsLeft skyscraper</span>
+                <details>
+                    <summary>Zoning by district</summary>
+                    <ul class="zoning">
+                        @foreach (var district in Session.Content.Board.Districts)
+                        {
+                            var zoning = view.Zoning[district.Id];
+                            <li>@district.Name: <strong>@UiHelpers.ZoningName(zoning)</strong> (up to @EventDescriber.LevelName(Session.Content.Rules.MaxBuildingLevel(zoning)))</li>
+                        }
+                    </ul>
+                </details>
             </section>
             <PlayerPanels View="view" Session="Session" />
             @if (selectedSpaceId != null && Session.Content.Properties.ContainsKey(selectedSpaceId))
             {
                 <section class="detail" aria-label="Property details">
+                    @if (request != null && !Session.ShowPassScreen && request.Decision.Management != ManagementOptions.None
+                         && view.Properties[selectedSpaceId].OwnerId == request.PlayerId)
+                    {
+                        <PropertyActions PropertyId="@selectedSpaceId" Request="request" Content="Session.Content" Session="Session" OnAnswer="Session.Answer" />
+                    }
                     <PropertyCard PropertyId="@selectedSpaceId" View="view" Content="Session.Content" />
                     <button class="small" @onclick="() => selectedSpaceId = null">Close</button>
                 </section>

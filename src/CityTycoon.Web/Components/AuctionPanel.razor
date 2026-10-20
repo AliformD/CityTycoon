@@ -1,4 +1,4 @@
-@* A sealed bid (Section 8.2): type an amount or use the quick buttons, then bid or pass. *@
+@* A sealed bid (Section 8.2): type an amount or use the quick buttons, choose how to pay, then bid or pass. *@
 <div class="decision auction">
     <h2>Auction: @Content.Property(Request.Decision.PropertyId!).Name</h2>
     <PropertyCard PropertyId="@(Request.Decision.PropertyId!)" View="Request.View" Content="Content" />
@@ -10,11 +10,17 @@
 
     @if (CanBid)
     {
+        @* Section 8.4: pay the whole bid now, or 20% now and the rest at your next GO. *@
+        <fieldset class="pay-choice">
+            <legend>How will you pay?</legend>
+            <label><input type="radio" name="pay" checked="@(!downPayment)" disabled="@(!CanPayInFull)" @onchange="() => downPayment = false" /> Pay in full</label>
+            <label><input type="radio" name="pay" checked="@downPayment" disabled="@(!CanDownPay)" @onchange="() => downPayment = true" /> Down payment (@UiHelpers.Money(Deposit) now, @UiHelpers.Money(bid - Deposit) at your next GO)</label>
+        </fieldset>
         <div class="bid-entry">
             <button class="small" @onclick="() => Change(-Inc)" disabled="@(bid <= Request.Decision.MinBid)" aria-label="Lower by $@Inc">−$@Inc</button>
             <label>
                 <span class="visually-hidden">Your bid in dollars</span>
-                $<input type="number" min="@Request.Decision.MinBid" max="@Request.Decision.MaxBid" step="@Inc" @bind="bid" @bind:event="oninput" />
+                $<input type="number" min="@Request.Decision.MinBid" max="@MaxBid" step="@Inc" @bind="bid" @bind:event="oninput" />
             </label>
             <button class="small" @onclick="() => Change(Inc)">+$@Inc</button>
             <button class="small" @onclick="() => Change(5 * Inc)">+$@(5 * Inc)</button>
@@ -29,11 +35,15 @@
     {
         <p>You don't have enough cash to bid.</p>
     }
+    @if (Request.LegalActions.Contains(new TakeLoan()))
+    {
+        <p><button class="small" @onclick="() => OnAnswer.InvokeAsync(new TakeLoan())">@UiHelpers.ActionLabel(new TakeLoan(), Request.View, Content)</button> to bid more.</p>
+    }
 
     <div class="buttons">
         @if (CanBid)
         {
-            <button class="big primary" disabled="@(Problem != null)" @onclick="() => OnAnswer.InvokeAsync(new PlaceBid(bid))">Bid @UiHelpers.Money(bid)</button>
+            <button class="big primary" disabled="@(Problem != null)" @onclick="() => OnAnswer.InvokeAsync(new PlaceBid(bid, downPayment))">Bid @UiHelpers.Money(bid)@(downPayment ? " (down payment)" : "")</button>
         }
         <button class="big" @onclick="() => OnAnswer.InvokeAsync(new PassBid())">Pass</button>
     </div>
@@ -45,14 +55,20 @@
     [Parameter] public EventCallback<GameAction> OnAnswer { get; set; }
 
     private int bid;
+    private bool downPayment;
     private HumanRequest? shownFor;
 
     private int Inc => Request.Decision.BidIncrement;
-    private bool CanBid => Request.Decision.MaxBid >= Request.Decision.MinBid;
+    private bool CanPayInFull => Request.Decision.MaxBid >= Request.Decision.MinBid;
+    private bool CanDownPay => Request.Decision.MaxDownPaymentBid >= Request.Decision.MinBid;
+    private bool CanBid => CanPayInFull || CanDownPay;
+    private int MaxBid => downPayment ? Request.Decision.MaxDownPaymentBid : Request.Decision.MaxBid;
+    private int Deposit => CityTycoon.Engine.Steps.AuctionStep.Deposit(Content.Rules, bid);
 
     private string? Problem =>
         bid < Request.Decision.MinBid ? $"The minimum bid is {UiHelpers.Money(Request.Decision.MinBid)}."
-        : bid > Request.Decision.MaxBid ? $"You only have {UiHelpers.Money(Request.View.Me.Cash)}."
+        : bid > MaxBid && downPayment ? $"Your deposit can't be more than your cash ({UiHelpers.Money(Request.View.Me.Cash)})."
+        : bid > MaxBid ? $"You only have {UiHelpers.Money(Request.View.Me.Cash)}."
         : bid % Inc != 0 ? $"Bids go up in steps of ${Inc}."
         : null;
 
@@ -63,9 +79,10 @@
         {
             shownFor = Request;
             bid = Request.Decision.MinBid;
+            downPayment = !CanPayInFull && CanDownPay;
         }
     }
 
     private void Change(int amount) =>
-        bid = Math.Clamp(bid + amount, Request.Decision.MinBid, Math.Max(Request.Decision.MinBid, Request.Decision.MaxBid));
+        bid = Math.Clamp(bid + amount, Request.Decision.MinBid, Math.Max(Request.Decision.MinBid, MaxBid));
 }

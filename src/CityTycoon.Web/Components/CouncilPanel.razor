@@ -13,7 +13,7 @@
             {
                 var ordinance = Content.Ordinance(id);
                 <div class="card-view ordinance">
-                    <strong>@ordinance.Name</strong>
+                    <strong>@ordinance.Name <SpeakButton Text="@(ordinance.Name + ". " + ordinance.Text)" Label="@ordinance.Name" /></strong>
                     <span class="timing">@LastsText(ordinance)</span>
                     <p>@ordinance.Text</p>
                     <button class="small primary" @onclick="() => OnAnswer.InvokeAsync(new ChooseOrdinance(id))">Put this to a vote</button>
@@ -46,7 +46,7 @@ else
     <div class="decision council vote">
         <h2>@view.Me.Name, cast your vote</h2>
         <div class="card-view ordinance">
-            <strong>@ordinance.Name@(decision.DistrictId is string d ? " in " + Content.Board.Districts.First(x => x.Id == d).Name : "")</strong>
+            <strong>@ordinance.Name@(decision.DistrictId is string d ? " in " + Content.Board.Districts.First(x => x.Id == d).Name : "") <SpeakButton Text="@(ordinance.Name + ". " + ordinance.Text)" Label="@ordinance.Name" /></strong>
             <span class="timing">@LastsText(ordinance)</span>
             <p>@ordinance.Text</p>
         </div>

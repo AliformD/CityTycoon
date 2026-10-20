@@ -97,7 +97,7 @@ public class BonusTests
         game.PlaceBefore(0, "go", 5);
         game.Roll(0, 1, 4);
         Assert.Contains(game.State.Log, e => e is PerkPaid { FromId: 0, ToId: 1, Amount: 20, Perk: "Utility Bill" });
-        Assert.Equal(1500 + 200 - 20, game.Player(0).Cash);
+        Assert.Equal(1500 + 200 - 20 + 100, game.Player(0).Cash);   // the poorer player also gets the $100 catch-up bonus
         Assert.Equal(1500 + 20, game.Player(1).Cash);
     }
 

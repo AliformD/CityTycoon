@@ -46,7 +46,7 @@ public static class Movement
     /// <summary>
     /// GO effects, in the order of Section 15.1: the salary, Utility Bill, Community Roots,
     /// Momentum tokens, down-payment balances due, the City Planner's peek, and last of all
-    /// the Red perk's Hostile Takeover becoming available again. (The catch-up bonus joins in Phase 9.)
+    /// the Red perk's Hostile Takeover becoming available again. and the catch-up bonus for the player furthest behind.
     /// </summary>
     public static void CollectGo(EngineContext ctx, PlayerState player)
     {
@@ -69,6 +69,13 @@ public static class Movement
             ctx.Emit(new PerkIncome(player.Id, amount, source));
         }
 
+        // Step 4: catch-up bonus. Whoever has the lowest net worth (ties all count) gets $100 (Section 16.2).
+        if (IsLowestNetWorth(ctx, player))
+        {
+            player.Cash += ctx.Rules.CatchUpBonus;
+            ctx.Emit(new CatchUpPaid(player.Id, ctx.Rules.CatchUpBonus));
+        }
+
         // Step 5: gain a Momentum token (and the extra one from Commuter Belt).
         MomentumRules.Gain(ctx, player, ctx.Rules.GoMomentumGain, "GO");
         foreach (var (amount, source) in RuleModifiers.GoMomentums(ctx.State, ctx.Content, player.Id))
@@ -88,6 +95,14 @@ public static class Movement
             .OrderByDescending(p => ctx.State.IndexOf(p.PropertyId));
         foreach (PropertyState p in pending)
             ctx.Push(new DownPaymentDueStep { PlayerId = player.Id, PropertyId = p.PropertyId });
+    }
+
+    /// <summary>True if no other player still in the game has a lower net worth than this one.</summary>
+    private static bool IsLowestNetWorth(EngineContext ctx, PlayerState player)
+    {
+        var active = RuleModifiers.Active(ctx.State, ctx.Content);
+        int mine = NetWorth.Calculate(ctx.State, ctx.Content, player.Id, active);
+        return ctx.State.ActivePlayers.All(p => NetWorth.Calculate(ctx.State, ctx.Content, p.Id, active) >= mine);
     }
 
     /// <summary>

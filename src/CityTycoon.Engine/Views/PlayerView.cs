@@ -48,6 +48,9 @@ public sealed record PlayerView(
 
     public int OrdinanceDeckCount { get; init; }
 
+    /// <summary>Each player's net worth split into cash, property, buildings, cards and loans (public, like net worth itself).</summary>
+    public IReadOnlyDictionary<int, NetWorth.Breakdown> NetWorthBreakdowns { get; init; } = new Dictionary<int, NetWorth.Breakdown>();
+
     public PlayerInfo Me => Players.First(p => p.Id == ViewerId);
 
     public PlayerInfo Player(int id) => Players.First(p => p.Id == id);
@@ -112,6 +115,7 @@ public sealed record PlayerView(
             ActiveOrdinances = state.ActiveOrdinances.ToList(),
             NextCouncilRound = (state.Round + content.Rules.CouncilEveryNRounds - 1) / content.Rules.CouncilEveryNRounds * content.Rules.CouncilEveryNRounds,
             OrdinanceDeckCount = state.OrdinanceDeck.Count,
+            NetWorthBreakdowns = state.Players.ToDictionary(p => p.Id, p => NetWorth.Explain(state, content, p.Id, modifiers)),
         };
     }
 }

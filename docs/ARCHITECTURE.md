@@ -232,3 +232,12 @@ Because the engine only ever sees "a controller answered", bots, people on this 
 ### Keeping the shared screen fair
 
 On one shared screen, the board and log are drawn from a **spectator view**: the same `PlayerView` a player gets, but for nobody in particular, so it holds no secrets. The auction panel uses the bidding player's own view. In Hidden mode with two or more humans, the pass-the-device screen covers everything until the right person taps "show me". Since Phase 5 every question can show that person's secret cards, so the pass screen appears whenever the next question is for a different person.
+
+## Polish: saves, settings and the rules page (Phase 9)
+
+- `SaveGame.cs` turns the engine state into JSON (`SavedGame`) and back. `GameSession.Resume` starts a game from one, sharing `Launch` with `Start`.
+- `SettingsService` keeps `UserSettings` and applies them through `wwwroot/js/app.js` (`window.ct`), which sets CSS variables like `--text-scale` and `--line-spacing`.
+- `SpeechService` and `SpeakButton` read text aloud with the browser's speech feature.
+- `RulesReference` builds the text of the `/rules` page from the content files, so card text stays in one place.
+- `NetWorth.Breakdown` splits net worth into parts. `PlayerView.NetWorthBreakdowns` hands it to the end screen.
+- Tests: `SaveLoadTests` saves and reloads after every step of a full game and checks the game continues the same way.

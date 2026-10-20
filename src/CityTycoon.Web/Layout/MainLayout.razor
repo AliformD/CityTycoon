@@ -1,3 +1,11 @@
 @inherits LayoutComponentBase
+@inject SettingsService Settings
 
-@Body
+<a class="skip-link" href="#main">Skip to the game</a>
+<div id="main" tabindex="-1">
+    @Body
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync() => await Settings.LoadAsync();
+}

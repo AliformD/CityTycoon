@@ -9,26 +9,28 @@
         <thead>
             <tr>
                 <th scope="col">Rank</th><th scope="col">Player</th><th scope="col">Cash</th><th scope="col">Property</th>
-                <th scope="col">Buildings</th><th scope="col">Net worth</th><th scope="col">Rent collected</th><th scope="col">Auctions won</th>
+                <th scope="col">Buildings</th><th scope="col">Cards</th><th scope="col">Loans</th><th scope="col">Net worth</th><th scope="col">Rent collected</th><th scope="col">Auctions won</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var s in result.Standings)
             {
                 var p = View.Player(s.PlayerId);
-                var (property, buildings) = Holdings(s.PlayerId);
+                var parts = View.NetWorthBreakdowns[s.PlayerId];
                 <tr class="@(result.WinnerIds.Contains(s.PlayerId) ? "winner" : "")">
                     <td>@(s.IsBankrupt ? "–" : s.Rank)</td>
                     <th scope="row"><span class="token" style="background:@UiHelpers.PlayerColor(p.Id)" aria-hidden="true">@UiHelpers.Initial(p.Name)</span> @p.Name</th>
                     @if (s.IsBankrupt)
                     {
-                        <td colspan="4">Bankrupt</td>
+                        <td colspan="6">Bankrupt</td>
                     }
                     else
                     {
-                        <td>@UiHelpers.Money(s.Cash)</td>
-                        <td>@UiHelpers.Money(property)</td>
-                        <td>@UiHelpers.Money(buildings)</td>
+                        <td>@UiHelpers.Money(parts.Cash)</td>
+                        <td>@UiHelpers.Money(parts.Properties)</td>
+                        <td>@UiHelpers.Money(parts.Buildings)</td>
+                        <td>@UiHelpers.Money(parts.Cards)</td>
+                        <td>@(parts.Loans > 0 ? "−" + UiHelpers.Money(parts.Loans) : "$0")</td>
                         <td><strong>@UiHelpers.Money(s.NetWorth)</strong></td>
                     }
                     <td>@UiHelpers.Money(RentCollected(s.PlayerId))</td>
@@ -50,17 +52,4 @@
     private int RentCollected(int playerId) => View.Log.OfType<RentPaid>().Where(r => r.ToId == playerId).Sum(r => r.Amount);
 
     private int AuctionsWon(int playerId) => View.Log.OfType<AuctionWon>().Count(a => a.PlayerId == playerId);
-
-    /// <summary>Property value (half if mortgaged) and building value, matching the net-worth rules.</summary>
-    private (int Property, int Buildings) Holdings(int playerId)
-    {
-        int property = 0, buildings = 0;
-        foreach (var owned in View.Properties.Values.Where(p => p.OwnerId == playerId))
-        {
-            var def = Content.Property(owned.Id);
-            property += owned.IsMortgaged ? def.AssessedValue - CityTycoon.Engine.Rules.NetWorth.MortgageValue(Content, def) : def.AssessedValue;
-            buildings += CityTycoon.Engine.Rules.NetWorth.BuildingValue(Content, def, owned.Level);
-        }
-        return (property, buildings);
-    }
 }

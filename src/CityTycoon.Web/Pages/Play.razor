@@ -96,14 +96,22 @@ else
             }
             else if (selectedSpaceId != null)
             {
-                <section class="detail"><p>@SpaceHelp(view)</p><button class="small" @onclick="() => selectedSpaceId = null">Close</button></section>
+                <section class="detail"><p>@SpaceHelp(view) <SpeakButton Text="@SpaceHelp(view)" Label="this space" /></p><button class="small" @onclick="() => selectedSpaceId = null">Close</button></section>
             }
             else
             {
                 <p class="hint">Tip: click any space on the board to see its details.</p>
             }
             <label class="toggle"><input type="checkbox" @bind="Session.FastBots" /> Fast bots</label>
-            <button class="small" @onclick='() => Nav.NavigateTo("")'>Menu</button>
+            <div class="save-row">
+                <button class="small" @onclick="SaveNow">Save game</button>
+                <button class="small" @onclick="Session.DownloadSaveAsync">Download save file</button>
+                <a href="rules" target="_blank" rel="noopener">Rules</a>
+                <button class="small" aria-expanded="@showSettings" @onclick="() => showSettings = !showSettings">Settings</button>
+                <button class="small" @onclick='() => Nav.NavigateTo("")'>Menu</button>
+            </div>
+            @if (saveMessage != null) { <p class="hint" role="status">@saveMessage</p> }
+            @if (showSettings) { <SettingsPanel /> }
         </aside>
     </div>
 
@@ -120,6 +128,15 @@ else
 
 @code {
     private string? selectedSpaceId;
+    private string? saveMessage;
+    private bool showSettings;
+
+    private async Task SaveNow()
+    {
+        saveMessage = await Session.SaveInBrowserAsync()
+            ? "Saved in this browser. Use \"Continue saved game\" on the menu to carry on."
+            : "The browser wouldn't keep the save (it may be full). Use \"Download save file\" instead.";
+    }
     private string? previewFocusId;
 
     private void Answer(GameAction action)

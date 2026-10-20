@@ -84,6 +84,7 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(OwnerKeptProperty), nameof(OwnerKeptProperty))]
 [JsonDerivedType(typeof(TileRevealed), nameof(TileRevealed))]
 [JsonDerivedType(typeof(TileFeePaid), nameof(TileFeePaid))]
+[JsonDerivedType(typeof(CatchUpPaid), nameof(CatchUpPaid))]
 [JsonDerivedType(typeof(CouncilStarted), nameof(CouncilStarted))]
 [JsonDerivedType(typeof(CouncilCancelled), nameof(CouncilCancelled))]
 [JsonDerivedType(typeof(OrdinanceProposed), nameof(OrdinanceProposed))]
@@ -348,3 +349,6 @@ public sealed record CouncilPaymentMade(int PlayerId, int Amount, string Ordinan
 
 /// <summary>Public Works revealed a hidden Government tile.</summary>
 public sealed record TileRevealedByCouncil(string SpaceId, string TileId) : GameEvent;
+
+/// <summary>The catch-up bonus: the player with the lowest net worth was paid extra for passing GO (Section 16.2).</summary>
+public sealed record CatchUpPaid(int PlayerId, int Amount) : GameEvent;

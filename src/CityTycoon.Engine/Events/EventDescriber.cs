@@ -107,6 +107,7 @@ public static class EventDescriber
             RecoverySkipped r => $"{Name(r.PlayerId)} skips the Hospital recovery and rolls 2 dice.",
             TileRevealed t => $"{Name(t.PlayerId)} revealed the Government tile: it's the {Tile(t.TileId)}!",
             TileFeePaid f => $"{Name(f.FromId)} paid ${f.Amount} to {(f.ToId is int to ? Name(to) : "the bank")} ({Tile(f.TileId)}).",
+            CatchUpPaid c => $"{Name(c.PlayerId)} has the lowest net worth, so they collected a ${c.Amount} catch-up bonus.",
             CouncilStarted { Emergency: true } c => $"Emergency City Council session! {Name(c.SetterId)} sets the agenda.",
             CouncilStarted c => $"City Council session. {Name(c.SetterId)} has the lowest net worth, so they set the agenda.",
             CouncilCancelled c => $"The City Council session was called off: {c.Reason}",

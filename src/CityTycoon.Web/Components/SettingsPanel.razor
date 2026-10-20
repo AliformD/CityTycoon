@@ -1,0 +1,52 @@
+@* Settings (Sections 24.2 and 27): font, text size, spacing, animation, bots and reactions. Saved in the browser. *@
+@inject SettingsService Settings
+
+<div class="settings-panel" role="group" aria-labelledby="settings-title">
+    <h2 id="settings-title">Settings</h2>
+
+    <label>Font
+        <select value="@S.Font" @onchange="SetFont">
+            <option value="atkinson">Atkinson Hyperlegible (easy to read)</option>
+            <option value="opendyslexic">OpenDyslexic (needs an internet connection the first time)</option>
+            <option value="system">Your device's own font</option>
+        </select>
+    </label>
+    <label>Text size: @S.TextSize%
+        <input type="range" min="80" max="160" step="10" value="@S.TextSize" @onchange="SetTextSize" />
+    </label>
+    <label>Line spacing: @S.LineSpacing.ToString("0.0")
+        <input type="range" min="1.2" max="2.2" step="0.1" value="@S.LineSpacing.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)"
+               @onchange="SetLineSpacing" />
+    </label>
+    <label>Animation speed
+        <select value="@S.Animation" @onchange="SetAnimation">
+            <option value="@AnimationSpeed.Normal">Normal</option>
+            <option value="@AnimationSpeed.Fast">Fast</option>
+            <option value="@AnimationSpeed.Off">Off (no animation, no pause between bot moves)</option>
+        </select>
+    </label>
+    <label class="toggle"><input type="checkbox" checked="@S.ReduceMotion" @onchange="SetReduceMotion" /> Reduce motion (your device's setting is always respected too)</label>
+    <label class="toggle"><input type="checkbox" checked="@S.FastBots" @onchange="SetFastBots" /> Fast bots: no pause between bot moves</label>
+    <label class="toggle"><input type="checkbox" checked="@S.AutoPassReactions" @onchange="SetAutoPass" /> New games: auto-pass Reaction cards for every person</label>
+
+    <p class="sample">The quick brown fox jumps over the lazy dog. Pay $1,500 to the bank. 0123456789</p>
+</div>
+
+@code {
+    private UserSettings S => Settings.Current;
+
+    private Task SetFont(ChangeEventArgs e) => Change(() => S.Font = e.Value?.ToString() ?? "atkinson");
+    private Task SetTextSize(ChangeEventArgs e) => Change(() => S.TextSize = int.TryParse(e.Value?.ToString(), out int size) ? size : 100);
+    private Task SetLineSpacing(ChangeEventArgs e) => Change(() =>
+        S.LineSpacing = double.TryParse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out double spacing) ? spacing : 1.5);
+    private Task SetAnimation(ChangeEventArgs e) => Change(() => S.Animation = Enum.TryParse(e.Value?.ToString(), out AnimationSpeed speed) ? speed : AnimationSpeed.Normal);
+    private Task SetReduceMotion(ChangeEventArgs e) => Change(() => S.ReduceMotion = e.Value is true);
+    private Task SetFastBots(ChangeEventArgs e) => Change(() => S.FastBots = e.Value is true);
+    private Task SetAutoPass(ChangeEventArgs e) => Change(() => S.AutoPassReactions = e.Value is true);
+
+    private async Task Change(Action edit)
+    {
+        edit();
+        await Settings.SaveAsync();
+    }
+}

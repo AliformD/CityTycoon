@@ -145,11 +145,11 @@ public class DownPaymentTests
         var game = new TestGame(players: 3);
         game.Give(0, "market-street");
         game.Property("market-street").IsPending = true;
-        game.Property("market-street").PendingBalance = 300;
+        game.Property("market-street").PendingBalance = 400;
         game.Player(0).Cash = 0;
 
         game.PlaceBefore(0, "go", 5);
-        game.Roll(0, 1, 4); // $200 salary, $300 due
+        game.Roll(0, 1, 4); // $200 salary + $100 catch-up (they are the poorest), $400 due
 
         var decision = game.DecisionFor(0)!;
         Assert.Equal(DecisionKind.RaiseMoney, decision.Kind);
@@ -170,7 +170,7 @@ public class DownPaymentTests
         var game = new TestGame();
         game.Give(0, "market-street");
         game.Property("market-street").IsPending = true;
-        game.Property("market-street").PendingBalance = 300;
+        game.Property("market-street").PendingBalance = 400;
         game.Player(0).Cash = 0;
         game.PlaceBefore(0, "go", 5);
         game.Roll(0, 1, 4);
@@ -178,7 +178,7 @@ public class DownPaymentTests
         game.Do(0, new TakeLoan());
 
         Assert.False(game.Property("market-street").IsPending);
-        Assert.Equal(100, game.Player(0).Cash);
+        Assert.Equal(100, game.Player(0).Cash);   // 300 (salary + catch-up) + 200 loan - 400
     }
 
     [Fact]
@@ -195,7 +195,7 @@ public class DownPaymentTests
         game.Roll(0, 1, 4);
 
         Assert.Null(game.Property("market-street").OwnerId);
-        Assert.Equal(200, game.Player(0).Cash); // the salary stays; the deposit is lost
+        Assert.Equal(300, game.Player(0).Cash); // the salary and catch-up bonus stay; the deposit is lost
         Assert.Equal([1], game.Engine.GetPendingDecisions().Select(d => d.PlayerId));
     }
 }

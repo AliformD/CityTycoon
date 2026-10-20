@@ -1,0 +1,49 @@
+@page "/rules"
+@inject NavigationManager Nav
+
+<PageTitle>Rules - City Tycoon</PageTitle>
+
+<main class="rules-page">
+    <h1>How to play City Tycoon</h1>
+    <p>A short summary of the rules. Each part has a speaker button that reads it out loud.</p>
+    <nav aria-label="Rules sections">
+        <ul>
+            @foreach (var part in sections)
+            {
+                <li><a href="rules#@part.Id">@part.Title</a></li>
+            }
+        </ul>
+    </nav>
+    @foreach (var part in sections)
+    {
+        <div role="region" id="@part.Id" aria-labelledby="@(part.Id + "-title")">
+            <h2 id="@(part.Id + "-title")">@part.Title <SpeakButton Text="@part.SpokenText" Label="@part.Title" /></h2>
+            @if (part.Paragraphs.Count == 1)
+            {
+                <p>@part.Paragraphs[0]</p>
+            }
+            else
+            {
+                @foreach (var paragraph in part.Paragraphs)
+                {
+                    <p>@paragraph</p>
+                }
+            }
+        </div>
+    }
+    <div role="region" aria-labelledby="deck-title">
+        <h2 id="deck-title">The ordinance cards</h2>
+        <ul>
+            @foreach (var ordinance in Content.Ordinances)
+            {
+                <li><strong>@ordinance.Name</strong> (@ordinance.Copies in the deck): @ordinance.Text <SpeakButton Text="@(ordinance.Name + ". " + ordinance.Text)" Label="@ordinance.Name" /></li>
+            }
+        </ul>
+    </div>
+    <p><button class="big" @onclick='() => Nav.NavigateTo("")'>Back to the menu</button></p>
+</main>
+
+@code {
+    private static GameContent Content => GameContent.Default;
+    private readonly IReadOnlyList<RulesSection> sections = RulesReference.Sections(Content);
+}

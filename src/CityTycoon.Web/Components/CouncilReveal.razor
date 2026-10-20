@@ -8,7 +8,7 @@
 <div class="council-reveal" role="dialog" aria-modal="true" aria-labelledby="reveal-title">
     <div class="reveal-box">
         <h2 id="reveal-title">City Council: @ordinance.Name@(Result.DistrictId is string d ? " in " + Content.Board.Districts.First(x => x.Id == d).Name : "")</h2>
-        <p>@ordinance.Text</p>
+        <p>@ordinance.Text <SpeakButton Text="@Spoken(ordinance)" Label="the result" /></p>
 
         <table class="scoreboard votes">
             <thead><tr><th>Player</th><th>Vote</th><th>Lobbying</th><th>Influence</th></tr></thead>
@@ -46,4 +46,12 @@
     [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
     [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>The result as a sentence or two, for read-aloud.</summary>
+    private string Spoken(OrdinanceDefinition ordinance)
+    {
+        int total = Result.YesInfluence + Result.NoInfluence;
+        double chance = total == 0 ? 0 : 100.0 * Result.YesInfluence / total;
+        return $"{ordinance.Name}. {ordinance.Text} Yes had {Result.YesInfluence} influence and No had {Result.NoInfluence}, a {chance:0} percent chance of passing. The roll was {Result.Roll + 1} out of {total}. It {(Result.Passed ? "passed" : "failed")}.";
+    }
 }

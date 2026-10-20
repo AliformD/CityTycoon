@@ -24,6 +24,7 @@ public sealed class RulesConfig
     public required int GoSalary { get; init; }
     public required int GoMomentumGain { get; init; }
     public required int CatchUpBonus { get; init; }
+    public required int HandCardNetWorth { get; init; }
     public required int IncomeTax { get; init; }
     public required int LuxuryTax { get; init; }
 

@@ -1,7 +1,7 @@
 @* One Opportunity or Event card: its name, what it does, and when it can be played. *@
 @{ var card = Content.Card(CardId); }
 <div class="card-view deck-@card.Deck.ToString().ToLowerInvariant()">
-    <strong>@card.Name</strong>
+    <strong>@card.Name <SpeakButton Text="@(card.Name + ". " + card.Text)" Label="@card.Name" /></strong>
     <span class="timing">@TimingText(card)</span>
     <p>@card.Text</p>
     @ChildContent

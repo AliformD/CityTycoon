@@ -14,7 +14,7 @@ public static class NetWorth
         if (player.IsBankrupt)
             return 0;
 
-        int total = player.Cash;
+        int total = player.Cash + player.Hand.Count * content.Rules.HandCardNetWorth;
         foreach (PropertyState owned in state.Properties.Values.Where(p => p.OwnerId == playerId))
         {
             PropertyDefinition def = content.Property(owned.PropertyId);
@@ -25,6 +25,29 @@ public static class NetWorth
         if (player.Loans > 0)
             total -= player.Loans * RuleModifiers.LoanRepayCost(state, content, playerId, active);
         return total;
+    }
+
+    /// <summary>Where a player's net worth comes from, line by line (the end screen shows this).</summary>
+    public sealed record Breakdown(int Cash, int Properties, int Buildings, int Cards, int Loans)
+    {
+        public int Total => Cash + Properties + Buildings + Cards - Loans;
+    }
+
+    /// <summary>The same sum as <see cref="Calculate"/>, split into its parts. A bankrupt player has nothing.</summary>
+    public static Breakdown Explain(GameState state, GameContent content, int playerId, IReadOnlyList<IRuleModifier>? active = null)
+    {
+        PlayerState player = state.Player(playerId);
+        if (player.IsBankrupt)
+            return new Breakdown(0, 0, 0, 0, 0);
+        int properties = 0, buildings = 0;
+        foreach (PropertyState owned in state.Properties.Values.Where(p => p.OwnerId == playerId))
+        {
+            PropertyDefinition def = content.Property(owned.PropertyId);
+            properties += PropertyValue(content, def, owned);
+            buildings += BuildingValue(content, def, owned.Level);
+        }
+        return new Breakdown(player.Cash, properties, buildings, player.Hand.Count * content.Rules.HandCardNetWorth,
+            player.Loans * RuleModifiers.LoanRepayCost(state, content, playerId, active));
     }
 
     /// <summary>

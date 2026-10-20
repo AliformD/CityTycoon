@@ -11,6 +11,8 @@
   "goSalary": 200,
   "goMomentumGain": 1,
   "catchUpBonus": 100,
+  // What each Opportunity card in your hand adds to your net worth (Section 16.3).
+  "handCardNetWorth": 50,
   "incomeTax": 200,
   "luxuryTax": 100,
 

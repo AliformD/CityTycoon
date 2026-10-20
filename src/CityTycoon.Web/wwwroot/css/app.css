@@ -39,8 +39,8 @@ html, body {
     background: var(--bg);
     color: var(--text);
     font-family: var(--font);
-    font-size: 17px;
-    line-height: 1.5;
+    font-size: calc(17px * var(--text-scale, 1));
+    line-height: var(--line-spacing, 1.5);
 }
 
 h1, h2 { line-height: 1.2; }
@@ -240,10 +240,11 @@ input, select {
 .scoreboard th, .scoreboard td { border-bottom: 1px solid var(--line); padding: 0.2rem 0.4rem; text-align: left; }
 .scoreboard tr.winner { background: var(--highlight); color: #000; }
 
-/* Respect "reduce motion" (Section 27). There are no animations yet, but this keeps future ones polite. */
+/* Respect "reduce motion" (Section 27): the system setting, or the same switch in this game's Settings. */
 @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
 }
+html[data-reduce-motion="true"] * { animation: none !important; transition: none !important; }
 
 /* ---------- Blazor's built-in error bar and loading spinner ---------- */
 
@@ -354,7 +355,7 @@ button.primary small { color: inherit; }
 .vote-option.picked { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 
 .council-reveal { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, 0.7); display: grid; place-items: center; padding: 1rem; overflow: auto; }
-.reveal-box { background: var(--panel); border: 3px solid var(--highlight); border-radius: 12px; padding: 1rem 1.4rem; max-width: 40rem; width: 100%; animation: reveal-in 0.4s ease-out; }
+.reveal-box { background: var(--panel); border: 3px solid var(--highlight); border-radius: 12px; padding: 1rem 1.4rem; max-width: 40rem; width: 100%; animation: reveal-in calc(0.4s * var(--anim-scale, 1)) ease-out; }
 .reveal-box h2 { margin-top: 0; }
 .votes td, .votes th { padding: 0.25rem 0.5rem; }
 
@@ -362,10 +363,24 @@ button.primary small { color: inherit; }
 .odds-meter { position: relative; display: flex; height: 2.2rem; border: 2px solid var(--line); border-radius: 8px; overflow: hidden; margin: 0.8rem 0; }
 .odds-meter .yes-part { width: var(--yes); background: #2a9d47; color: #fff; padding: 0.3rem 0.5rem; font-weight: 700; white-space: nowrap; overflow: hidden; }
 .odds-meter .no-part { flex: 1; background: #b8323d; color: #fff; padding: 0.3rem 0.5rem; text-align: right; font-weight: 700; }
-.odds-meter .roll-marker { position: absolute; top: -4px; bottom: -4px; left: var(--roll); width: 6px; margin-left: -3px; background: var(--highlight); border: 2px solid #000; border-radius: 3px; animation: roll-sweep 2s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-.verdict { font-size: 1.3rem; font-weight: 700; animation: verdict-in 0.4s ease-out 2s both; }
+.odds-meter .roll-marker { position: absolute; top: -4px; bottom: -4px; left: var(--roll); width: 6px; margin-left: -3px; background: var(--highlight); border: 2px solid #000; border-radius: 3px; animation: roll-sweep calc(2s * var(--anim-scale, 1)) cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.verdict { font-size: 1.3rem; font-weight: 700; animation: verdict-in calc(0.4s * var(--anim-scale, 1)) ease-out calc(2s * var(--anim-scale, 1)) both; }
 .verdict.passed { color: #1f8a3b; }
 .verdict.failed { color: var(--error); }
 @keyframes reveal-in { from { transform: scale(0.9); opacity: 0; } }
 @keyframes roll-sweep { from { left: 0; } }
 @keyframes verdict-in { from { opacity: 0; transform: translateY(6px); } }
+
+/* ----- Phase 9: settings, speech, rules reference, saving ----- */
+.speak { border: 0; background: transparent; padding: 0 0.25rem; font-size: 0.95rem; cursor: pointer; }
+.speak[aria-pressed="true"] { background: var(--highlight); color: #000; border-radius: 4px; }
+.settings-panel { background: var(--panel); border: 2px solid var(--line); border-radius: 10px; padding: 0.5rem 1rem; margin: 1rem 0; max-width: 40rem; }
+.settings-panel label { display: block; margin: 0.4rem 0; }
+.settings-panel .sample { border: 1px dashed var(--line); border-radius: 6px; padding: 0.4rem 0.6rem; }
+.rules-page { max-width: 46rem; margin: 0 auto; padding: 1rem; }
+.rules-page section { background: var(--panel); border: 2px solid var(--line); border-radius: 8px; padding: 0.3rem 1rem; margin: 0.8rem 0; }
+.rules-page h2 { display: flex; gap: 0.5rem; align-items: center; }
+.save-row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.saved-game { border: 2px solid var(--accent); border-radius: 10px; padding: 0.5rem 1rem; margin: 0.8rem 0; }
+.skip-link { position: absolute; left: -999px; }
+.skip-link:focus { left: 0.5rem; top: 0.5rem; z-index: 100; background: var(--highlight); color: #000; padding: 0.3rem 0.6rem; }

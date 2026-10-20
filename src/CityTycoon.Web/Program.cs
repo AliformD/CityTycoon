@@ -8,6 +8,8 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // One GameSession for the whole browser tab, shared by every page.
+builder.Services.AddSingleton<SettingsService>();
+builder.Services.AddSingleton<SpeechService>();
 builder.Services.AddSingleton<GameSession>();
 
 await builder.Build().RunAsync();

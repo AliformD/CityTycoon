@@ -12,8 +12,8 @@ namespace CityTycoon.Sim;
 public sealed record SimOptions(int Games, int Players, ulong Seed, GameMode Mode, int Rounds, string OutputFolder,
     BotKind Bots = BotKind.Mixed, CharacterMode Characters = CharacterMode.Random);
 
-/// <summary>Which bots play in the Sim: all random, all Easy, or half and half (alternating seats).</summary>
-public enum BotKind { Random, Easy, Mixed }
+/// <summary>Which bots play in the Sim: all one kind, or two kinds in alternating seats (even seats get the first, listed one, so HardVsEasy gives Hard bots seats 0, 2, 4).</summary>
+public enum BotKind { Random, Easy, Normal, Hard, Mixed, NormalVsEasy, HardVsEasy, HardVsNormal }
 
 /// <summary>The numbers collected from one finished (or crashed) game.</summary>
 public sealed record GameStats(
@@ -75,6 +75,13 @@ public sealed record GameStats(
     public int TiedSealedAuctions { get; init; }
     public int MogulEdgeWins { get; init; }
     public int HostileTakeovers { get; init; }
+
+    /// <summary>City Council sessions held, how many ordinances passed, the total lobbying money spent, and the most any one vote swung (Yes percent).</summary>
+    public int CouncilSessions { get; init; }
+    public int OrdinancesPassed { get; init; }
+    public int LobbyingSpent { get; init; }
+    public int CouncilCancelled { get; init; }
+    public Dictionary<string, int> OrdinanceCounts { get; init; } = [];
     public int PerkPayments { get; init; }
 }
 
@@ -141,6 +148,11 @@ public static class SimulationRunner
     {
         BotKind.Random => new RandomBot(botSeed),
         BotKind.Easy => new EasyBot(botSeed),
+        BotKind.Normal => new NormalBot(botSeed),
+        BotKind.Hard => new HardBot(botSeed),
+        BotKind.NormalVsEasy => playerId % 2 == 0 ? new NormalBot(botSeed) : new EasyBot(botSeed),
+        BotKind.HardVsEasy => playerId % 2 == 0 ? new HardBot(botSeed) : new EasyBot(botSeed),
+        BotKind.HardVsNormal => playerId % 2 == 0 ? new HardBot(botSeed) : new NormalBot(botSeed),
         _ => playerId % 2 == 0 ? new EasyBot(botSeed) : new RandomBot(botSeed),
     };
 
@@ -215,6 +227,11 @@ public static class SimulationRunner
             TiedSealedAuctions = SealedAuctionOutcomes(state).Count(o => o.Tied),
             MogulEdgeWins = SealedAuctionOutcomes(state).Count(o => o.MogulWonOnEdgeOrTie),
             HostileTakeovers = log.OfType<HostileTakeoverUsed>().Count(),
+            CouncilSessions = log.OfType<CouncilResolved>().Count(),
+            OrdinancesPassed = log.OfType<CouncilResolved>().Count(r => r.Passed),
+            LobbyingSpent = log.OfType<CouncilResolved>().Sum(r => r.Votes.Sum(v => v.Lobby)),
+            CouncilCancelled = log.OfType<CouncilCancelled>().Count(),
+            OrdinanceCounts = log.OfType<CouncilResolved>().Where(r => r.Passed).GroupBy(r => r.OrdinanceId).ToDictionary(g => g.Key, g => g.Count()),
             PerkPayments = log.OfType<PerkPaid>().Count() + log.OfType<PerkIncome>().Count(),
         };
     }

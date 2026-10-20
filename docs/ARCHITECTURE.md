@@ -185,6 +185,21 @@ New things the player is asked, each a step on the resolution stack: `CharacterP
 
 The Sim (`--characters none|random`) prints a win rate for each character and flags any that wins more than 5 points above fair share.
 
+## The City Council (Phase 8)
+
+Sessions, votes and ordinances follow the same pattern as cards: the **content** is JSON and the **behavior** is a small class.
+
+- `content/ordinances.json` lists the 14 ordinance kinds (17 cards with `copies`). An entry gives a `name`, `text`, optional `target: "district"`, a `duration` in rounds (or `lasting: true`), and an `effect` that names an effect type plus its settings.
+- `src/CityTycoon.Engine/Ordinances/OrdinanceEffects.cs` is the explicit list of effect types (`Rezone`, `AddPermits`, `BuildingMoratorium`, `DistrictRent`, `RailroadRent`, `TaxPerLevel`, `InfrastructureBond`, `CollectFromBank`, `Preserve`, `CasinoCap`, `RevealAllTiles`). Each answers: *can this be picked right now?*, *which districts?*, *what happens when it passes?*, and, for timed ones, *which rule change does it make while it lasts?*
+- A passed ordinance with a duration goes into `GameState.ActiveOrdinances`. `RuleModifiers.Active` turns each into a normal rule modifier (rent percentages reuse the `RentPercent` hook; two new hooks, `BuildingBlockedReason` and `MaxCasinoStake`, cover building and the Casino). The modifier cache's signature includes the active ordinances, so the cache refreshes when one starts or ends.
+- `CouncilStep` (`Steps/CouncilSteps.cs`) runs a session as stages: start (find the agenda setter, draw two ordinances), pick ordinance, pick district, vote, resolve. Because a step keeps its progress in plain properties, a session can be saved and loaded halfway through, like every other step.
+- The vote is a question put to every player at once (like sealed bids). Votes are only counted when all are in. The roll comes from `IDiceSource.RollBelow`, so tests can script it (`ScriptedDice.AddCouncilRoll`).
+- `GameStep` starts a Regular session after the end-of-round timers tick; City Hall and the Emergency Session card push an Emergency one. `RoundEndHandled` stops the end-of-round work from running twice when the game comes back after a session.
+
+In the browser, `CouncilPanel` asks the three questions (agenda, district, vote). When a vote has been counted, `GameSession` pauses the game and shows `CouncilReveal`, a full-screen box with every vote, the odds meter and the roll, until someone clicks Continue (games with no humans, and Fast bots, skip the pause). The meter's animation switches off when the player asks their device for reduced motion.
+
+The Sim prints votes per game, the pass rate, lobbying spent, and how often each ordinance passed.
+
 ## The browser app (Phase 2)
 
 The Web project draws the game and passes clicks to the engine. It never changes the game state itself.
@@ -217,3 +232,18 @@ Because the engine only ever sees "a controller answered", bots, people on this 
 ### Keeping the shared screen fair
 
 On one shared screen, the board and log are drawn from a **spectator view**: the same `PlayerView` a player gets, but for nobody in particular, so it holds no secrets. The auction panel uses the bidding player's own view. In Hidden mode with two or more humans, the pass-the-device screen covers everything until the right person taps "show me". Since Phase 5 every question can show that person's secret cards, so the pass screen appears whenever the next question is for a different person.
+
+## Polish: saves, settings and the rules page (Phase 9)
+
+- `SaveGame.cs` turns the engine state into JSON (`SavedGame`) and back. `GameSession.Resume` starts a game from one, sharing `Launch` with `Start`.
+- `SettingsService` keeps `UserSettings` and applies them through `wwwroot/js/app.js` (`window.ct`), which sets CSS variables like `--text-scale` and `--line-spacing`.
+- `SpeechService` and `SpeakButton` read text aloud with the browser's speech feature.
+- `RulesReference` builds the text of the `/rules` page from the content files, so card text stays in one place.
+- `NetWorth.Breakdown` splits net worth into parts. `PlayerView.NetWorthBreakdowns` hands it to the end screen.
+- Tests: `SaveLoadTests` saves and reloads after every step of a full game and checks the game continues the same way.
+
+## Bots: Easy, Normal and Hard (Phase 10)
+
+- `EasyBot` answers every kind of decision. `NormalBot` and `HardBot` inherit from it and override a few `virtual` methods: `Reserve`, `PropertyWorth`, `SealedAmount`, `PickBuild`, `Vote`, `NudgeThreshold`.
+- The estimates (set bonus, blocking, vote impact) use only the bot's `PlayerView`.
+- The Sim has mixed-table modes so one kind of bot can be measured against another. Results are written up in `docs/BALANCE.md`.

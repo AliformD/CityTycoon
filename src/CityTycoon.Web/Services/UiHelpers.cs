@@ -118,6 +118,9 @@ public static class UiHelpers
             HostileTakeover ht => $"🏴 Hostile Takeover of {Name(ht.PropertyId)}",
             RerollDice => "🔁 Roll again",
             KeepCard kc => $"Keep {content.Card(kc.CardId).Name}",
+            ChooseOrdinance co => content.Ordinance(co.OrdinanceId).Name,
+            ChooseDistrict cd => content.Board.Districts.First(d => d.Id == cd.DistrictId).Name,
+            CastVote cv => cv.Choice == VoteChoice.Abstain ? "Abstain" : $"Vote {cv.Choice}{(cv.Lobby > 0 ? $" and lobby {Money(cv.Lobby)}" : "")}",
             PeekAtTile pt => view.Spaces.First(s => s.Id == pt.SpaceId).Name,
             _ => action.GetType().Name,
         };

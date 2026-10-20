@@ -40,6 +40,17 @@ public sealed record PlayerView(
 {
     public bool IsOver => Result != null;
 
+    /// <summary>Ordinances in force right now, with the rounds each has left (null means it never ends).</summary>
+    public IReadOnlyList<ActiveOrdinance> ActiveOrdinances { get; init; } = [];
+
+    /// <summary>The round at the end of which the next Regular City Council session happens.</summary>
+    public int NextCouncilRound { get; init; }
+
+    public int OrdinanceDeckCount { get; init; }
+
+    /// <summary>Each player's net worth split into cash, property, buildings, cards and loans (public, like net worth itself).</summary>
+    public IReadOnlyDictionary<int, NetWorth.Breakdown> NetWorthBreakdowns { get; init; } = new Dictionary<int, NetWorth.Breakdown>();
+
     public PlayerInfo Me => Players.First(p => p.Id == ViewerId);
 
     public PlayerInfo Player(int id) => Players.First(p => p.Id == id);
@@ -99,7 +110,13 @@ public sealed record PlayerView(
             // Events never contain secrets before they're revealed (sealed bids only appear in BidsRevealed,
             // and an Opportunity card only appears once it's played, sold or discarded).
             Log: state.Log.ToList(),
-            Result: state.Result);
+            Result: state.Result)
+        {
+            ActiveOrdinances = state.ActiveOrdinances.ToList(),
+            NextCouncilRound = (state.Round + content.Rules.CouncilEveryNRounds - 1) / content.Rules.CouncilEveryNRounds * content.Rules.CouncilEveryNRounds,
+            OrdinanceDeckCount = state.OrdinanceDeck.Count,
+            NetWorthBreakdowns = state.Players.ToDictionary(p => p.Id, p => NetWorth.Explain(state, content, p.Id, modifiers)),
+        };
     }
 }
 

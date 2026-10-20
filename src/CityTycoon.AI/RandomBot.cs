@@ -28,6 +28,14 @@ public sealed class RandomBot(ulong seed) : IPlayerController
         if (decision.Kind == DecisionKind.SubmitBid)
             return Task.FromResult(ChooseBid(decision));
 
+        // City Council: any vote, with a bit of lobbying so the Sim exercises the money side too.
+        if (decision.Kind == DecisionKind.CouncilVote)
+        {
+            var choice = (VoteChoice)rng.NextInt(3);
+            int lobby = choice == VoteChoice.Abstain ? 0 : rng.NextInt(Math.Max(1, decision.MaxLobby / 4 + 1));
+            return Task.FromResult<GameAction>(new CastVote(choice, lobby, PlayLobbyist: choice != VoteChoice.Abstain && decision.HasLobbyist && rng.NextInt(2) == 0));
+        }
+
         // Management actions (build, mortgage, loans...) can be taken again and
         // again, so a purely random bot could spend forever on them. Mostly it
         // answers the question itself instead.

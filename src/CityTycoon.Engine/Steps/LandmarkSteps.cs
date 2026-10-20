@@ -71,7 +71,7 @@ public sealed class CasinoStep : Step
             if (player.Cash <= 0)
                 return StepResult.Done;
             return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.CasinoBet,
-                "Welcome to the Casino. Make one bet, or walk on by.", MaxBet: player.Cash));
+                "Welcome to the Casino. Make one bet, or walk on by.", MaxBet: StakeLimit(ctx, player.Cash)));
         }
 
         if (HighLow is { } bet)
@@ -97,6 +97,10 @@ public sealed class CasinoStep : Step
         }
         return StepResult.Done;
     }
+
+    /// <summary>The most this player can stake: their cash, or the Casino Regulation cap if one is in force.</summary>
+    private static int StakeLimit(EngineContext ctx, int cash) =>
+        Math.Min(cash, RuleModifiers.MaxCasinoStake(ctx.State, ctx.Content) ?? int.MaxValue);
 
     private bool IsRight(EngineContext ctx, BetHighLow bet) =>
         bet.High ? Die1 + Die2 >= ctx.Rules.CasinoHighMin : Die1 + Die2 <= ctx.Rules.CasinoLowMax;
@@ -131,10 +135,10 @@ public sealed class CasinoStep : Step
         return action switch
         {
             NoThanks => true,
-            BetHighLow bet => bet.Amount >= 1 && bet.Amount <= cash,
+            BetHighLow bet => bet.Amount >= 1 && bet.Amount <= StakeLimit(ctx, cash),
             // Both players put in the same amount, up to whoever has less cash.
             ChallengeDuel duel => Opponents(ctx).Any(p => p.Id == duel.OpponentId)
-                && duel.Amount >= 1 && duel.Amount <= Math.Min(cash, ctx.Player(duel.OpponentId).Cash),
+                && duel.Amount >= 1 && duel.Amount <= StakeLimit(ctx, Math.Min(cash, ctx.Player(duel.OpponentId).Cash)),
             _ => false,
         };
     }

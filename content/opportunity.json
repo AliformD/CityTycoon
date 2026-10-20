@@ -73,7 +73,7 @@
       "effect": { "type": "PeekTile" } },
 
     { "id": "lobbyist", "deck": "opportunity", "polarity": "helpful", "name": "Lobbyist", "copies": 1,
-      "text": "During a Council vote, before the reveal: add 200 free influence to your side. (The City Council arrives in a later phase.)",
+      "text": "Tick it when you vote in a City Council session: add 200 free influence to your side.",
       "timing": "council",
       "effect": { "type": "AddInfluence", "amount": 200 } }
   ]

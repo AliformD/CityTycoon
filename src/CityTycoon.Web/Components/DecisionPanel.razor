@@ -10,6 +10,10 @@
 {
     <AuctionPanel Request="Request" Content="Content" OnAnswer="OnAnswer" />
 }
+else if (decision.Kind is DecisionKind.ChooseOrdinance or DecisionKind.ChooseDistrict or DecisionKind.CouncilVote)
+{
+    <CouncilPanel Request="Request" Content="Content" OnAnswer="OnAnswer" />
+}
 else if (decision.Kind == DecisionKind.RaiseMoney)
 {
     @* Owes more than they have (Section 15.10): every way to raise cash is listed as a button. *@

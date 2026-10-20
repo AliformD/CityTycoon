@@ -19,6 +19,7 @@ public static class EventDescriber
         static string Tokens(int n) => n == 1 ? "1 Momentum token" : $"{n} Momentum tokens";
         string Card(string id) => content.Cards.TryGetValue(id, out var c) ? c.Name : id;
         string Tile(string id) => content.GovTile(id).Name;
+        string District(string id) => content.Board.Districts.First(d => d.Id == id).Name;
         static string Spaces(int n) => n == 1 ? "1 space" : $"{n} spaces";
 
         return e switch
@@ -104,10 +105,20 @@ public static class EventDescriber
             TilePeeked t => $"{Name(t.PlayerId)} secretly peeked at a hidden Government tile.",
             EventsArranged a => $"{Name(a.PlayerId)} looked at the top {a.Count} Event cards and put them back.",
             RecoverySkipped r => $"{Name(r.PlayerId)} skips the Hospital recovery and rolls 2 dice.",
-            CardNotReadyYet c => $"{Card(c.CardId)} needs the City Council, which arrives in a later phase. Nothing happens.",
             TileRevealed t => $"{Name(t.PlayerId)} revealed the Government tile: it's the {Tile(t.TileId)}!",
             TileFeePaid f => $"{Name(f.FromId)} paid ${f.Amount} to {(f.ToId is int to ? Name(to) : "the bank")} ({Tile(f.TileId)}).",
-            TileNotReadyYet t => $"The {Tile(t.TileId)}'s Emergency Council session arrives in a later phase. Nothing more happens.",
+            CatchUpPaid c => $"{Name(c.PlayerId)} has the lowest net worth, so they collected a ${c.Amount} catch-up bonus.",
+            CouncilStarted { Emergency: true } c => $"Emergency City Council session! {Name(c.SetterId)} sets the agenda.",
+            CouncilStarted c => $"City Council session. {Name(c.SetterId)} has the lowest net worth, so they set the agenda.",
+            CouncilCancelled c => $"The City Council session was called off: {c.Reason}",
+            OrdinanceProposed o => $"{Name(o.SetterId)} put {content.Ordinance(o.OrdinanceId).Name}{(o.DistrictId is string d ? " for " + District(d) : "")} to a vote.",
+            CouncilResolved r => DescribeCouncil(r, Name, District),
+            OrdinanceEnded o => $"{content.Ordinance(o.OrdinanceId).Name}{(o.DistrictId is string d ? " (" + District(d) + ")" : "")} has ended.",
+            ZoningChanged z => $"{District(z.DistrictId)} is now zoned {ZoneName(z.To)} (was {ZoneName(z.From)}).",
+            PermitsAdded p => $"The city added {(p.Hotels > 0 ? p.Hotels + " hotel permits" : "")}{(p.Hotels > 0 && p.Skyscrapers > 0 ? " and " : "")}{(p.Skyscrapers > 0 ? p.Skyscrapers + " skyscraper permits" : "")}.",
+            CouncilPayout c => $"{Name(c.PlayerId)} collected ${c.Amount} ({content.Ordinance(c.OrdinanceId).Name}).",
+            CouncilPaymentMade c => $"{Name(c.PlayerId)} paid ${c.Amount} ({content.Ordinance(c.OrdinanceId).Name}).",
+            TileRevealedByCouncil t => $"Public Works revealed the {Tile(t.TileId)}.",
             TransitHopped h => $"{Name(h.PlayerId)} paid ${h.Cost} and hopped onto the Transit Hub instead of paying rent for {Space(h.PropertyId)}.",
             CharacterChosen c => $"{Name(c.PlayerId)} is {content.Character(c.CharacterId).Name}: {content.Character(c.CharacterId).Text}",
             ExpressLineUsed x => $"{Name(x.PlayerId)} paid ${x.Cost} for the Express Line and jumped to {Space(x.RailroadId)}.",
@@ -160,5 +171,17 @@ public static class EventDescriber
             return parts.Count == 0 ? "nothing" : string.Join(" + ", parts);
         }
         return $"{Side(offer.GiveCash, offer.GiveProperties, spaceName)} for {Side(offer.GetCash, offer.GetProperties, spaceName)}";
+    }
+
+    public static string ZoneName(ZoningLevel level) => level == ZoningLevel.HighRise ? "High-Rise" : level.ToString();
+
+    private static string DescribeCouncil(CouncilResolved r, Func<int, string> name, Func<string, string> district)
+    {
+        string votes = string.Join(", ", r.Votes.Select(v => v.Choice == Actions.VoteChoice.Abstain
+            ? $"{name(v.PlayerId)} abstained"
+            : $"{name(v.PlayerId)} {v.Choice.ToString().ToLowerInvariant()}{(v.Lobby > 0 ? $" (lobbied ${v.Lobby})" : "")}{(v.UsedLobbyist ? " + Lobbyist" : "")}"));
+        int total = r.YesInfluence + r.NoInfluence;
+        double chance = total == 0 ? 0 : 100.0 * r.YesInfluence / total;
+        return $"Votes: {votes}. Yes {r.YesInfluence} vs No {r.NoInfluence}: {chance:0.#}% chance. The roll was {r.Roll + 1} of {total}: the ordinance {(r.Passed ? "PASSED" : "FAILED")}.";
     }
 }

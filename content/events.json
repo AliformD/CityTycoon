@@ -64,7 +64,7 @@
       "effect": { "type": "GoToJail" } },
 
     { "id": "emergency-session", "deck": "event", "name": "Emergency Session", "copies": 1,
-      "text": "Start an Emergency Council session with you setting the agenda. (The City Council arrives in a later phase, so nothing happens yet.)",
+      "text": "Start an Emergency Council session with you setting the agenda.",
       "effect": { "type": "EmergencySession" } }
   ]
 }

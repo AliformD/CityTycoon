@@ -38,6 +38,8 @@ namespace CityTycoon.Engine.Steps;
 [JsonDerivedType(typeof(CharacterPickStep), nameof(CharacterPickStep))]
 [JsonDerivedType(typeof(PeekTileStep), nameof(PeekTileStep))]
 [JsonDerivedType(typeof(KeepOneCardStep), nameof(KeepOneCardStep))]
+[JsonDerivedType(typeof(CouncilStep), nameof(CouncilStep))]
+[JsonDerivedType(typeof(PickDistrictStep), nameof(PickDistrictStep))]
 public abstract class Step
 {
     /// <summary>Called whenever this step is on top of the stack. Do some work, then say what's next.</summary>

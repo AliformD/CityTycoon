@@ -275,7 +275,9 @@ public class GovernmentTileTests
         game.Property("studio-street").Level = 5; // a hotel is 5 levels
         game.RollOnto(0, "old-town-government");
         Assert.Equal(1430, game.Player(0).Cash);
-        Assert.Contains(game.State.Log, e => e is TileNotReadyYet { TileId: "city-hall" });
+        // The fee is settled first, then the Emergency Council meets with the player who landed setting the agenda.
+        Assert.Contains(game.State.Log, e => e is CouncilStarted { Emergency: true, SetterId: 0 });
+        Assert.True(game.State.Log.FindIndex(e => e is TileFeePaid) < game.State.Log.FindIndex(e => e is CouncilStarted));
     }
 
     [Fact]

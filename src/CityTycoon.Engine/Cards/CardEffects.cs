@@ -367,11 +367,11 @@ public sealed class GoToJailEffect : ICardEffect
     public void Apply(CardEffectContext c) => Movement.SendToJail(c.Ctx, c.Player, $"drew {c.Card.Name}");
 }
 
-/// <summary>Emergency Session: the City Council arrives in Phase 8, so for now nothing happens.</summary>
+/// <summary>Emergency Session: an Emergency City Council session now. The player who drew it sets the agenda (Section 11.1).</summary>
 public sealed class EmergencySessionEffect : ICardEffect
 {
     public string Type => "EmergencySession";
-    public void Apply(CardEffectContext c) => c.Ctx.Emit(new CardNotReadyYet(c.Card.Id));
+    public void Apply(CardEffectContext c) => c.Ctx.Push(new CouncilStep { Emergency = true, TriggeredById = c.Player.Id });
 }
 
 // ---------------------------------------------------------- Opportunity effects
@@ -541,7 +541,7 @@ public sealed class DiceDuelEffect : ICardEffect
     public bool IsLegalPlay(EngineContext ctx, PlayerState player, CardDefinition card, PlayCard play) =>
         play.TargetPlayerId is int id
         && CardEffects.OthersInTurnOrder(ctx.State, player.Id).Any(p => p.Id == id)
-        && play.Number >= 1 && play.Number <= Math.Min(player.Cash, ctx.Player(id).Cash);
+        && play.Number >= 1 && play.Number <= Math.Min(Math.Min(player.Cash, ctx.Player(id).Cash), RuleModifiers.MaxCasinoStake(ctx.State, ctx.Content) ?? int.MaxValue);
 
     public void Apply(CardEffectContext c) =>
         c.Ctx.Push(new DiceDuelStep { ChallengerId = c.Player.Id, OpponentId = c.Play.TargetPlayerId!.Value, Stake = c.Play.Number });
@@ -602,7 +602,10 @@ public sealed class PeekTileEffect : ICardEffect
     }
 }
 
-/// <summary>Lobbyist: extra influence in a City Council vote. The Council arrives in Phase 8, so it can't be played yet.</summary>
+/// <summary>
+/// Lobbyist: extra influence in a City Council vote. It isn't played like other cards: you tick it as part of
+/// your vote (see <see cref="CastVote"/>), so it never shows up as a play on your own turn.
+/// </summary>
 public sealed class AddInfluenceEffect : ICardEffect
 {
     public string Type => "AddInfluence";
@@ -611,5 +614,5 @@ public sealed class AddInfluenceEffect : ICardEffect
 
     public IEnumerable<PlayCard> Plays(EngineContext ctx, PlayerState player, CardDefinition card) => [];
 
-    public void Apply(CardEffectContext c) => c.Ctx.Emit(new CardNotReadyYet(c.Card.Id));
+    public void Apply(CardEffectContext c) { }
 }

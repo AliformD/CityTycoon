@@ -1,4 +1,5 @@
 using CityTycoon.Engine.Content;
+using CityTycoon.Engine.Ordinances;
 using CityTycoon.Engine.State;
 using CityTycoon.Engine.Tiles;
 
@@ -43,6 +44,12 @@ public static class RuleModifiers
             foreach (ModifierSpec spec in perk.Specs)
                 active.Add(ModifierTypes.Create(new ModifierContext(spec, perk.PlayerId, perk.Name, content, perk.GroupId)));
         }
+        foreach (ActiveOrdinance ordinance in state.ActiveOrdinances)
+        {
+            OrdinanceDefinition def = content.Ordinance(ordinance.OrdinanceId);
+            if (OrdinanceEffects.Find(def.EffectType)?.Modifier(ordinance, def, content) is { } modifier)
+                active.Add(modifier);
+        }
         state.ModifierCache = new ModifierCache(signature, content, active);
         return active;
     }
@@ -62,6 +69,8 @@ public static class RuleModifiers
             if (s.Kind == SpaceKind.GovernmentTile)
                 h = h * 1_000_003 + (s.IsRevealed ? 1 : 0) + (s.TileId?.GetHashCode() ?? 0) * 2L;
         }
+        foreach (ActiveOrdinance ordinance in state.ActiveOrdinances)
+            h = h * 1_000_003 + (ordinance.OrdinanceId.GetHashCode() * 31L) + (ordinance.DistrictId?.GetHashCode() ?? 0);
         foreach (PropertyState owned in state.Properties.Values)
             h = h * 1_000_003 + ((owned.OwnerId ?? -1) + 2) * 4 + (owned.IsPending ? 1 : 0) + (owned.IsMortgaged ? 2 : 0);
         return h;
@@ -143,6 +152,14 @@ public static class RuleModifiers
         int total = RentPercents(state, content, propertyId, active).Where(p => !ignoresBad || p.Percent > 0).Sum(p => p.Percent);
         return Math.Clamp(total, content.Rules.MinRentPercent, content.Rules.MaxRentPercent);
     }
+
+    /// <summary>Why nobody can build on this property right now (a Building Moratorium), or null.</summary>
+    public static string? BuildingBlockedReason(GameState state, GameContent content, string propertyId) =>
+        Active(state, content).Select(m => m.BuildingBlockedReason(state, propertyId)).FirstOrDefault(r => r != null);
+
+    /// <summary>The lowest Casino stake limit in force (Casino Regulation), or null for none.</summary>
+    public static int? MaxCasinoStake(GameState state, GameContent content) =>
+        Active(state, content).Select(m => m.MaxCasinoStake(state)).Where(x => x != null).DefaultIfEmpty(null).Min();
 
     public static int BuildDiscountPercent(GameState state, GameContent content, string propertyId,
         IReadOnlyList<IRuleModifier>? active = null) =>

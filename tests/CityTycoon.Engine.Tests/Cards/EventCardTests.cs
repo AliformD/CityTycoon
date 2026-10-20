@@ -265,11 +265,11 @@ public class EventCardTests
     }
 
     [Fact]
-    public void EmergencySession_DoesNothingUntilTheCouncilArrives()
+    public void EmergencySession_CallsACouncilSession_WithTheDrawerSettingTheAgenda()
     {
         var game = new TestGame();
         game.DrawEvent(0, "emergency-session");
-        Assert.Contains(game.State.Log, e => e is CardNotReadyYet { CardId: "emergency-session" });
-        Assert.Equal(DecisionKind.PostMoveActions, game.DecisionFor(0)!.Kind);
+        Assert.Contains(game.State.Log, e => e is CouncilStarted { Emergency: true, SetterId: 0 });
+        Assert.Equal(DecisionKind.ChooseOrdinance, game.DecisionFor(0)!.Kind);
     }
 }

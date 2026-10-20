@@ -1,0 +1,34 @@
+@* A speaker button: reads the text aloud with the browser's built-in speech (Section 27). Hidden where speech isn't available. *@
+@inject SpeechService Speech
+
+@if (available)
+{
+    <button type="button" class="speak" aria-pressed="@speaking" aria-label="@(speaking ? "Stop reading" : "Read aloud: " + Label)" title="Read aloud" @onclick="Toggle">@(speaking ? "⏹" : "🔊")</button>
+}
+
+@code {
+    /// <summary>What is read out.</summary>
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+
+    /// <summary>A short name for the screen reader, like the card's name.</summary>
+    [Parameter] public string Label { get; set; } = "";
+
+    private bool available;
+    private bool speaking;
+
+    protected override async Task OnInitializedAsync() => available = await Speech.IsAvailableAsync();
+
+    private async Task Toggle()
+    {
+        if (speaking)
+        {
+            speaking = false;
+            await Speech.StopAsync();
+            return;
+        }
+        speaking = true;
+        await Speech.SpeakAsync(Text);
+        // The browser doesn't tell us when it finishes, so the button goes back to normal after a rough reading time.
+        _ = Task.Delay(Math.Max(2000, Text.Length * 70)).ContinueWith(_ => InvokeAsync(() => { speaking = false; StateHasChanged(); }));
+    }
+}

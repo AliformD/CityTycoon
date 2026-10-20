@@ -12,6 +12,32 @@
         <p><button class="big" @onclick='() => Nav.NavigateTo("play")'>Continue current game</button></p>
     }
 
+    @if (saved != null)
+    {
+        <section class="saved-game" aria-labelledby="saved-title">
+            <h2 id="saved-title">Saved game</h2>
+            <p>@saved.Describe()</p>
+            <div class="save-row">
+                <button class="big primary" @onclick="ContinueSaved">Continue saved game</button>
+                <button class="small" @onclick="ForgetSaved">Delete this save</button>
+            </div>
+        </section>
+    }
+
+    <p class="save-row">
+        <label class="small">Load a save file: <InputFile OnChange="LoadFile" accept=".json,application/json" /></label>
+        <a href="rules">Rules</a>
+        <button class="small" aria-expanded="@showSettings" @onclick="() => showSettings = !showSettings">Settings</button>
+    </p>
+    @if (loadError != null)
+    {
+        <p class="error" role="alert">@loadError</p>
+    }
+    @if (showSettings)
+    {
+        <SettingsPanel />
+    }
+
     <section class="setup" aria-labelledby="setup-title">
         <h2 id="setup-title">New game</h2>
 
@@ -30,6 +56,8 @@
                         <select @bind="seats[seat].Kind">
                             <option value="@SeatKind.Human">Human</option>
                             <option value="@SeatKind.EasyBot">Bot (Easy)</option>
+                            <option value="@SeatKind.NormalBot">Bot (Normal)</option>
+                            <option value="@SeatKind.HardBot">Bot (Hard)</option>
                         </select>
                     </label>
                     @if (seats.Count > Rules.MinPlayers)
@@ -97,6 +125,43 @@
     private CharacterMode characters = CharacterMode.Pick;
     private string seedText = "";
     private string? error;
+    private SavedGame? saved;
+    private string? loadError;
+    private bool showSettings;
+
+    protected override async Task OnInitializedAsync() => saved = await Session.FindBrowserSaveAsync();
+
+    private void ContinueSaved()
+    {
+        Session.Resume(saved!);
+        Nav.NavigateTo("play");
+    }
+
+    private async Task ForgetSaved()
+    {
+        await Session.ForgetBrowserSaveAsync();
+        saved = null;
+    }
+
+    private async Task LoadFile(InputFileChangeEventArgs e)
+    {
+        loadError = null;
+        try
+        {
+            using var reader = new StreamReader(e.File.OpenReadStream(maxAllowedSize: 32 * 1024 * 1024));
+            var save = SavedGame.FromJson(await reader.ReadToEndAsync());
+            Session.Resume(save);
+            Nav.NavigateTo("play");
+        }
+        catch (InvalidDataException ex)
+        {
+            loadError = ex.Message;
+        }
+        catch (Exception)
+        {
+            loadError = "That file couldn't be read as a City Tycoon save.";
+        }
+    }
 
     private void AddSeat() =>
         seats.Add(new SeatSetup { Name = BotNames.First(n => seats.All(s => s.Name != n)), Kind = SeatKind.EasyBot });

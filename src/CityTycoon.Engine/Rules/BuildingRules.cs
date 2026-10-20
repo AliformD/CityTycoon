@@ -73,6 +73,8 @@ public static class BuildingRules
             return "You can only build on color properties.";
         if (player.InJail)
             return "You can't build while you're in Jail.";
+        if (RuleModifiers.BuildingBlockedReason(state, ctx.Content, propertyId) is string blocked)
+            return blocked;
 
         // Rule 1: own the whole group, with none of it mortgaged or pending.
         var group = ctx.Content.GroupMembers(def.Group!).Select(id => state.Properties[id]).ToList();

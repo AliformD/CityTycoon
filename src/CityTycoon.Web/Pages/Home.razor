@@ -1,0 +1,13 @@
+@page "/"
+@using CityTycoon.Engine.Content
+
+<PageTitle>City Tycoon</PageTitle>
+
+<h1>City Tycoon</h1>
+
+<p>The game screen arrives in Phase 2. For now, this page proves the browser can load the rules engine.</p>
+<p>Starting cash: <strong>$@rules.StartingCash</strong>. GO salary: <strong>$@rules.GoSalary</strong>.</p>
+
+@code {
+    private readonly RulesConfig rules = ContentLoader.LoadRules();
+}

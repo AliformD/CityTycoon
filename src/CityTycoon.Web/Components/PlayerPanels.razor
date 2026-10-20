@@ -19,6 +19,7 @@
                     <dt>Cash</dt><dd>@UiHelpers.Money(p.Cash)</dd>
                     <dt>Net worth</dt><dd>@UiHelpers.Money(p.NetWorth)</dd>
                     <dt>Properties</dt><dd>@View.Properties.Values.Count(x => x.OwnerId == p.Id)</dd>
+                    <dt>Cards</dt><dd>@p.HandCount</dd>
                     <dt>Momentum</dt><dd><span aria-hidden="true">@(new string('●', p.Momentum))</span> @p.Momentum</dd>
                     @if (p.Loans > 0) { <dt>Loans</dt><dd>@p.Loans (repay @UiHelpers.Money(p.Loans * Session.Content.Rules.LoanRepay))</dd> }
                     @{ var pending = View.Properties.Values.Where(x => x.OwnerId == p.Id && x.IsPending).ToList(); }
@@ -27,6 +28,13 @@
                 @if (p.InJail) { <p class="status">▦ In Jail@(p.JailTurns > 0 ? $" (turn {p.JailTurns})" : ""): rent halved</p> }
                 @if (p.IsInsured) { <p class="status">✚ Insured</p> }
                 @if (p.IsRecovering) { <p class="status">✚ Recovering: rolls 1 die next turn</p> }
+                @if (p.HasRoadWork) { <p class="status">🚧 Road Work: rolls 1 die next turn</p> }
+                @if (p.ExtraBuildsThisTurn > 0) { <p class="status">📜 Construction Permit: +@p.ExtraBuildsThisTurn builds, @p.BuildDiscountThisTurn% off this turn</p> }
+                @if (Session.IsHuman(p.Id))
+                {
+                    <label class="toggle small-print"><input type="checkbox" checked="@Session.AutoPassesReactions(p.Id)"
+                           @onchange="e => Session.SetAutoPassReactions(p.Id, e.Value is true)" /> Auto-pass reactions</label>
+                }
             }
         </article>
     }

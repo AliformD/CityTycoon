@@ -27,13 +27,17 @@ public static class BuildingRules
         return discounted / rules.BuildDiscountRoundTo * rules.BuildDiscountRoundTo;
     }
 
-    /// <summary>What the next building level on this property would cost.</summary>
+    /// <summary>What the next building level on this property would cost its owner (with any discount this turn).</summary>
     public static int NextLevelCost(EngineContext ctx, string propertyId)
     {
         PropertyDefinition def = ctx.Content.Property(propertyId);
-        int newLevel = ctx.State.Properties[propertyId].Level + 1;
-        return ApplyDiscount(ctx.Rules, LevelCost(ctx.Content, def, newLevel), discountPercent: 0);
+        PropertyState owned = ctx.State.Properties[propertyId];
+        int discount = owned.OwnerId is int ownerId ? ctx.Player(ownerId).BuildDiscountThisTurn : 0;
+        return ApplyDiscount(ctx.Rules, LevelCost(ctx.Content, def, owned.Level + 1), discount);
     }
+
+    /// <summary>How many levels this player may build this turn (the build limit plus any Construction Permit).</summary>
+    public static int BuildLimit(EngineContext ctx, PlayerState player) => ctx.Rules.BuildLimitPerTurn + player.ExtraBuildsThisTurn;
 
     /// <summary>The tallest building the property's district allows right now.</summary>
     public static int ZoningCap(EngineContext ctx, string propertyId)
@@ -85,8 +89,8 @@ public static class BuildingRules
             return "No skyscraper permits are left.";
 
         // Rule 6: the build limit.
-        if (player.BuildsThisTurn >= ctx.Rules.BuildLimitPerTurn)
-            return $"You've already built {ctx.Rules.BuildLimitPerTurn} levels this turn.";
+        if (player.BuildsThisTurn >= BuildLimit(ctx, player))
+            return $"You've already built {BuildLimit(ctx, player)} levels this turn.";
 
         // Rule 8: skyscrapers need a hotel on every property in the group.
         if (newLevel == ctx.Rules.SkyscraperLevel && group.Any(p => p.Level < ctx.Rules.HotelLevel))
@@ -177,6 +181,37 @@ public static class BuildingRules
 
         ctx.Player(playerId).Cash += refund;
         ctx.Emit(new BuildingSold(playerId, propertyId, owned.Level, refund));
+    }
+
+    /// <summary>
+    /// Fire!: the property loses 1 level, with no money back. Permits work as
+    /// for selling: a skyscraper drops to a hotel if a hotel permit is free,
+    /// otherwise to 4 houses.
+    /// </summary>
+    public static void Burn(EngineContext ctx, int playerId, string propertyId)
+    {
+        PropertyState owned = ctx.State.Properties[propertyId];
+        RulesConfig rules = ctx.Rules;
+        if (owned.Level == rules.SkyscraperLevel)
+        {
+            ctx.State.SkyscraperPermits++;
+            if (ctx.State.HotelPermits > 0)
+            {
+                ctx.State.HotelPermits--;
+                owned.Level--;
+            }
+            else
+            {
+                owned.Level -= 2;
+            }
+        }
+        else if (owned.Level > 0)
+        {
+            if (owned.Level == rules.HotelLevel)
+                ctx.State.HotelPermits++;
+            owned.Level--;
+        }
+        ctx.Emit(new BuildingBurned(playerId, propertyId, owned.Level));
     }
 
     /// <summary>Sells every level on a property at once (bankruptcy), returning permits. Gives back the refund.</summary>

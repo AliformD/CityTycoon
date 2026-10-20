@@ -85,7 +85,7 @@ public static class UiHelpers
             EndTurn => "End turn",
             PayBail => $"Pay {Money(rules.JailBail)} bail",
             RollForDoubles => "Try for doubles",
-            Build b => $"Build {EventDescriber.LevelName(Level(b.PropertyId) + 1)} on {Name(b.PropertyId)} ({Money(BuildingRules.LevelCost(content, content.Property(b.PropertyId), Level(b.PropertyId) + 1))})",
+            Build b => $"Build {EventDescriber.LevelName(Level(b.PropertyId) + 1)} on {Name(b.PropertyId)} ({Money(BuildCost(b.PropertyId, view, content))})",
             SellBuilding s => $"Sell a building on {Name(s.PropertyId)} (+{Money(BuildingRules.SellValue(content, content.Property(s.PropertyId), Level(s.PropertyId)))})",
             Mortgage m => $"Mortgage {Name(m.PropertyId)} (+{Money(NetWorth.MortgageValue(content, content.Property(m.PropertyId)))})",
             Unmortgage u => $"Unmortgage {Name(u.PropertyId)} ({Money(MoneyRules.UnmortgageCost(content, content.Property(u.PropertyId)))})",
@@ -102,8 +102,43 @@ public static class UiHelpers
             AcceptDuel => "Accept the duel",
             DeclineDuel => "No thanks",
             PickStadiumGroup g => content.Groups[g.GroupId].Name,
+            PlayCard play => $"Play {content.Card(play.CardId).Name}{PlayTarget(play, view, content)}",
+            DiscardCard d => $"Discard {content.Card(d.CardId).Name}",
+            TakeMomentum => $"Take {rules.CityParkMomentum} Momentum token",
+            DrawOpportunity => "Draw an Opportunity card",
+            BuyCard buy when buy.Slot < view.MallShop.Count => $"Buy {content.Card(view.MallShop[buy.Slot]).Name} ({Money(rules.MallPrices[buy.Slot])})",
+            SellCard sell => $"Sell {content.Card(sell.CardId).Name} (+{Money(rules.MallSellPrice)})",
+            ChooseProperty c => Name(c.PropertyId),
+            ClearRoadWork => "Spend Momentum to clear the Road Work (roll both dice)",
+            ArrangeCards => "Put them back in this order",
             _ => action.GetType().Name,
         };
+    }
+
+    /// <summary>What the next building level costs this player, including a Construction Permit discount.</summary>
+    public static int BuildCost(string propertyId, PlayerView view, GameContent content) =>
+        BuildingRules.ApplyDiscount(content.Rules,
+            BuildingRules.LevelCost(content, content.Property(propertyId), view.Properties[propertyId].Level + 1),
+            view.Me.BuildDiscountThisTurn);
+
+    /// <summary>The " on Bo" or " (+1 space)" part of a card's button: what the play is aimed at.</summary>
+    public static string PlayTarget(PlayCard play, PlayerView view, GameContent content)
+    {
+        var effect = content.Card(play.CardId).EffectType;
+        var parts = new List<string>();
+        if (play.TargetPlayerId is int target && effect != "Detour")
+            parts.Add(view.Player(target).Name);
+        if (play.TargetSpaceId is string spaceId)
+            parts.Add(content.Properties.ContainsKey(spaceId) ? content.Property(spaceId).Name : view.Spaces.First(s => s.Id == spaceId).Name);
+        string on = parts.Count > 0 ? " on " + string.Join(", ", parts) : "";
+        string number = effect switch
+        {
+            "Detour" => $" ({(play.Number > 0 ? "+" : "−")}{Math.Abs(play.Number)} space)",
+            "Shortcut" => $": move {play.Number} space{(play.Number == 1 ? "" : "s")}",
+            "DiceDuel" => $" for {Money(play.Number)}",
+            _ => play.Number != 0 ? $" ({play.Number})" : "",
+        };
+        return on + number;
     }
 
     /// <summary>The board space a player would land on after moving this many spaces.</summary>

@@ -42,6 +42,35 @@ public static class ContentLoader
         }
     }
 
+    /// <summary>
+    /// Every card file: opportunity.json and events.json, plus any extra files
+    /// whose names start the same way (like opportunity.expansion1.json).
+    /// </summary>
+    public static List<CardsFile> LoadCardFiles()
+    {
+        const string prefix = "CityTycoon.Content.";
+        return typeof(ContentLoader).Assembly.GetManifestResourceNames()
+            .Where(n => n.StartsWith(prefix) && n.EndsWith(".json"))
+            .Select(n => n[prefix.Length..])
+            .Where(f => f.StartsWith("opportunity") || f.StartsWith("events"))
+            .Order(StringComparer.Ordinal)
+            .Select(Load<CardsFile>)
+            .ToList();
+    }
+
+    /// <summary>Reads card JSON text (for example an expansion file a test or mod supplies).</summary>
+    public static CardsFile ParseCards(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<CardsFile>(json, JsonOptions) ?? throw new ContentException("The card file is empty.");
+        }
+        catch (JsonException ex)
+        {
+            throw new ContentException($"A card file could not be read: {ex.Message}", ex);
+        }
+    }
+
     /// <summary>Returns the raw text of one embedded content file.</summary>
     public static string ReadText(string fileName)
     {

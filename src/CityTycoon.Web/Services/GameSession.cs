@@ -43,6 +43,23 @@ public sealed class GameSession
     /// <summary>Skip the short pause between bot moves.</summary>
     public bool FastBots { get; set; }
 
+    /// <summary>Humans who chose "Auto-pass reactions" (Section 17.2): they're never asked about Reaction cards.</summary>
+    private readonly HashSet<int> autoPassReactions = [];
+
+    /// <summary>The last human shown a question, so Hidden mode knows when the device changes hands.</summary>
+    private int lastHumanId = -1;
+
+    public bool AutoPassesReactions(int playerId) => autoPassReactions.Contains(playerId);
+
+    public void SetAutoPassReactions(int playerId, bool on)
+    {
+        if (on)
+            autoPassReactions.Add(playerId);
+        else
+            autoPassReactions.Remove(playerId);
+        Changed?.Invoke();
+    }
+
     /// <summary>Set if the game crashed, so the page can show what went wrong.</summary>
     public string? Error { get; private set; }
 
@@ -69,6 +86,8 @@ public sealed class GameSession
         Engine = GameEngine.NewGame(setup, Content);
         Seats = Enumerable.Range(0, seats.Count).ToDictionary(i => i, i => seats[i].Kind);
         humans.Clear();
+        autoPassReactions.Clear();
+        lastHumanId = -1;
         Request = null;
         ShowPassScreen = false;
         Error = null;
@@ -125,16 +144,25 @@ public sealed class GameSession
     /// <summary>Called by a <see cref="HumanUiController"/> when it needs a person to choose.</summary>
     public void ShowRequest(HumanRequest request)
     {
+        if (request.Decision.Kind == DecisionKind.PlayReaction && AutoPassesReactions(request.PlayerId))
+        {
+            humans[request.PlayerId].Answer(new NoThanks());
+            return;
+        }
+
         Request = request;
-        // Hidden mode (Section 25): before a private choice, cover the screen
-        // until the right person has the device, unless only one human is playing.
-        bool isPrivate = request.Decision.Kind == DecisionKind.SubmitBid;
+        // Hidden mode (Section 25): every question can show the player's secret
+        // hand, so cover the screen whenever the device passes to a different
+        // person, and before every sealed bid. Not needed with only one human.
+        bool hidden = Engine!.State.Settings.Privacy == PrivacyMode.Hidden;
+        bool isBid = request.Decision.Kind == DecisionKind.SubmitBid;
+        bool newPerson = request.PlayerId != lastHumanId;
         bool severalHumans = Seats.Count(s => s.Value == SeatKind.Human) > 1;
         // A trade offer from one person to another means handing the device over too.
         bool tradeBetweenHumans = (request.Decision.Trade is { } offer && IsHuman(offer.FromId))
             || (request.Decision.Duel is { } duel && IsHuman(duel.ChallengerId));
-        ShowPassScreen = severalHumans
-            && ((isPrivate && Engine!.State.Settings.Privacy == PrivacyMode.Hidden) || tradeBetweenHumans);
+        ShowPassScreen = severalHumans && ((hidden && (isBid || newPerson)) || (newPerson && tradeBetweenHumans));
+        lastHumanId = request.PlayerId;
         Changed?.Invoke();
     }
 

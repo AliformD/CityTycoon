@@ -21,10 +21,12 @@ Run `CityTycoon.Web` and the game opens in your browser. On the **New game** scr
 
 - Click the big buttons in the middle of the board to roll, bid and end your turn.
 - Click any space on the board to see its rent table.
-- With two or more humans in **Hidden** mode, a "Pass to ..." screen covers the board before each secret bid, so the next person can take the device without anyone peeking.
+- With two or more humans in **Hidden** mode, a "Pass to ..." screen covers the board whenever the device should go to someone else (and before each secret bid), so nobody sees another player's cards.
+- Your Opportunity cards appear under the main buttons on your turn. Click **Play** (or **Play…** to pick a target).
+- Reaction cards (Rent Strike, Insurance, Detour) ask you at the right moment. Tick **Auto-pass reactions** in your player panel if you never want to be asked.
 - Tick **Fast bots** to stop the short pause between bot moves.
 
-Right now the game has movement, auctions, rent, taxes, Jail, scoring, buildings, mortgages, loans, trades, Momentum tokens (Nudge and Precision Roll) and the Hospital, Casino, Stadium and City Park. Cards, the Mall, Government tile effects, characters and the City Council arrive in later phases (see Section 29 of the design doc).
+Right now the game has movement, auctions, rent, taxes, Jail, scoring, buildings, mortgages, loans, trades, Momentum tokens (Nudge and Precision Roll), the Hospital, Casino, Stadium, City Park and Mall, and every Opportunity and Event card. Government tile effects, characters and the City Council arrive in later phases (see Section 29 of the design doc).
 
 ## Running the tests in Visual Studio
 

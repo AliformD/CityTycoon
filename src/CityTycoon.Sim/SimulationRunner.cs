@@ -44,6 +44,14 @@ public sealed record GameStats(
     public int CasinoNet { get; init; }
     public int Duels { get; init; }
     public int InsuranceBought { get; init; }
+
+    // Phase 5 numbers: cards.
+    public int CardsPlayed { get; init; }
+    public int CardsCancelled { get; init; }
+    public int EventsDrawn { get; init; }
+    public int OpportunitiesDrawn { get; init; }
+    public int MallBuys { get; init; }
+    public int Reshuffles { get; init; }
 }
 
 /// <summary>Plays many bot-vs-bot games and gathers statistics (Section 26.3).</summary>
@@ -133,6 +141,12 @@ public static class SimulationRunner
             CasinoNet = log.OfType<CasinoHighLow>().Sum(c => c.Net),
             Duels = log.OfType<DuelWon>().Count(),
             InsuranceBought = log.OfType<InsuranceBought>().Count(),
+            CardsPlayed = log.OfType<CardPlayed>().Count(),
+            CardsCancelled = log.OfType<CardCancelled>().Count(),
+            EventsDrawn = log.OfType<EventDrawn>().Count(),
+            OpportunitiesDrawn = log.OfType<OpportunityDrawn>().Count(),
+            MallBuys = log.OfType<MallCardBought>().Count(),
+            Reshuffles = log.OfType<DeckReshuffled>().Count(),
         };
     }
 }

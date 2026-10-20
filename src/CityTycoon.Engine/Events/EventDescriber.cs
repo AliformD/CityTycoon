@@ -17,6 +17,8 @@ public static class EventDescriber
         string SpaceAt(int index) => view.Spaces[index].Name;
         string GroupName(string id) => content.Groups[id].Name;
         static string Tokens(int n) => n == 1 ? "1 Momentum token" : $"{n} Momentum tokens";
+        string Card(string id) => content.Cards.TryGetValue(id, out var c) ? c.Name : id;
+        static string Spaces(int n) => n == 1 ? "1 space" : $"{n} spaces";
 
         return e switch
         {
@@ -31,7 +33,9 @@ public static class EventDescriber
             BidsRevealed b => "Bids: " + string.Join(", ", b.Bids.Select(x => $"{Name(x.PlayerId)} {(x.Amount is int amount ? "$" + amount : "passed")}")) + ".",
             AuctionWon w => w.DownPayment
                 ? $"{Name(w.PlayerId)} won {Space(w.PropertyId)} for ${w.Price} with a down payment: ${w.PaidNow} now, ${w.Price - w.PaidNow} at their next GO."
+                : w.PaidToId is int owner ? $"{Name(w.PlayerId)} won {Space(w.PropertyId)} for ${w.Price}, paid to {Name(owner)}."
                 : $"{Name(w.PlayerId)} won {Space(w.PropertyId)} for ${w.Price}.",
+            OwnerKeptProperty k => $"Nobody bid, so {Name(k.OwnerId)} keeps {Space(k.PropertyId)}.",
             AuctionNoBids n => $"Nobody bid on {Space(n.PropertyId)}. It stays with the bank.",
             RentPaid r => $"{Name(r.FromId)} paid ${r.Amount} rent to {Name(r.ToId)} for {Space(r.PropertyId)}.",
             TaxPaid t => $"{Name(t.PlayerId)} paid ${t.Amount} {Space(t.SpaceId)}.",
@@ -57,7 +61,7 @@ public static class EventDescriber
             PrecisionRolled p => $"{Name(p.PlayerId)} spent {Tokens(p.TokensSpent)} on a Precision Roll: {string.Join(", ", p.Dice)}.",
             Nudged n => $"{Name(n.PlayerId)} spent {Tokens(n.TokensSpent)} to move {Math.Abs(n.Spaces)} space{(Math.Abs(n.Spaces) == 1 ? "" : "s")} {(n.Spaces > 0 ? "further" : "less")}.",
             InsuranceBought i => $"{Name(i.PlayerId)} bought an Insured marker for ${i.Cost}.",
-            InsuranceUsed i => $"{Name(i.PlayerId)}'s Insured marker paid the Hospital bill.",
+            InsuranceUsed i => $"{Name(i.PlayerId)}'s Insured marker was used up.",
             SentToHospital h => $"{Name(h.PlayerId)} went to the Hospital ({h.Reason}).",
             HospitalBillPaid h => $"{Name(h.PlayerId)} paid a ${h.Amount} Hospital bill and rolls 1 die next turn.",
             CasinoHighLow c => $"{Name(c.PlayerId)} bet ${c.Bet} on {(c.CalledHigh ? "High" : "Low")} and rolled {c.Die1} + {c.Die2} = {c.Total}: "
@@ -69,10 +73,50 @@ public static class EventDescriber
             DuelWon d => $"{Name(d.WinnerId)} won the duel and takes ${d.Stake} from {Name(d.LoserId)}.",
             StadiumChosen s => $"{Name(s.PlayerId)} filled the Stadium: {GroupName(s.GroupId)} rent is doubled until their next turn.",
             StadiumEnded s => $"The Stadium boost on {GroupName(s.GroupId)} is over.",
+            OpportunityDrawn o => $"{Name(o.PlayerId)} drew an Opportunity card ({o.Source}).",
+            EventDrawn d => $"{Name(d.PlayerId)} drew the Event card \"{Card(d.CardId)}\": {content.Card(d.CardId).Text}",
+            NoCardToDraw n => $"There are no {(n.Deck == CardDeck.Opportunity ? "Opportunity" : "Event")} cards left to draw.",
+            DeckReshuffled r => $"The {(r.Deck == CardDeck.Opportunity ? "Opportunity" : "Event")} discard pile was shuffled into a new deck ({r.Cards} cards).",
+            CardPlayed c => DescribePlay(c, view, content),
+            CardCancelled c => $"{Name(c.CancelledById)} cancelled {Name(c.PlayerId)}'s {Card(c.CardId)} with Insurance.",
+            CardDiscarded d => $"{Name(d.PlayerId)} discarded {Card(d.CardId)} (hand limit).",
+            MallCardBought b => $"{Name(b.PlayerId)} bought {Card(b.CardId)} at the Mall for ${b.Price}.",
+            MallCardSold s => $"{Name(s.PlayerId)} sold {Card(s.CardId)} to the Mall for ${s.Price}.",
+            CashFromBank c => $"{Name(c.PlayerId)} collected ${c.Amount} ({Card(c.CardId)}).",
+            CashToBank c => $"{Name(c.PlayerId)} paid ${c.Amount} to the bank ({Card(c.CardId)}).",
+            CardPaymentMade p => $"{Name(p.FromId)} paid ${p.Amount} to {(p.ToId is int to ? Name(to) : "the bank")} ({Card(p.CardId)}).",
+            RentReduced r => $"Rent Strike! {Name(r.PlayerId)} pays ${r.To} instead of ${r.From} for {Space(r.PropertyId)}.",
+            Detoured d => $"{Name(d.ByPlayerId)}'s Detour moves {Name(d.MoverId)} {Spaces(Math.Abs(d.Spaces))} {(d.Spaces > 0 ? "further" : "back")}.",
+            BuildingBurned b => $"Fire! {Space(b.PropertyId)} lost a level (now {LevelName(b.NewLevel)}).",
+            FireAvoided f => $"Fire! But {Name(f.PlayerId)} is safe ({f.Reason}).",
+            LotteryRolled l => "Lottery rolls: " + string.Join(", ", l.Rolls.Select(r => $"{Name(r.PlayerId)} {r.Die}")) + ".",
+            LotteryWon l => $"{Name(l.WinnerId)} won the ${l.Pot} Lottery pot!",
+            RoadWorkStarted r => $"{Name(r.PlayerId)} rolls only 1 die next turn because of Road Work.",
+            RoadWorkCleared r => $"{Name(r.PlayerId)} spent {Tokens(r.TokensSpent)} to get past the Road Work.",
+            RentBoostStarted b => $"{Space(b.PropertyId)}'s rent is ×{b.Multiplier} until {Name(b.PlayerId)}'s next turn.",
+            RentBoostEnded b => $"The Grand Opening on {Space(b.PropertyId)} is over.",
+            TilePeeked t => $"{Name(t.PlayerId)} secretly peeked at a hidden Government tile.",
+            EventsArranged a => $"{Name(a.PlayerId)} looked at the top {a.Count} Event cards and put them back.",
+            RecoverySkipped r => $"{Name(r.PlayerId)} skips the Hospital recovery and rolls 2 dice.",
+            CardNotReadyYet c => $"{Card(c.CardId)} needs the City Council, which arrives in a later phase. Nothing happens.",
             RoundEnded r => $"Round {r.Round} is over.",
             GameEnded g => $"Game over: {g.Reason} Winner: {string.Join(" and ", g.WinnerIds.Select(Name))}.",
             _ => e.ToString(),
         };
+    }
+
+    /// <summary>"Ann played Audit against Bo." with the details that matter for each card.</summary>
+    private static string DescribePlay(CardPlayed c, PlayerView view, GameContent content)
+    {
+        CardDefinition card = content.Card(c.CardId);
+        string text = $"{view.Player(c.PlayerId).Name} played {card.Name}";
+        if (card.EffectType == "Shortcut")
+            return text + $" to move {c.Number} space{(c.Number == 1 ? "" : "s")}.";
+        if (c.TargetPlayerId is int target)
+            text += $" against {view.Player(target).Name}";
+        if (c.TargetSpaceId is string space && card.Target != CardTarget.HiddenTile)
+            text += $" on {(content.Properties.TryGetValue(space, out var p) ? p.Name : space)}";
+        return text + ".";
     }
 
     /// <summary>"2 houses", "a hotel", and so on (Section 9.1: levels 1-4 are houses, 5 a hotel, 6 a skyscraper).</summary>

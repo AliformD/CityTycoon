@@ -1,0 +1,78 @@
+{
+  "contentVersion": 1,
+  // Opportunity cards (Section 15.4). Players keep these in their hand.
+  // "timing": ownTurn (play on your own turn), reaction (play when "trigger" happens), council (Phase 8).
+  // "target": what the player picks when playing it: none, opponent, ownProperty, opponentProperty, hiddenTile, space.
+  // "effect.type" names a C# effect class (src/CityTycoon.Engine/Cards/CardEffects.cs); the other effect fields are its settings.
+  "cards": [
+    { "id": "rent-strike", "deck": "opportunity", "name": "Rent Strike", "copies": 2,
+      "text": "Reaction: when you owe rent, pay half of it.",
+      "timing": "reaction", "trigger": "rentOwed",
+      "effect": { "type": "RentMultiplier", "multiplier": 0.5 } },
+
+    { "id": "insurance", "deck": "opportunity", "name": "Insurance", "copies": 2,
+      "text": "Reaction: when a card is played against you, cancel it. Insurance can't be cancelled.",
+      "timing": "reaction", "trigger": "cardPlayedAgainstYou",
+      "effect": { "type": "CancelCard" } },
+
+    { "id": "detour", "deck": "opportunity", "name": "Detour", "copies": 2,
+      "text": "Reaction: after another player rolls and nudges, move their piece 1 space forward or back from where it would land.",
+      "timing": "reaction", "trigger": "opponentMoving",
+      "effect": { "type": "Detour", "spaces": 1 } },
+
+    { "id": "shortcut", "deck": "opportunity", "name": "Shortcut", "copies": 2,
+      "text": "Instead of rolling, move to any space up to 6 spaces ahead. GO counts if you pass it. It's never doubles.",
+      "timing": "ownTurn", "target": "space",
+      "effect": { "type": "Shortcut", "maxSpaces": 6 } },
+
+    { "id": "hostile-bid", "deck": "opportunity", "name": "Hostile Bid", "copies": 1,
+      "text": "Force an auction on one eligible opponent property.",
+      "timing": "ownTurn", "target": "opponentProperty",
+      "effect": { "type": "ForceAuction" } },
+
+    { "id": "audit", "deck": "opportunity", "name": "Audit", "copies": 1,
+      "text": "Pick a player. They pay 10% of their cash to the bank, rounded down.",
+      "timing": "ownTurn", "target": "opponent",
+      "effect": { "type": "PayPercentOfCash", "percent": 10, "who": "target" } },
+
+    { "id": "construction-permit", "deck": "opportunity", "name": "Construction Permit", "copies": 1,
+      "text": "This turn, build up to 2 levels past your build limit, and every level you build is 25% off.",
+      "timing": "ownTurn",
+      "effect": { "type": "ConstructionPermit", "extraLevels": 2, "discountPercent": 25 } },
+
+    { "id": "get-out-of-jail-free", "deck": "opportunity", "name": "Get Out of Jail Free", "copies": 1,
+      "text": "Leave Jail for free, or skip the 1-die recovery turn after the Hospital.",
+      "timing": "ownTurn",
+      "effect": { "type": "GetOutOfJailFree" } },
+
+    { "id": "dice-duel", "deck": "opportunity", "name": "Dice Duel", "copies": 1,
+      "text": "Challenge any player to a Dice Duel from anywhere on the board.",
+      "timing": "ownTurn", "target": "opponent",
+      "effect": { "type": "DiceDuel" } },
+
+    { "id": "tip-off", "deck": "opportunity", "name": "Tip-Off", "copies": 1,
+      "text": "Look at the top 3 Event cards and put them back in any order.",
+      "timing": "ownTurn",
+      "effect": { "type": "ArrangeEvents", "count": 3 } },
+
+    { "id": "fast-track", "deck": "opportunity", "name": "Fast Track", "copies": 1,
+      "text": "Gain 2 Momentum tokens.",
+      "timing": "ownTurn",
+      "effect": { "type": "GainMomentum", "amount": 2 } },
+
+    { "id": "grand-opening", "deck": "opportunity", "name": "Grand Opening", "copies": 1,
+      "text": "Pick one of your properties. Its rent is doubled until your next turn.",
+      "timing": "ownTurn", "target": "ownProperty",
+      "effect": { "type": "PropertyRentBoost", "multiplier": 2 } },
+
+    { "id": "inside-source", "deck": "opportunity", "name": "Inside Source", "copies": 1,
+      "text": "Secretly peek at 1 hidden Government tile.",
+      "timing": "ownTurn", "target": "hiddenTile",
+      "effect": { "type": "PeekTile" } },
+
+    { "id": "lobbyist", "deck": "opportunity", "name": "Lobbyist", "copies": 1,
+      "text": "During a Council vote, before the reveal: add 200 free influence to your side. (The City Council arrives in a later phase.)",
+      "timing": "council",
+      "effect": { "type": "AddInfluence", "amount": 200 } }
+  ]
+}

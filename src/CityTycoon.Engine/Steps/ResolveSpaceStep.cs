@@ -1,3 +1,4 @@
+using CityTycoon.Engine.Cards;
 using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Events;
 using CityTycoon.Engine.Rules;
@@ -38,9 +39,15 @@ public sealed class ResolveSpaceStep : Step
                 break;
 
             case SpaceKind.CityPark:
-                // City Park offers a token or an Opportunity card. Cards arrive in
-                // Phase 5, so for now the token is the only choice (docs/DECISIONS.md).
-                MomentumRules.Gain(ctx, player, ctx.Rules.CityParkMomentum, "City Park");
+                ctx.Push(new CityParkStep { PlayerId = PlayerId });
+                break;
+
+            case SpaceKind.Opportunity:
+                CardRules.DrawOpportunity(ctx, player, "Opportunity space");
+                break;
+
+            case SpaceKind.Event:
+                CardRules.DrawEvent(ctx, player);
                 break;
 
             case SpaceKind.Landmark:
@@ -49,12 +56,12 @@ public sealed class ResolveSpaceStep : Step
                     case LandmarkType.Hospital: ctx.Push(new HospitalVisitStep { PlayerId = PlayerId }); break;
                     case LandmarkType.Casino: ctx.Push(new CasinoStep { PlayerId = PlayerId }); break;
                     case LandmarkType.Stadium: ctx.Push(new StadiumStep { PlayerId = PlayerId }); break;
-                    // The Mall sells Opportunity cards, which arrive in Phase 5.
+                    case LandmarkType.Mall: ctx.Push(new MallStep { PlayerId = PlayerId }); break;
                 }
                 break;
 
             // GO was already paid while moving. Jail is "Just Visiting".
-            // Event and Opportunity cards and Government tiles arrive in later phases.
+            // Government tile effects arrive in Phase 6.
             default:
                 break;
         }

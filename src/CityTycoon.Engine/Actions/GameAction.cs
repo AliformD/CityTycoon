@@ -36,6 +36,15 @@ namespace CityTycoon.Engine.Actions;
 [JsonDerivedType(typeof(AcceptDuel), nameof(AcceptDuel))]
 [JsonDerivedType(typeof(DeclineDuel), nameof(DeclineDuel))]
 [JsonDerivedType(typeof(PickStadiumGroup), nameof(PickStadiumGroup))]
+[JsonDerivedType(typeof(PlayCard), nameof(PlayCard))]
+[JsonDerivedType(typeof(DiscardCard), nameof(DiscardCard))]
+[JsonDerivedType(typeof(TakeMomentum), nameof(TakeMomentum))]
+[JsonDerivedType(typeof(DrawOpportunity), nameof(DrawOpportunity))]
+[JsonDerivedType(typeof(BuyCard), nameof(BuyCard))]
+[JsonDerivedType(typeof(SellCard), nameof(SellCard))]
+[JsonDerivedType(typeof(ChooseProperty), nameof(ChooseProperty))]
+[JsonDerivedType(typeof(ArrangeCards), nameof(ArrangeCards))]
+[JsonDerivedType(typeof(ClearRoadWork), nameof(ClearRoadWork))]
 public abstract record GameAction;
 
 /// <summary>Roll the normal 2 dice.</summary>
@@ -100,6 +109,40 @@ public sealed record DeclineDuel : GameAction;
 
 /// <summary>At the Stadium: double this color group's rent until your next turn.</summary>
 public sealed record PickStadiumGroup(string GroupId) : GameAction;
+
+/// <summary>
+/// Play an Opportunity card from your hand (Section 15.4). Which extra fields
+/// are used depends on the card: a player to target, a space or property to
+/// target, or a number (spaces for Shortcut and Detour, the stake for Dice Duel).
+/// </summary>
+public sealed record PlayCard(string CardId, int? TargetPlayerId = null, string? TargetSpaceId = null, int Number = 0) : GameAction;
+
+/// <summary>Over the hand limit at the end of your turn: throw this card away.</summary>
+public sealed record DiscardCard(string CardId) : GameAction;
+
+/// <summary>At City Park: take a Momentum token.</summary>
+public sealed record TakeMomentum : GameAction;
+
+/// <summary>At City Park: draw an Opportunity card.</summary>
+public sealed record DrawOpportunity : GameAction;
+
+/// <summary>At the Mall: buy the card in this shop slot (0 is the cheapest).</summary>
+public sealed record BuyCard(int Slot) : GameAction;
+
+/// <summary>At the Mall: sell this card from your hand to the bank.</summary>
+public sealed record SellCard(string CardId) : GameAction;
+
+/// <summary>Pick one property (for example which building the Fire! card hits when there's a tie).</summary>
+public sealed record ChooseProperty(string PropertyId) : GameAction;
+
+/// <summary>
+/// Tip-Off: put the cards you looked at back in this order. Each number is a
+/// position in the list you were shown, so [2, 0, 1] puts the third card on top.
+/// </summary>
+public sealed record ArrangeCards(IReadOnlyList<int> Order) : GameAction;
+
+/// <summary>Road Work: spend Momentum tokens to roll both dice this turn after all.</summary>
+public sealed record ClearRoadWork : GameAction;
 
 /// <summary>A Dice Duel challenge waiting for an answer.</summary>
 public sealed record DuelChallenge(int ChallengerId, int OpponentId, int Stake);
@@ -171,6 +214,12 @@ public enum DecisionKind
     CasinoBet,
     RespondToDuel,
     ChooseStadiumGroup,
+    PlayReaction,
+    DiscardCards,
+    CityParkChoice,
+    MallVisit,
+    ChooseFireProperty,
+    ArrangeEvents,
 }
 
 /// <summary>
@@ -189,6 +238,9 @@ public enum DecisionKind
 /// <param name="Dice">For Precision Rolls: the dice rolled. For Nudges: the dice being used.</param>
 /// <param name="MaxBet">For the Casino: the most this player can bet.</param>
 /// <param name="Duel">For Dice Duel replies: the challenge.</param>
+/// <param name="Cards">Card IDs to show: the triggering card for a reaction, or the Event cards a Tip-Off reveals.</param>
+/// <param name="OtherPlayerId">For a Detour: the player about to move.</param>
+/// <param name="Spaces">For a Detour: how far that player is about to move.</param>
 public sealed record PendingDecision(
     int PlayerId,
     DecisionKind Kind,
@@ -203,4 +255,7 @@ public sealed record PendingDecision(
     TradeOffer? Trade = null,
     IReadOnlyList<int>? Dice = null,
     int MaxBet = 0,
-    DuelChallenge? Duel = null);
+    DuelChallenge? Duel = null,
+    IReadOnlyList<string>? Cards = null,
+    int? OtherPlayerId = null,
+    int Spaces = 0);

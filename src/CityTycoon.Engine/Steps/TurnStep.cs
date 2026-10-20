@@ -1,4 +1,7 @@
+using System.Text.Json.Serialization;
 using CityTycoon.Engine.Actions;
+using CityTycoon.Engine.Cards;
+using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Events;
 using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.State;
@@ -15,11 +18,13 @@ public enum TurnStage
     PrecisionRoll,
     PrecisionChosen,
     Nudge,
+    Detour,
     Move,
     JailRoll,
     ForcedBailMove,
     PostMove,
     AfterPostMove,
+    EndOfTurn,
 }
 
 /// <summary>
@@ -45,7 +50,14 @@ public sealed class TurnStep : Step
     public int LastDiceTotal { get; set; }
 
     /// <summary>Recovering from the Hospital: this turn rolls only 1 die (Section 15.3).</summary>
-    public bool OneDieTurn { get; set; }
+    public bool RecoveringThisTurn { get; set; }
+
+    /// <summary>Road Work: this turn rolls only 1 die, unless this many tokens are spent. 0 means no Road Work.</summary>
+    public int RoadWorkCost { get; set; }
+
+    /// <summary>True when this turn rolls only 1 die (Hospital recovery or Road Work, Section 7.3).</summary>
+    [JsonIgnore]
+    public bool OneDieTurn => RecoveringThisTurn || RoadWorkCost > 0;
 
     /// <summary>The 3 dice of a Precision Roll, while the player picks 2.</summary>
     public List<int> PrecisionDice { get; set; } = [];
@@ -61,6 +73,16 @@ public sealed class TurnStep : Step
     /// <summary>The Nudge chosen (spaces added or taken away).</summary>
     public int NudgeSpaces { get; set; }
 
+    /// <summary>Spaces another player's Detour card added or took away.</summary>
+    public int DetourSpaces { get; set; }
+
+    /// <summary>The Detour question for other players, once it has been opened.</summary>
+    public ReactionWindow? DetourWindow { get; set; }
+
+    /// <summary>How far the player will move: the dice plus any Nudge.</summary>
+    [JsonIgnore]
+    public int PlannedSpaces => Die1 + Die2 + NudgeSpaces;
+
     public override StepResult Run(EngineContext ctx)
     {
         PlayerState player = ctx.Player(PlayerId);
@@ -74,9 +96,13 @@ public sealed class TurnStep : Step
                 player.DoublesInARow = 0;
                 player.BuildsThisTurn = 0;
                 player.TradesProposedThisTurn = 0;
-                EndStadiumBoosts(ctx);
-                OneDieTurn = player.IsRecovering;
+                player.ExtraBuildsThisTurn = 0;
+                player.BuildDiscountThisTurn = 0;
+                EndBoosts(ctx);
+                RecoveringThisTurn = player.IsRecovering;
                 player.IsRecovering = false;
+                RoadWorkCost = player.RoadWorkCost;
+                player.RoadWorkCost = 0;
                 if (player.InJail)
                     player.JailTurns++;
                 Stage = player.InJail ? TurnStage.JailChoice : TurnStage.ChooseMove;
@@ -89,7 +115,9 @@ public sealed class TurnStep : Step
 
             case TurnStage.ChooseMove:
                 return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.ChooseMoveMethod,
-                    OneDieTurn ? "You're recovering from the Hospital, so you roll only 1 die this turn." : "How do you want to move?",
+                    RecoveringThisTurn ? "You're recovering from the Hospital, so you roll only 1 die this turn."
+                    : RoadWorkCost > 0 ? $"Road Work! You roll only 1 die this turn, unless you spend {RoadWorkCost} Momentum token."
+                    : "How do you want to move?",
                     Management: ManagementOptions.OwnTurn));
 
             case TurnStage.Roll:
@@ -112,8 +140,11 @@ public sealed class TurnStep : Step
                     $"You rolled {Die1 + Die2}. Spend {ctx.Rules.NudgeCost} Momentum token to move up to {ctx.Rules.NudgeMaxSpaces} spaces more or fewer?",
                     Dice: Die2 == 0 ? [Die1] : [Die1, Die2]));
 
+            case TurnStage.Detour:
+                return DetourStage(ctx, player);
+
             case TurnStage.Move:
-                return MoveAndResolve(ctx, player, Die1 + Die2 + NudgeSpaces, diceTotal: Die1 + Die2);
+                return MoveAndResolve(ctx, player, PlannedSpaces + DetourSpaces, diceTotal: Die1 + Die2);
 
             case TurnStage.JailRoll:
                 return RollInJail(ctx, player);
@@ -128,7 +159,10 @@ public sealed class TurnStep : Step
             case TurnStage.PostMove:
                 // Going to Jail ends your turn straight away (Section 14.1).
                 if (player.InJail)
-                    return StepResult.Done;
+                {
+                    Stage = TurnStage.EndOfTurn;
+                    return StepResult.Continue;
+                }
                 return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.PostMoveActions, "Anything else before you end your turn?",
                     Management: ManagementOptions.OwnTurn));
 
@@ -140,6 +174,12 @@ public sealed class TurnStep : Step
                     Stage = TurnStage.ChooseMove;
                     return StepResult.Continue;
                 }
+                Stage = TurnStage.EndOfTurn;
+                return StepResult.Continue;
+
+            case TurnStage.EndOfTurn:
+                // Section 7.2, step 10: discard down to the hand limit, then the turn is over.
+                ctx.Push(new HandLimitStep { PlayerId = PlayerId });
                 return StepResult.Done;
 
             default:
@@ -150,11 +190,11 @@ public sealed class TurnStep : Step
     public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision)
     {
         PlayerState player = ctx.Player(PlayerId);
-        return decision.Kind switch
+        if (decision.Kind == DecisionKind.PlayReaction)
+            return DetourWindow!.LegalActions(ctx, decision);
+        IReadOnlyList<GameAction> main = decision.Kind switch
         {
-            DecisionKind.ChooseMoveMethod => !OneDieTurn && MomentumRules.CanSpend(player, MomentumRules.PrecisionRollCost(ctx, player))
-                ? [new RollDice(), new PrecisionRoll()]
-                : [new RollDice()],
+            DecisionKind.ChooseMoveMethod => MoveChoices(ctx, player),
             DecisionKind.ChoosePrecisionDice => [new ChooseDice(0, 1), new ChooseDice(0, 2), new ChooseDice(1, 2)],
             DecisionKind.ChooseNudge => MomentumRules.NudgeOptions(ctx, player, Die1 + Die2).Select(n => (GameAction)new Nudge(n)).ToList(),
             DecisionKind.PostMoveActions => [new EndTurn()],
@@ -164,13 +204,49 @@ public sealed class TurnStep : Step
                 : [new RollForDoubles()],
             _ => [],
         };
+        // Opportunity cards that can be played at this moment of your own turn (Section 7.2).
+        return [.. main, .. CardRules.OwnTurnPlays(ctx, player, decision.Kind)];
+    }
+
+    private List<GameAction> MoveChoices(EngineContext ctx, PlayerState player)
+    {
+        var choices = new List<GameAction> { new RollDice() };
+        if (!OneDieTurn && MomentumRules.CanSpend(player, MomentumRules.PrecisionRollCost(ctx, player)))
+            choices.Add(new PrecisionRoll());
+        if (RoadWorkCost > 0 && !RecoveringThisTurn && MomentumRules.CanSpend(player, RoadWorkCost))
+            choices.Add(new ClearRoadWork());
+        return choices;
+    }
+
+    public override bool IsLegal(EngineContext ctx, PendingDecision decision, GameAction action)
+    {
+        if (action is PlayCard play && decision.Kind != DecisionKind.PlayReaction)
+            return CardRules.IsLegalOwnTurnPlay(ctx, ctx.Player(PlayerId), decision.Kind, play);
+        return base.IsLegal(ctx, decision, action);
     }
 
     public override void Receive(EngineContext ctx, PendingDecision decision, GameAction action)
     {
         PlayerState player = ctx.Player(PlayerId);
+        if (decision.Kind == DecisionKind.PlayReaction)
+        {
+            DetourWindow!.Receive(ctx, decision, action);
+            return;
+        }
         switch (action)
         {
+            case PlayCard play:
+                // The card's effect runs next, on top of this turn. Then the same question comes back,
+                // unless the card moved the turn on (Shortcut, Get Out of Jail Free).
+                CardRules.BeginPlay(ctx, player, play);
+                break;
+
+            case ClearRoadWork:
+                player.Momentum -= RoadWorkCost;
+                ctx.Emit(new RoadWorkCleared(PlayerId, RoadWorkCost));
+                RoadWorkCost = 0;
+                break;
+
             case RollDice:
                 Stage = TurnStage.Roll;
                 break;
@@ -192,7 +268,7 @@ public sealed class TurnStep : Step
                     player.Momentum -= ctx.Rules.NudgeCost;
                     ctx.Emit(new Nudged(PlayerId, nudge.Spaces, ctx.Rules.NudgeCost));
                 }
-                Stage = TurnStage.Move;
+                Stage = TurnStage.Detour;
                 break;
 
             case PayBail:
@@ -240,6 +316,9 @@ public sealed class TurnStep : Step
         Die1 = die1;
         Die2 = die2;
         NudgeSpaces = 0;
+        DetourSpaces = 0;
+        DetourWindow = null;
+        DetourPlayed = false;
 
         if (roll.IsDoubles && !LeftJailThisTurn)
         {
@@ -248,7 +327,8 @@ public sealed class TurnStep : Step
             {
                 // Three doubles in a row: go to Jail instead of moving (Section 7.2, step 9).
                 Movement.SendToJail(ctx, player, $"rolled doubles {ctx.Rules.MaxDoublesBeforeJail} times in a row");
-                return StepResult.Done;
+                Stage = TurnStage.EndOfTurn;
+                return StepResult.Continue;
             }
         }
 
@@ -256,18 +336,67 @@ public sealed class TurnStep : Step
 
         // Only offer a Nudge when there's a real choice (a token to spend).
         bool canNudge = MomentumRules.NudgeOptions(ctx, player, roll.Total).Any(n => n != 0);
-        Stage = canNudge ? TurnStage.Nudge : TurnStage.Move;
+        Stage = canNudge ? TurnStage.Nudge : TurnStage.Detour;
         return StepResult.Continue;
     }
 
-    /// <summary>A Stadium boost lasts until the start of the chooser's next turn (Section 15.3).</summary>
-    private void EndStadiumBoosts(EngineContext ctx)
+    /// <summary>Stadium and Grand Opening boosts last until the start of the chooser's next turn (Section 15.3).</summary>
+    private void EndBoosts(EngineContext ctx)
     {
         foreach (StadiumBoost boost in ctx.State.StadiumBoosts.Where(b => b.ChosenById == PlayerId).ToList())
         {
             ctx.State.StadiumBoosts.Remove(boost);
             ctx.Emit(new StadiumEnded(PlayerId, boost.GroupId));
         }
+        foreach (PropertyBoost boost in ctx.State.PropertyBoosts.Where(b => b.ChosenById == PlayerId).ToList())
+        {
+            ctx.State.PropertyBoosts.Remove(boost);
+            ctx.Emit(new RentBoostEnded(PlayerId, boost.PropertyId));
+        }
+    }
+
+    /// <summary>
+    /// The Detour window (Section 7.2, step 5): after the roll and Nudge, any other
+    /// player holding a Detour may move this player's landing spot by a space.
+    /// </summary>
+    private StepResult DetourStage(EngineContext ctx, PlayerState player)
+    {
+        if (DetourWindow == null)
+        {
+            var others = CardEffects.OthersInTurnOrder(ctx.State, PlayerId).Select(p => p.Id);
+            DetourWindow = ReactionWindow.Open(ctx, CardTrigger.OpponentMoving, others, moverId: PlayerId, moveSpaces: PlannedSpaces);
+        }
+        if (DetourWindow.Decision(ctx, $"{player.Name} is about to move {PlannedSpaces} spaces. Play a Detour?") is { } ask)
+            return StepResult.WaitFor(ask);
+        if (DetourWindow.Played is { } play && !DetourPlayed)
+        {
+            // The Detour's effect runs on top of this turn. The mover may cancel it with Insurance.
+            DetourPlayed = true;
+            ctx.Push(new CardPlayStep { PlayerId = DetourWindow.PlayedBy, Play = play });
+            return StepResult.Continue;
+        }
+        Stage = TurnStage.Move;
+        return StepResult.Continue;
+    }
+
+    /// <summary>True once a Detour card from the window has been handed to its effect.</summary>
+    public bool DetourPlayed { get; set; }
+
+    /// <summary>Shortcut card: move this many spaces instead of rolling. It's never doubles, so no extra turn.</summary>
+    public void TakeShortcut(EngineContext ctx, PlayerState player, int spaces)
+    {
+        ExtraTurnEarned = false;
+        Die1 = Die2 = NudgeSpaces = DetourSpaces = 0;
+        MoveAndResolve(ctx, player, spaces);
+    }
+
+    /// <summary>Get Out of Jail Free: leave Jail and move normally (no extra turn on doubles, like bail).</summary>
+    public void LeaveJailFree(EngineContext ctx, PlayerState player)
+    {
+        player.InJail = false;
+        LeftJailThisTurn = true;
+        ctx.Emit(new LeftJail(PlayerId, "used Get Out of Jail Free"));
+        Stage = TurnStage.ChooseMove;
     }
 
     /// <summary>Jail option 3: try for doubles (Section 14.3).</summary>
@@ -295,7 +424,8 @@ public sealed class TurnStep : Step
         }
 
         ctx.Emit(new StayedInJail(PlayerId, player.JailTurns));
-        return StepResult.Done;
+        Stage = TurnStage.EndOfTurn;
+        return StepResult.Continue;
     }
 
     /// <param name="diceTotal">What the dice showed, before any Nudge (utility rent uses it).</param>

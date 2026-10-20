@@ -321,3 +321,21 @@ button.primary small { color: inherit; }
 .group-choice .band { height: 0.6rem; border-radius: 3px; }
 .duel-setup { margin: 0.6rem 0; border: 1px solid var(--line); border-radius: 8px; }
 .city .boost { font-weight: 700; }
+
+/* ----- Phase 5: cards ----- */
+.cards { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.4rem 0; }
+.card-view { position: relative; flex: 1 1 11rem; max-width: 15rem; border: 2px solid var(--line); border-radius: 8px;
+    padding: 0.4rem 0.6rem; background: var(--panel); display: flex; flex-direction: column; gap: 0.25rem; }
+.card-view.deck-opportunity { border-color: #2a9d47; }
+.card-view.deck-event { border-color: #e07a10; }
+.card-view .timing { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.card-view p { margin: 0; font-size: 0.9rem; }
+.card-view .copies { position: absolute; top: 0.3rem; right: 0.5rem; font-weight: 700; }
+.card-view details summary { cursor: pointer; font-weight: 700; }
+.card-view .stake input { width: 5rem; }
+.hand { margin-top: 0.8rem; border-top: 1px solid var(--line); padding-top: 0.4rem; }
+.hand h3, .mall h3 { font-size: 1rem; margin: 0.2rem 0; }
+.secret { font-style: italic; }
+.decks { font-size: 0.85rem; color: var(--muted); }
+.space .opening { position: absolute; top: 1.1rem; right: 0.15rem; font-size: 0.75rem; }
+.toggle.small-print { font-size: 0.85rem; }

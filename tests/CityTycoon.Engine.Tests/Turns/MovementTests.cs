@@ -20,9 +20,9 @@ public class MovementTests
     public void Roll_MovesThePlayerByTheDiceTotal()
     {
         var game = new TestGame();
-        game.PlaceBefore(0, "mall", 7);
+        game.PlaceBefore(0, "jail", 7);
         game.Roll(0, 3, 4);
-        Assert.Equal(game.State.IndexOf("mall"), game.Player(0).Position);
+        Assert.Equal(game.State.IndexOf("jail"), game.Player(0).Position);
         Assert.Equal(DecisionKind.PostMoveActions, game.DecisionFor(0)!.Kind);
     }
 
@@ -51,7 +51,7 @@ public class MovementTests
     public void Doubles_GiveAnotherTurn()
     {
         var game = new TestGame();
-        game.PlaceBefore(0, "mall", 4);
+        game.PlaceBefore(0, "jail", 4);
         game.Roll(0, 2, 2);
         game.EndTurn(0);
         Assert.Equal(DecisionKind.ChooseMoveMethod, game.DecisionFor(0)!.Kind);

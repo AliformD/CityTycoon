@@ -54,7 +54,12 @@ public sealed class EasyBot : IPlayerController
             // A duel is a coin flip: fine for pocket change only.
             DecisionKind.RespondToDuel => decision.Duel!.Stake <= view.Me.Cash / 20 ? new AcceptDuel() : new DeclineDuel(),
             DecisionKind.ChooseStadiumGroup => new PickStadiumGroup(BestStadiumGroup(view)),
-            _ => ManageMoney(view, decision, legalActions) ?? MainChoice(view, decision, legalActions),
+            // A card is usually worth more than one token, while there's room in the hand.
+            DecisionKind.CityParkChoice => view.MyHand.Count < content.Rules.HandLimit ? new DrawOpportunity() : new TakeMomentum(),
+            DecisionKind.MallVisit => MallChoice(view, legalActions),
+            DecisionKind.DiscardCards => new DiscardCard(view.MyHand.MinBy(CardValue)!),
+            DecisionKind.PlayReaction => ChooseReaction(view, decision, legalActions),
+            _ => PlayACard(view, decision, legalActions) ?? ManageMoney(view, decision, legalActions) ?? MainChoice(view, decision, legalActions),
         };
         return Task.FromResult(choice);
     }
@@ -106,8 +111,9 @@ public sealed class EasyBot : IPlayerController
         return null;
     }
 
-    private int NextBuildCost(PlayerView view, string propertyId) =>
-        BuildingRules.LevelCost(content, content.Property(propertyId), view.Properties[propertyId].Level + 1);
+    private int NextBuildCost(PlayerView view, string propertyId) => BuildingRules.ApplyDiscount(content.Rules,
+        BuildingRules.LevelCost(content, content.Property(propertyId), view.Properties[propertyId].Level + 1),
+        view.Me.BuildDiscountThisTurn);
 
     /// <summary>Owes money: mortgage first (no loss), then loans, then sell buildings (it loses half).</summary>
     private static GameAction RaiseMoney(IReadOnlyList<GameAction> legalActions) =>
@@ -311,4 +317,103 @@ public sealed class EasyBot : IPlayerController
             double rent = EstimateRent(view, id, 7);
             return owner == view.ViewerId ? rent : owner == null ? 0 : -rent;
         }))!;
+
+    // ----- Cards (Section 15.4) -----
+
+    /// <summary>
+    /// How much the bot likes holding a card, by what its effect does. Used to
+    /// pick what to discard or sell. Cards the Easy bot never plays are worth least.
+    /// </summary>
+    private int CardValue(string cardId) => content.Card(cardId).EffectType switch
+    {
+        "CancelCard" => 9,
+        "RentMultiplier" => 8,
+        "GetOutOfJailFree" => 6,
+        "PropertyRentBoost" => 6,
+        "GainMomentum" => 5,
+        "PayPercentOfCash" => 5,
+        "Detour" => 4,
+        "ConstructionPermit" => 4,
+        "PeekTile" => 2,
+        _ => 1,
+    };
+
+    /// <summary>
+    /// Plays an Opportunity card on its own turn when the moment is obviously
+    /// right. Returns null to do something else. Playing removes the card from
+    /// the hand, so this can't loop forever.
+    /// </summary>
+    private GameAction? PlayACard(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions)
+    {
+        var plays = legalActions.OfType<PlayCard>().ToList();
+        if (plays.Count == 0)
+            return null;
+        PlayCard? Find(string effect) => plays.FirstOrDefault(p => content.Card(p.CardId).EffectType == effect);
+
+        if (decision.Kind == DecisionKind.JailChoice)
+            return Find("GetOutOfJailFree");
+
+        if (Find("GainMomentum") is PlayCard fastTrack && view.Me.Momentum + content.Card(fastTrack.CardId).Int("amount") <= content.Rules.MomentumCap - 2)
+            return fastTrack;
+
+        // Audit the richest opponent, if it's worth it.
+        var audits = plays.Where(p => content.Card(p.CardId).EffectType == "PayPercentOfCash" && p.TargetPlayerId != null).ToList();
+        if (audits.MaxBy(p => view.Player(p.TargetPlayerId!.Value).Cash) is PlayCard audit && view.Player(audit.TargetPlayerId!.Value).Cash >= 300)
+            return audit;
+
+        // Grand Opening on its best earner.
+        var openings = plays.Where(p => content.Card(p.CardId).EffectType == "PropertyRentBoost" && p.TargetSpaceId != null).ToList();
+        if (openings.MaxBy(p => EstimateRent(view, p.TargetSpaceId!, 7)) is PlayCard opening && EstimateRent(view, opening.TargetSpaceId!, 7) >= 20)
+            return opening;
+
+        // A Construction Permit only after moving, when there's money to build with.
+        if (decision.Kind == DecisionKind.PostMoveActions && Find("ConstructionPermit") is PlayCard permit
+            && view.Me.BuildDiscountThisTurn == 0
+            && legalActions.OfType<Build>().Any(b => NextBuildCost(view, b.PropertyId) * 3 <= view.Me.Cash - SafetyReserve))
+        {
+            return permit;
+        }
+
+        return Find("PeekTile");
+    }
+
+    /// <summary>Reaction cards: always use Rent Strike and Insurance; use Detour when it helps.</summary>
+    private GameAction ChooseReaction(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions)
+    {
+        var plays = legalActions.OfType<PlayCard>().ToList();
+        var detours = plays.Where(p => content.Card(p.CardId).EffectType == "Detour").ToList();
+        if (detours.Count == 0)
+            return plays.FirstOrDefault() ?? (GameAction)new NoThanks();
+
+        // Detour: steer the mover onto the bot's own property, or away from nothing.
+        if (decision.OtherPlayerId is not int moverId)
+            return new NoThanks();
+        int from = view.Player(moverId).Position;
+        double Gain(int spaces)
+        {
+            SpaceInfo space = view.Spaces[(from + spaces) % view.Spaces.Count];
+            if (space.Kind == SpaceKind.GoToJail)
+                return 50;
+            return space.Kind == SpaceKind.Property && view.Properties[space.Id].OwnerId == view.ViewerId
+                ? EstimateRent(view, space.Id, decision.Spaces)
+                : 0;
+        }
+        double stay = Gain(decision.Spaces);
+        var best = detours.MaxBy(d => Gain(decision.Spaces + d.Number))!;
+        return Gain(decision.Spaces + best.Number) > stay + TokenValue ? best : new NoThanks();
+    }
+
+    /// <summary>Buys the cheapest shop card if the hand has room and cash is plentiful; sells junk when the hand is full.</summary>
+    private GameAction MallChoice(PlayerView view, IReadOnlyList<GameAction> legalActions)
+    {
+        int spare = view.Me.Cash - SafetyReserve * 2;
+        if (view.MyHand.Count < content.Rules.HandLimit && legalActions.Contains(new BuyCard(0))
+            && view.MallShop.Count > 0 && CardValue(view.MallShop[0]) >= 4 && spare >= content.Rules.MallPrices[0])
+        {
+            return new BuyCard(0);
+        }
+        if (view.MyHand.Count >= content.Rules.HandLimit && view.MyHand.MinBy(CardValue) is string junk && CardValue(junk) <= 2)
+            return new SellCard(junk);
+        return new NoThanks();
+    }
 }

@@ -2,7 +2,8 @@
 @{
     var decision = Request.Decision;
     var view = Request.View;
-    var main = Request.LegalActions.Where(a => a is not ManagementAction).ToList();
+    var main = Request.LegalActions.Where(a => a is not ManagementAction and not PlayCard).ToList();
+    var plays = Request.LegalActions.OfType<PlayCard>().ToList();
     var manage = Request.LegalActions.OfType<ManagementAction>().ToList();
 }
 @if (decision.Kind == DecisionKind.SubmitBid)
@@ -123,6 +124,104 @@ else if (decision.Kind == DecisionKind.ChooseStadiumGroup)
         </div>
     </div>
 }
+else if (decision.Kind == DecisionKind.PlayReaction)
+{
+    @* A Reaction window (Section 17.2): only players holding a matching card are asked. *@
+    <div class="decision reaction">
+        <h2>@view.Me.Name, @AfterName(decision.Prompt)</h2>
+        @if (decision.Cards is { Count: > 0 } trigger)
+        {
+            <div class="cards"><CardView CardId="@trigger[0]" Content="Content" /></div>
+        }
+        <div class="buttons stacked">
+            @foreach (var play in plays)
+            {
+                if (Content.Card(play.CardId).EffectType == "Detour" && decision.OtherPlayerId is int mover)
+                {
+                    var land = UiHelpers.LandingSpace(view, mover, decision.Spaces + play.Number);
+                    <button class="big" @onclick="() => OnAnswer.InvokeAsync(play)"
+                            @onmouseover="() => Preview(land.Id)" @onmouseout="() => Preview(null)"
+                            @onfocus="() => Preview(land.Id)" @onblur="() => Preview(null)">
+                        <span>@UiHelpers.ActionLabel(play, view, Content)</span>
+                        <small>@view.Player(mover).Name lands on @UiHelpers.DisplayName(land, Content) instead</small>
+                    </button>
+                }
+                else
+                {
+                    <button class="big primary" @onclick="() => OnAnswer.InvokeAsync(play)">@UiHelpers.ActionLabel(play, view, Content)</button>
+                }
+            }
+            @foreach (var action in main)
+            {
+                <button class="big" @onclick="() => OnAnswer.InvokeAsync(action)">@UiHelpers.ActionLabel(action, view, Content)</button>
+            }
+        </div>
+        <label class="toggle"><input type="checkbox" checked="@Session.AutoPassesReactions(Request.PlayerId)"
+               @onchange="e => Session.SetAutoPassReactions(Request.PlayerId, e.Value is true)" /> Always pass on reactions from now on</label>
+    </div>
+}
+else if (decision.Kind == DecisionKind.MallVisit)
+{
+    @* The Mall (Section 15.3): three face-up cards for sale, cheapest on the left. Or sell one of yours. *@
+    <div class="decision mall">
+        <h2>@view.Me.Name, @AfterName(decision.Prompt)</h2>
+        <div class="cards">
+            @for (int i = 0; i < view.MallShop.Count; i++)
+            {
+                // A copy of the loop number: the card's button is drawn later, after the loop has moved on.
+                int slot = i;
+                var buy = new BuyCard(slot);
+                <CardView CardId="@view.MallShop[slot]" Content="Content">
+                    <button class="small primary" disabled="@(!main.Contains(buy))" @onclick="() => OnAnswer.InvokeAsync(buy)">Buy for @UiHelpers.Money(Content.Rules.MallPrices[slot])</button>
+                </CardView>
+            }
+        </div>
+        @if (main.OfType<SellCard>().Any())
+        {
+            <h3>Or sell one of your cards for @UiHelpers.Money(Content.Rules.MallSellPrice)</h3>
+            <div class="buttons">
+                @foreach (var sell in main.OfType<SellCard>())
+                {
+                    <button class="small" @onclick="() => OnAnswer.InvokeAsync(sell)">@UiHelpers.ActionLabel(sell, view, Content)</button>
+                }
+            </div>
+        }
+        <div class="buttons"><button class="big" @onclick="() => OnAnswer.InvokeAsync(new NoThanks())">Just browsing</button></div>
+    </div>
+}
+else if (decision.Kind == DecisionKind.DiscardCards)
+{
+    <div class="decision discard">
+        <h2>@view.Me.Name, @AfterName(decision.Prompt)</h2>
+        <div class="cards">
+            @foreach (var cardId in view.MyHand.Distinct())
+            {
+                var discard = new DiscardCard(cardId);
+                <CardView CardId="@cardId" Content="Content">
+                    <button class="small" @onclick="() => OnAnswer.InvokeAsync(discard)">Discard</button>
+                </CardView>
+            }
+        </div>
+    </div>
+}
+else if (decision.Kind == DecisionKind.ArrangeEvents && decision.Cards is { } top)
+{
+    @* Tip-Off: only this player sees these cards. Each button is one order, top card first. *@
+    <div class="decision arrange">
+        <h2>@view.Me.Name, @AfterName(decision.Prompt)</h2>
+        <div class="cards">
+            @foreach (var cardId in top) { <CardView CardId="@cardId" Content="Content" /> }
+        </div>
+        <div class="buttons stacked">
+            @foreach (var arrange in main.OfType<ArrangeCards>())
+            {
+                <button class="small" @onclick="() => OnAnswer.InvokeAsync(arrange)">
+                    @string.Join(" → ", arrange.Order.Select(i => Content.Card(top[i]).Name))
+                </button>
+            }
+        </div>
+    </div>
+}
 else
 {
     <div class="decision">
@@ -133,6 +232,8 @@ else
                 <button class="big @(action == main[0] ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)">@UiHelpers.ActionLabel(action, view, Content)</button>
             }
         </div>
+
+        <HandPanel Request="Request" Content="Content" OnAnswer="OnAnswer" />
 
         @if (decision.Management != ManagementOptions.None)
         {
@@ -180,8 +281,12 @@ else
     };
 
     // "Angel, " + "Anything else?" reads better as "Angel, anything else?".
-    private static string AfterName(string prompt) =>
-        prompt.Length > 1 && char.IsUpper(prompt[0]) && char.IsLower(prompt[1]) ? char.ToLowerInvariant(prompt[0]) + prompt[1..] : prompt;
+    // A prompt that starts with someone's name ("Cal is about to move") keeps its capital letter.
+    private string AfterName(string prompt) =>
+        prompt.Length > 1 && char.IsUpper(prompt[0]) && char.IsLower(prompt[1])
+            && !Request.View.Players.Any(p => prompt.StartsWith(p.Name + " ", StringComparison.Ordinal))
+            ? char.ToLowerInvariant(prompt[0]) + prompt[1..]
+            : prompt;
 
     private Task Preview(string? spaceId) => OnPreview.InvokeAsync(spaceId);
 

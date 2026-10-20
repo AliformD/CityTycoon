@@ -51,9 +51,6 @@ public sealed class CasinoStep : Step
     public BetHighLow? HighLow { get; set; }
     public ChallengeDuel? Duel { get; set; }
 
-    /// <summary>The challenged player's answer, null while waiting.</summary>
-    public bool? DuelAccepted { get; set; }
-
     public bool Answered { get; set; }
 
     public override StepResult Run(EngineContext ctx)
@@ -68,25 +65,9 @@ public sealed class CasinoStep : Step
         }
 
         if (HighLow is { } bet)
-        {
             PlayHighLow(ctx, player, bet);
-            return StepResult.Done;
-        }
-
-        if (Duel is { } duel)
-        {
-            if (DuelAccepted == null)
-            {
-                return StepResult.WaitFor(new PendingDecision(duel.OpponentId, DecisionKind.RespondToDuel,
-                    $"{player.Name} challenges you to a Dice Duel for ${duel.Amount}. Both roll 2 dice; the higher total takes everything.",
-                    Duel: new DuelChallenge(PlayerId, duel.OpponentId, duel.Amount)));
-            }
-
-            if (DuelAccepted == true)
-                PlayDuel(ctx, duel);
-            else
-                ctx.Emit(new DuelDeclined(PlayerId, duel.OpponentId));
-        }
+        else if (Duel is { } duel)
+            ctx.Push(new DiceDuelStep { ChallengerId = PlayerId, OpponentId = duel.OpponentId, Stake = duel.Amount });
         return StepResult.Done;
     }
 
@@ -102,31 +83,8 @@ public sealed class CasinoStep : Step
         ctx.Emit(new CasinoHighLow(PlayerId, bet.Amount, bet.High, die1, die2, net));
     }
 
-    private void PlayDuel(EngineContext ctx, ChallengeDuel duel)
-    {
-        // Ties roll again until someone wins.
-        while (true)
-        {
-            int mine = ctx.Dice.RollDie() + ctx.Dice.RollDie();
-            int theirs = ctx.Dice.RollDie() + ctx.Dice.RollDie();
-            ctx.Emit(new DuelRolled(PlayerId, mine, duel.OpponentId, theirs));
-            if (mine == theirs)
-                continue;
-
-            int winnerId = mine > theirs ? PlayerId : duel.OpponentId;
-            int loserId = winnerId == PlayerId ? duel.OpponentId : PlayerId;
-            ctx.Player(winnerId).Cash += duel.Amount;
-            ctx.Player(loserId).Cash -= duel.Amount;
-            ctx.Emit(new DuelWon(winnerId, loserId, duel.Amount));
-            return;
-        }
-    }
-
     public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision)
     {
-        if (decision.Kind == DecisionKind.RespondToDuel)
-            return [new AcceptDuel(), new DeclineDuel()];
-
         // Any whole-dollar amount up to the limit is legal too (see IsLegal).
         // These are just examples, so bots and the screen have something to start from.
         int example = Math.Min(10, decision.MaxBet);
@@ -138,9 +96,6 @@ public sealed class CasinoStep : Step
 
     public override bool IsLegal(EngineContext ctx, PendingDecision decision, GameAction action)
     {
-        if (decision.Kind == DecisionKind.RespondToDuel)
-            return action is AcceptDuel or DeclineDuel;
-
         int cash = ctx.Player(PlayerId).Cash;
         return action switch
         {
@@ -155,27 +110,9 @@ public sealed class CasinoStep : Step
 
     public override void Receive(EngineContext ctx, PendingDecision decision, GameAction action)
     {
-        switch (action)
-        {
-            case AcceptDuel:
-                DuelAccepted = true;
-                break;
-            case DeclineDuel:
-                DuelAccepted = false;
-                break;
-            case BetHighLow bet:
-                Answered = true;
-                HighLow = bet;
-                break;
-            case ChallengeDuel duel:
-                Answered = true;
-                Duel = duel;
-                ctx.Emit(new DuelChallenged(PlayerId, duel.OpponentId, duel.Amount));
-                break;
-            default:
-                Answered = true;
-                break;
-        }
+        Answered = true;
+        HighLow = action as BetHighLow;
+        Duel = action as ChallengeDuel;
     }
 
     /// <summary>Players who can be challenged: still in the game, with some cash.</summary>

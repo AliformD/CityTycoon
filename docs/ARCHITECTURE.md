@@ -130,6 +130,25 @@ Each landmark that asks a question is its own small step in `Steps/LandmarkSteps
 
 Rent changes from the Stadium (×2) and Jail (×½) live in `RentCalculator`, so every place that charges rent gets them for free.
 
+## Cards (Phase 5)
+
+Every Opportunity and Event card is **data** in `content/opportunity.json` and `content/events.json`. A card names an **effect type** (like `PayPercentOfCash`) and gives it settings (like `"percent": 10`). The code for each effect type lives in `src/CityTycoon.Engine/Cards/CardEffects.cs`, as one small class per effect.
+
+So adding a card is usually just JSON. Audit and a made-up "Tax Inspector" (20% instead of 10%) both use `PayPercentOfCash` with different numbers. Only a brand-new *kind* of effect needs a new C# class. The test `AnExpansionFile_AddsACard_WithNoNewCode` proves this by loading an extra card file.
+
+| Piece | Job |
+| --- | --- |
+| `Cards/ICardEffect.cs` | What every effect class can do: check its settings when the content loads (`Validate`), list the ways it can be played (`Plays`), and do its thing (`Apply`). |
+| `Cards/CardEffects.cs` | The effect classes, plus one list inside `CardEffects` that maps each effect name to its class. It's an ordinary list on purpose: Blazor trims away code it thinks is unused, and looking classes up "by magic" (reflection) can break after trimming. |
+| `Cards/CardRules.cs` | Decks, shuffling, drawing, discarding, and which cards can be played right now. |
+| `Cards/ReactionWindow.cs` | A Reaction moment (Rent Strike, Insurance, Detour). Only players holding a matching card are asked, one at a time. |
+| `Steps/CardPlayStep.cs` | Plays one card: first it opens an Insurance window if the card hurts someone, then it applies the effect. |
+| `Steps/CardSteps.cs` | The questions cards ask: City Park, the Mall, Fire!, Tip-Off, the Dice Duel and the hand limit. |
+
+Some effects need to change the thing they react to. Rent Strike halves a rent payment that's already being asked for, and Detour changes a move that's about to happen. The effect gets a `Parent`: the step it was played under (the `PaymentStep` or the `TurnStep`), and changes that.
+
+Opportunity cards are secret. The log only says "Angel drew an Opportunity card", and `PlayerView.MyHand` shows the cards to their owner only. Everyone else just sees how many cards each player holds.
+
 ## The browser app (Phase 2)
 
 The Web project draws the game and passes clicks to the engine. It never changes the game state itself.
@@ -144,6 +163,7 @@ The Web project draws the game and passes clicks to the engine. It never changes
 | `Components/PropertyActions.razor` | Build, sell, mortgage and unmortgage buttons for one of your properties (Phase 3). |
 | `Components/TradeBuilder.razor` | The "offer a trade" form (Phase 3). |
 | `Components/CasinoPanel.razor` | The Casino: bet High/Low or challenge someone to a Dice Duel (Phase 4). |
+| `Components/HandPanel.razor`, `CardView.razor` | Your Opportunity cards with their Play buttons, and how one card looks (Phase 5). |
 
 While you choose a Nudge or Precision dice, `Play.razor` works out every space you could land on and gives them to the board, which outlines them. Pointing at a button outlines its space more strongly, so you can see where you'd land before you click.
 
@@ -160,4 +180,4 @@ Because the engine only ever sees "a controller answered", bots, people on this 
 
 ### Keeping the shared screen fair
 
-On one shared screen, the board and log are drawn from a **spectator view**: the same `PlayerView` a player gets, but for nobody in particular, so it holds no secrets. The auction panel uses the bidding player's own view. In Hidden mode with two or more humans, the pass-the-device screen covers everything until the right person taps "show me".
+On one shared screen, the board and log are drawn from a **spectator view**: the same `PlayerView` a player gets, but for nobody in particular, so it holds no secrets. The auction panel uses the bidding player's own view. In Hidden mode with two or more humans, the pass-the-device screen covers everything until the right person taps "show me". Since Phase 5 every question can show that person's secret cards, so the pass screen appears whenever the next question is for a different person.

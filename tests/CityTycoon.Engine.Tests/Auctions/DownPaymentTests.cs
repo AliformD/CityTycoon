@@ -130,7 +130,7 @@ public class DownPaymentTests
         game.Property("market-street").IsPending = true;
         game.Property("market-street").PendingBalance = 120;
 
-        game.PlaceBefore(0, "old-town-event", 5);
+        game.PlaceBefore(0, "go", 5);
         game.Roll(0, 1, 4); // passes GO
 
         Assert.False(game.Property("market-street").IsPending);
@@ -148,7 +148,7 @@ public class DownPaymentTests
         game.Property("market-street").PendingBalance = 300;
         game.Player(0).Cash = 0;
 
-        game.PlaceBefore(0, "old-town-event", 5);
+        game.PlaceBefore(0, "go", 5);
         game.Roll(0, 1, 4); // $200 salary, $300 due
 
         var decision = game.DecisionFor(0)!;
@@ -172,7 +172,7 @@ public class DownPaymentTests
         game.Property("market-street").IsPending = true;
         game.Property("market-street").PendingBalance = 300;
         game.Player(0).Cash = 0;
-        game.PlaceBefore(0, "old-town-event", 5);
+        game.PlaceBefore(0, "go", 5);
         game.Roll(0, 1, 4);
 
         game.Do(0, new TakeLoan());
@@ -191,7 +191,7 @@ public class DownPaymentTests
         game.Player(0).Cash = 0;
         game.Player(0).Loans = 2;
 
-        game.PlaceBefore(0, "old-town-event", 5);
+        game.PlaceBefore(0, "go", 5);
         game.Roll(0, 1, 4);
 
         Assert.Null(game.Property("market-street").OwnerId);

@@ -18,7 +18,7 @@ public class MomentumTests
     public void PassingGo_GivesAToken()
     {
         var game = new TestGame();
-        game.PlaceBefore(0, "old-town-event", 5);
+        game.PlaceBefore(0, "go", 5);
         game.Roll(0, 1, 4);
         Assert.Equal(2, game.Player(0).Momentum);
         Assert.Contains(game.State.Log, e => e is MomentumGained { Source: "GO", Amount: 1 });
@@ -29,7 +29,7 @@ public class MomentumTests
     {
         var game = new TestGame();
         game.Player(0).Momentum = 5;
-        game.PlaceBefore(0, "old-town-event", 5);
+        game.PlaceBefore(0, "go", 5);
         game.Roll(0, 1, 4);
         Assert.Equal(5, game.Player(0).Momentum);
         Assert.DoesNotContain(game.State.Log, e => e is MomentumGained);
@@ -39,7 +39,7 @@ public class MomentumTests
     public void AfterRolling_YouMayNudgeUpToTwoSpacesEitherWay()
     {
         var game = new TestGame();
-        game.PlaceBefore(0, "mall", 7);
+        game.PlaceBefore(0, "jail", 7);
         game.Dice.Add(3, 4);
         game.Do(0, new RollDice());
 
@@ -53,12 +53,12 @@ public class MomentumTests
     public void ANudge_CostsOneToken_AndChangesWhereYouLand()
     {
         var game = new TestGame();
-        game.PlaceBefore(0, "mall", 9);
+        game.PlaceBefore(0, "jail", 9);
         game.Dice.Add(3, 4);
         game.Do(0, new RollDice());
         game.Do(0, new Nudge(2));
 
-        Assert.Equal(game.State.IndexOf("mall"), game.Player(0).Position);
+        Assert.Equal(game.State.IndexOf("jail"), game.Player(0).Position);
         Assert.Equal(0, game.Player(0).Momentum);
         Assert.Contains(game.State.Log, e => e is Nudged { Spaces: 2 });
     }
@@ -67,13 +67,13 @@ public class MomentumTests
     public void NotNudging_IsFree()
     {
         var game = new TestGame();
-        game.PlaceBefore(0, "mall", 7);
+        game.PlaceBefore(0, "jail", 7);
         game.Dice.Add(3, 4);
         game.Do(0, new RollDice());
         game.Do(0, new Nudge(0));
 
         Assert.Equal(1, game.Player(0).Momentum);
-        Assert.Equal(game.State.IndexOf("mall"), game.Player(0).Position);
+        Assert.Equal(game.State.IndexOf("jail"), game.Player(0).Position);
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class MomentumTests
         game.SkipTurn(0);
         game.SkipTurn(1);
         game.Player(0).Momentum = 2;
-        game.PlaceBefore(0, "mall", 2);
+        game.PlaceBefore(0, "jail", 2);
         game.Dice.Add(2);
         game.Do(0, new RollDice());
 
@@ -97,7 +97,7 @@ public class MomentumTests
     {
         var game = new TestGame();
         game.Player(0).Momentum = 0;
-        game.PlaceBefore(0, "mall", 7);
+        game.PlaceBefore(0, "jail", 7);
         game.Dice.Add(3, 4);
         game.Do(0, new RollDice());
         Assert.Equal(DecisionKind.PostMoveActions, game.DecisionFor(0)!.Kind);
@@ -107,7 +107,7 @@ public class MomentumTests
     public void ANudge_DoesntChangeDoubles()
     {
         var game = new TestGame();
-        game.PlaceBefore(0, "mall", 5);
+        game.PlaceBefore(0, "jail", 5);
         game.Dice.Add(3, 3);
         game.Do(0, new RollDice());
         game.Do(0, new Nudge(-1));
@@ -131,7 +131,7 @@ public class MomentumTests
     {
         var game = new TestGame();
         game.Player(0).Momentum = 3;
-        game.PlaceBefore(0, "mall", 9);
+        game.PlaceBefore(0, "jail", 9);
         game.Dice.Add(2, 6, 3);
 
         game.Do(0, new PrecisionRoll());
@@ -142,7 +142,7 @@ public class MomentumTests
 
         game.Do(0, new ChooseDice(1, 2)); // 6 + 3 = 9
         game.Do(0, new Nudge(0));
-        Assert.Equal(game.State.IndexOf("mall"), game.Player(0).Position);
+        Assert.Equal(game.State.IndexOf("jail"), game.Player(0).Position);
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public class MomentumTests
     {
         var game = new TestGame();
         game.Player(0).Momentum = 2;
-        game.PlaceBefore(0, "mall", 8);
+        game.PlaceBefore(0, "jail", 8);
         game.Dice.Add(4, 4, 1);
 
         game.Do(0, new PrecisionRoll());

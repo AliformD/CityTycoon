@@ -55,6 +55,12 @@ public static class Bankruptcy
         player.IsInsured = false;
         player.IsRecovering = false;
         ctx.State.StadiumBoosts.RemoveAll(b => b.ChosenById == player.Id);
+        ctx.State.PropertyBoosts.RemoveAll(b => b.ChosenById == player.Id);
+        // Their Opportunity cards go to the discard pile.
+        foreach (string card in player.Hand)
+            Cards.CardRules.Discard(ctx, card);
+        player.Hand.Clear();
+        player.RoadWorkCost = 0;
         player.IsBankrupt = true;
         player.InJail = false;
         ctx.Emit(new PlayerBankrupt(player.Id, creditorId, cash, outright.Select(p => p.PropertyId).ToList()));

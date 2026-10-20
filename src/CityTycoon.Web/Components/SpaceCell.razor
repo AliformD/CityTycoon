@@ -17,6 +17,9 @@
         label += ", pending";
     if (group != null && View.StadiumBoosts.Any(b => b.GroupId == group.Id))
         label += ", rent doubled by the Stadium";
+    var opening = View.PropertyBoosts.FirstOrDefault(b => b.PropertyId == Space.Id);
+    if (opening != null)
+        label += $", Grand Opening: rent ×{opening.Multiplier}";
 }
 <button class="space side-@UiHelpers.Side(Space.Index) kind-@Space.Kind.ToString().ToLowerInvariant() @(Highlight ? "highlight" : "") @(Preview ? "preview" : "") @(PreviewFocus ? "preview-focus" : "")"
         style="grid-column:@col; grid-row:@row;"
@@ -47,6 +50,10 @@
         <span class="owner" style="background:@UiHelpers.PlayerColor(ownerId)">
             @UiHelpers.Initial(View.Player(ownerId).Name)@(owned.IsMortgaged ? " (M)" : "")@(owned.IsPending ? " (P)" : "")
         </span>
+        @if (opening != null)
+        {
+            <span class="opening" aria-hidden="true">🎉</span>
+        }
         @if (owned.Level > 0)
         {
             <span class="level level-@owned.Level">@UiHelpers.LevelMarker(owned.Level)</span>

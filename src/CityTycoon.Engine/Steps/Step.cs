@@ -26,6 +26,13 @@ namespace CityTycoon.Engine.Steps;
 [JsonDerivedType(typeof(HospitalVisitStep), nameof(HospitalVisitStep))]
 [JsonDerivedType(typeof(CasinoStep), nameof(CasinoStep))]
 [JsonDerivedType(typeof(StadiumStep), nameof(StadiumStep))]
+[JsonDerivedType(typeof(CardPlayStep), nameof(CardPlayStep))]
+[JsonDerivedType(typeof(CityParkStep), nameof(CityParkStep))]
+[JsonDerivedType(typeof(MallStep), nameof(MallStep))]
+[JsonDerivedType(typeof(ChooseFirePropertyStep), nameof(ChooseFirePropertyStep))]
+[JsonDerivedType(typeof(ArrangeEventsStep), nameof(ArrangeEventsStep))]
+[JsonDerivedType(typeof(DiceDuelStep), nameof(DiceDuelStep))]
+[JsonDerivedType(typeof(HandLimitStep), nameof(HandLimitStep))]
 public abstract class Step
 {
     /// <summary>Called whenever this step is on top of the stack. Do some work, then say what's next.</summary>

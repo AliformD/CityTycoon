@@ -3,6 +3,10 @@
     @foreach (var p in View.Players)
     {
         <article class="player-card @(p.IsActive ? "active" : "") @(p.IsBankrupt ? "bankrupt" : "")" style="border-color:@UiHelpers.PlayerColor(p.Id)">
+            @foreach (var pop in Session.Playback.PopsFor(p.Id))
+            {
+                <span class="pop @(pop.Amount > 0 ? "up" : "down")" @key="pop.Number" aria-hidden="true">@(pop.Amount > 0 ? "+" : "−")@UiHelpers.Money(Math.Abs(pop.Amount))</span>
+            }
             <header>
                 <span class="token" style="background:@UiHelpers.PlayerColor(p.Id)" aria-hidden="true">@UiHelpers.Initial(p.Name)</span>
                 <strong>@p.Name</strong>

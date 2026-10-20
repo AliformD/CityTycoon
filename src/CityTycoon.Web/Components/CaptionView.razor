@@ -1,0 +1,25 @@
+@* What is happening right now, big, in the middle of the board, while the game replays a move. *@
+@if (Playback.IsPlaying)
+{
+    @if (Playback.Caption is { } beat)
+    {
+        @* The game log says the same thing out loud for screen readers, so this copy is hidden from them. *@
+        <div class="caption tone-@beat.Tone" @key="beat.Number" aria-hidden="true">
+            @if (beat.CardId != null)
+            {
+                <div class="caption-card"><CardView CardId="@beat.CardId" Content="Content" /></div>
+            }
+            else if (beat.CardBack)
+            {
+                <div class="card-back">★ Opportunity card</div>
+            }
+            <p><span class="caption-icon">@beat.Icon</span> @beat.Text</p>
+        </div>
+    }
+    <button class="small skip" @onclick="Playback.Skip">⏭ Skip animation</button>
+}
+
+@code {
+    [Parameter, EditorRequired] public Playback Playback { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+}

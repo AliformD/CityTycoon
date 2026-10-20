@@ -1,0 +1,62 @@
+{
+  "contentVersion": 1,
+
+  "startingCash": 1500,
+  "startingMomentum": 1,
+  "momentumCap": 5,
+  "nudgeMaxSpaces": 2,
+  "nudgeCost": 1,
+  "precisionRollCost": 2,
+
+  "goSalary": 200,
+  "goMomentumGain": 1,
+  "catchUpBonus": 100,
+  "incomeTax": 200,
+  "luxuryTax": 100,
+
+  "auctionMinBidPercent": 50,
+  "forcedAuctionMinBidPercent": 100,
+  "bidIncrement": 10,
+  "downPaymentPercent": 20,
+  "maxPendingProperties": 2,
+
+  "mortgagePercent": 50,
+  "unmortgageFeePercent": 10,
+
+  "buildLimitPerTurn": 3,
+  "skyscraperCostMultiplier": 3,
+  "skyscraperRentMultiplier": 1.5,
+  "maxBuildDiscountPercent": 75,
+  "permitsByPlayerCount": [
+    { "minPlayers": 2, "maxPlayers": 3, "hotelPermits": 8, "skyscraperPermits": 2 },
+    { "minPlayers": 4, "maxPlayers": 4, "hotelPermits": 10, "skyscraperPermits": 3 },
+    { "minPlayers": 5, "maxPlayers": 6, "hotelPermits": 12, "skyscraperPermits": 4 }
+  ],
+
+  "councilEveryNRounds": 4,
+  "voteInfluence": 100,
+  "politicianVoteInfluence": 200,
+  "publicOpinionInfluence": 100,
+
+  "loanAmount": 200,
+  "loanRepay": 250,
+  "maxLoans": 2,
+
+  "jailBail": 50,
+  "maxJailTurns": 2,
+  "jailRentMultiplier": 0.5,
+
+  "hospitalBill": 100,
+  "insuredMarkerCost": 50,
+  "mallPrices": [ 50, 100, 150 ],
+  "mallSellPrice": 50,
+  "handLimit": 3,
+
+  "timedModeDefaultRounds": 30,
+
+  "minPlayers": 2,
+  "maxPlayers": 6,
+  "railroadRents": [ 25, 50, 100, 200 ],
+  "utilityRentMultipliers": [ 4, 10 ],
+  "maxDoublesBeforeJail": 3
+}

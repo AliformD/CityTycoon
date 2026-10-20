@@ -1,0 +1,27 @@
+# CI = Continuous Integration. GitHub runs this on every push and pull request:
+# it builds the whole solution and runs every test, so mistakes get caught early.
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore packages
+        run: dotnet restore CityTycoon.sln
+
+      - name: Build
+        run: dotnet build CityTycoon.sln --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test CityTycoon.sln --no-build --configuration Release --verbosity normal

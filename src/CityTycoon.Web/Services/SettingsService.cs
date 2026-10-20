@@ -3,7 +3,7 @@ using Microsoft.JSInterop;
 
 namespace CityTycoon.Web.Services;
 
-public enum AnimationSpeed { Normal, Fast, Off }
+public enum AnimationSpeed { Normal, Fast, Off, Slow }
 
 /// <summary>What a person can change in Settings (Sections 24.2 and 27). Saved in the browser, not in a game.</summary>
 public sealed class UserSettings
@@ -63,11 +63,11 @@ public sealed class SettingsService(IJSRuntime js)
 
     private ValueTask ApplyAsync()
     {
-        double animationScale = Current.Animation switch { AnimationSpeed.Fast => 0.4, AnimationSpeed.Off => 0.0001, _ => 1.0 };
+        double animationScale = Current.Animation switch { AnimationSpeed.Fast => 0.4, AnimationSpeed.Off => 0.0001, AnimationSpeed.Slow => 1.6, _ => 1.0 };
         return js.InvokeVoidAsync("ct.applySettings", Current.Font, Current.TextSize / 100.0, Current.LineSpacing,
             Current.ReduceMotion || Current.Animation == AnimationSpeed.Off, animationScale);
     }
 
     /// <summary>How long to pause between bot moves, in milliseconds.</summary>
-    public int BotDelayMs => Current.FastBots ? 0 : Current.Animation switch { AnimationSpeed.Fast => 120, AnimationSpeed.Off => 0, _ => 350 };
+    public int BotDelayMs => Current.FastBots ? 0 : Current.Animation switch { AnimationSpeed.Fast => 60, AnimationSpeed.Off => 0, AnimationSpeed.Slow => 300, _ => 200 };
 }

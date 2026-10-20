@@ -21,7 +21,7 @@
     if (opening != null)
         label += $", Grand Opening: rent ×{opening.Multiplier}";
 }
-<button class="space side-@UiHelpers.Side(Space.Index) kind-@Space.Kind.ToString().ToLowerInvariant() @(Highlight ? "highlight" : "") @(Preview ? "preview" : "") @(PreviewFocus ? "preview-focus" : "")"
+<button class="space side-@UiHelpers.Side(Space.Index) kind-@Space.Kind.ToString().ToLowerInvariant() @(Highlight ? "highlight" : "") @(Preview ? "preview" : "") @(PreviewFocus ? "preview-focus" : "") @(Flash ? "flash flash-" + FlashTone : "")"
         style="grid-column:@col; grid-row:@row;"
         title="@label"
         aria-label="@label"
@@ -64,7 +64,7 @@
         <span class="tokens">
             @foreach (var p in tokens)
             {
-                <span class="token @(p.IsActive ? "active" : "")" style="background:@UiHelpers.PlayerColor(p.Id)" title="@p.Name">@UiHelpers.Initial(p.Name)</span>
+                <span class="token @(p.IsActive ? "active" : "")" @key="p.Id" style="background:@UiHelpers.PlayerColor(p.Id)" title="@p.Name">@UiHelpers.Initial(p.Name)</span>
             }
         </span>
     }
@@ -77,5 +77,9 @@
     [Parameter] public bool Highlight { get; set; }
     [Parameter] public bool Preview { get; set; }
     [Parameter] public bool PreviewFocus { get; set; }
+
+    /// <summary>Flashed while the replay is talking about this space. The tone is "good", "bad" or empty.</summary>
+    [Parameter] public bool Flash { get; set; }
+    [Parameter] public string FlashTone { get; set; } = "";
     [Parameter] public EventCallback<SpaceInfo> OnSelect { get; set; }
 }

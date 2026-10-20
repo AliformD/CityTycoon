@@ -212,7 +212,7 @@ input, select {
 .city { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 0.5rem; }
 .city .permits, .city details { flex-basis: 100%; }
 .players { display: flex; flex-direction: column; gap: 0.5rem; }
-.player-card { border-width: 3px; }
+.player-card { border-width: 3px; position: relative; }
 .player-card.active { box-shadow: 0 0 0 3px var(--highlight); }
 .player-card.bankrupt { opacity: 0.55; }
 .player-card header { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
@@ -384,3 +384,35 @@ button.primary small { color: inherit; }
 .saved-game { border: 2px solid var(--accent); border-radius: 10px; padding: 0.5rem 1rem; margin: 0.8rem 0; }
 .skip-link { position: absolute; left: -999px; }
 .skip-link:focus { left: 0.5rem; top: 0.5rem; z-index: 100; background: var(--highlight); color: #000; padding: 0.3rem 0.6rem; }
+
+/* ---- Replay of each move (Playback): caption, tumbling dice, token pops, money pops, space flashes ---- */
+.caption { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; font-size: 1.25rem; font-weight: 700; border-left: 6px solid var(--line); background: var(--panel); border-radius: 6px; padding: 0.4rem 0.8rem; margin: 0.3rem 0; animation: caption-in calc(0.3s * var(--anim-scale, 1)) ease-out; }
+.caption p { margin: 0; }
+.caption .caption-icon { font-size: 1.6rem; margin-right: 0.2rem; }
+.caption.tone-good { border-left-color: #2a9d47; }
+.caption.tone-bad { border-left-color: #d62839; }
+.caption-card { max-width: 16rem; animation: card-flip calc(0.6s * var(--anim-scale, 1)) ease-out; }
+.card-back { width: 6.5rem; padding: 1.4rem 0.5rem; text-align: center; border: 3px solid var(--line); border-radius: 8px; background: repeating-linear-gradient(45deg, var(--panel), var(--panel) 6px, var(--line) 6px, var(--line) 8px); animation: card-flip calc(0.6s * var(--anim-scale, 1)) ease-out; }
+button.skip { margin: 0.2rem 0; }
+
+.dice.rolling .die { animation: die-tumble calc(0.35s * var(--anim-scale, 1)) linear infinite; }
+.dice:not(.rolling) .die { animation: die-land calc(0.35s * var(--anim-scale, 1)) ease-out; }
+
+.token { animation: token-pop calc(0.3s * var(--anim-scale, 1)) ease-out; }
+
+.space.flash { animation: space-flash calc(0.9s * var(--anim-scale, 1)) ease-out; }
+.space.flash { --flash: var(--highlight); }
+.space.flash-good { --flash: #2a9d47; }
+.space.flash-bad { --flash: #d62839; }
+
+.pop { position: absolute; right: 0.6rem; top: 0.2rem; font-weight: 800; font-size: 1.3rem; pointer-events: none; text-shadow: 0 0 3px var(--panel), 0 0 3px var(--panel); animation: pop-float calc(1.6s * var(--anim-scale, 1)) ease-out forwards; z-index: 2; }
+.pop.up { color: #1f7a36; }
+.pop.down { color: #c0182a; }
+
+@keyframes caption-in { from { opacity: 0; transform: translateY(-6px); } }
+@keyframes card-flip { from { transform: rotateY(90deg) scale(0.8); opacity: 0; } }
+@keyframes die-tumble { 0% { transform: rotate(0deg) translateY(0); } 25% { transform: rotate(90deg) translateY(-6px); } 50% { transform: rotate(180deg) translateY(0); } 75% { transform: rotate(270deg) translateY(-6px); } 100% { transform: rotate(360deg) translateY(0); } }
+@keyframes die-land { from { transform: scale(1.5) rotate(-20deg); } }
+@keyframes token-pop { from { transform: scale(1.8); } }
+@keyframes space-flash { 0%, 60% { box-shadow: inset 0 0 0 5px var(--flash), 0 0 12px var(--flash); } 100% { box-shadow: none; } }
+@keyframes pop-float { 0% { opacity: 0; transform: translateY(8px); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-28px); } }

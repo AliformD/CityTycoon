@@ -3,7 +3,7 @@
     @foreach (var space in View.Spaces)
     {
         <SpaceCell Space="space" View="View" Content="Content" Highlight="space.Id == HighlightSpaceId"
-                   Preview="PreviewSpaceIds?.Contains(space.Id) == true" PreviewFocus="space.Id == PreviewFocusId" OnSelect="OnSelect" />
+                   Preview="PreviewSpaceIds?.Contains(space.Id) == true" PreviewFocus="space.Id == PreviewFocusId" Flash="space.Id == FlashSpaceId" FlashTone="@FlashTone" OnSelect="OnSelect" />
     }
     <div class="board-center">
         @ChildContent
@@ -20,6 +20,9 @@
 
     /// <summary>The landing spot of the option the mouse or keyboard focus is on.</summary>
     [Parameter] public string? PreviewFocusId { get; set; }
+    /// <summary>The space the replay is flashing right now, and whether it is good or bad news.</summary>
+    [Parameter] public string? FlashSpaceId { get; set; }
+    [Parameter] public string FlashTone { get; set; } = "";
     [Parameter] public EventCallback<SpaceInfo> OnSelect { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
 }

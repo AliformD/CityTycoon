@@ -247,3 +247,11 @@ On one shared screen, the board and log are drawn from a **spectator view**: the
 - `EasyBot` answers every kind of decision. `NormalBot` and `HardBot` inherit from it and override a few `virtual` methods: `Reserve`, `PropertyWorth`, `SealedAmount`, `PickBuild`, `Vote`, `NudgeThreshold`.
 - The estimates (set bonus, blocking, vote impact) use only the bot's `PlayerView`.
 - The Sim has mixed-table modes so one kind of bot can be measured against another. Results are written up in `docs/BALANCE.md`.
+
+## Replaying moves so they are easy to follow (Web)
+
+- `Services/Playback.cs` takes the events a step produced and shows them one at a time. `GameSession.RunAsync` calls `Prepare` before each step and `PlayAsync` after it.
+- `Playback.Apply` turns the real `PlayerView` into the view the screen draws while a replay is running. `GameSession.PublicView` goes through it, so every component shows the replayed state without knowing about it.
+- Money, ownership and positions are worked out from events only for the common cases. If an event is not covered, the screen simply catches up when the replay ends.
+- New pieces: `CaptionView` (big caption, card pop-up, skip button), tumbling dice in `DiceView`, space flashes in `SpaceCell`, and money pop-ups in `PlayerPanels`. Their CSS is at the end of `app.css`.
+- To replay a new kind of event: add its pause in `PauseFor`, its icon in `Look`, and (if it moves money or changes a property) its entry in `MoneyChanges` or `ApplyBoard`.

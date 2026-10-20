@@ -86,8 +86,13 @@ public sealed class GameSession(SettingsService settings, IJSRuntime js)
     /// <summary>Pages subscribe to this and redraw when it fires.</summary>
     public event Action? Changed;
 
-    /// <summary>What everyone at the table can see (no secrets), for drawing the board.</summary>
-    public PlayerView PublicView => Engine!.GetView(viewerId: -1);
+    private Playback? playback;
+
+    /// <summary>Slows the game down and replays each step's events one at a time (see <see cref="Playback"/>).</summary>
+    public Playback Playback => playback ??= new Playback(settings, Content, () => Changed?.Invoke());
+
+    /// <summary>What everyone at the table can see (no secrets), for drawing the board. While a replay is playing it shows only what has been replayed so far.</summary>
+    public PlayerView PublicView => Playback.Apply(Engine!.GetView(viewerId: -1));
 
     public bool IsHuman(int playerId) => Seats.TryGetValue(playerId, out var kind) && kind == SeatKind.Human;
 
@@ -168,11 +173,19 @@ public sealed class GameSession(SettingsService settings, IJSRuntime js)
                     return;
                 bool botsAreUp = host.Engine.GetPendingDecisions().All(d => !IsHuman(d.PlayerId));
                 if (botsAreUp && settings.BotDelayMs > 0)
-                    await Task.Delay(settings.BotDelayMs); // a short pause so people can follow what the bots did
+                    await Task.Delay(settings.BotDelayMs); // a short pause between bot moves
+
+                // "Fast bots" skips the replay for bot moves, but a person's own moves are still shown.
+                bool replay = Playback.Enabled && (!botsAreUp || !FastBots);
+                int logBefore = host.Engine.State.Log.Count;
+                if (replay)
+                    Playback.Prepare(host.Engine.GetView(viewerId: -1));
 
                 await host.StepAsync();
                 if (stop.IsCancellationRequested)
                     return;
+                if (replay)
+                    await Playback.PlayAsync(host.Engine.GetView(viewerId: -1), host.Engine.State.Log.Skip(logBefore).ToList(), stop);
                 Changed?.Invoke();
                 await ShowCouncilResults(host, stop);
             }

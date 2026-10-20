@@ -20,6 +20,7 @@
     </label>
     <label>Animation speed
         <select value="@S.Animation" @onchange="SetAnimation">
+            <option value="@AnimationSpeed.Slow">Slow (more time to follow each move)</option>
             <option value="@AnimationSpeed.Normal">Normal</option>
             <option value="@AnimationSpeed.Fast">Fast</option>
             <option value="@AnimationSpeed.Off">Off (no animation, no pause between bot moves)</option>

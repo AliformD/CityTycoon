@@ -18,8 +18,10 @@ else
     var request = Session.Request;
     <div class="game">
         <BoardView View="view" Content="Session.Content" HighlightSpaceId="@selectedSpaceId" OnSelect="Select"
-                   PreviewSpaceIds="PreviewSpots(request)" PreviewFocusId="@previewFocusId">
-            <DiceView View="view" />
+                   PreviewSpaceIds="PreviewSpots(request)" PreviewFocusId="@previewFocusId"
+                   FlashSpaceId="@Session.Playback.FlashSpaceId" FlashTone="@Session.Playback.FlashTone">
+            <CaptionView Playback="Session.Playback" Content="Session.Content" />
+            <DiceView View="view" Rolling="Session.Playback.Rolling" RollingFaces="Session.Playback.RollingFaces" />
             @if (Session.Error != null)
             {
                 <p class="error" role="alert">Something went wrong: @Session.Error</p>
@@ -32,7 +34,7 @@ else
             {
                 <DecisionPanel Request="request" Content="Session.Content" Session="Session" OnAnswer="Answer" OnPreview="id => previewFocusId = id" />
             }
-            else if (request == null)
+            else if (request == null && !Session.Playback.IsPlaying)
             {
                 <p class="waiting">Waiting for @string.Join(", ", view.WaitingOn.Select(id => view.Player(id).Name))…</p>
             }

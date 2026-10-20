@@ -1,0 +1,49 @@
+{
+  "contentVersion": 1,
+  // Railroad and utility bonuses (Sections 13.3 and 13.4). They switch on when you own "count" or more
+  // properties of that "propertyType" (owned outright and not mortgaged). Railroad bonuses stack, so
+  // owning 4 railroads gives you all three. Each "modifiers" entry names a class in
+  // src/CityTycoon.Engine/Modifiers (listed in ModifierTypes.cs).
+  "bonuses": [
+    {
+      "id": "express-line",
+      "name": "Express Line",
+      "text": "With 2 railroads: instead of rolling, pay $50 to the bank and move to any railroad you own. Then roll 1 die and move that many spaces. You may Nudge. Express Line never gives an extra turn.",
+      "propertyType": "railroad",
+      "count": 2,
+      "modifiers": [ { "type": "ExpressLine", "value": 50 } ]
+    },
+    {
+      "id": "toll-collector",
+      "name": "Toll Collector",
+      "text": "With 3 railroads: gain 1 Momentum token every time someone pays you railroad rent.",
+      "propertyType": "railroad",
+      "count": 3,
+      "modifiers": [ { "type": "TollCollector", "value": 1 } ]
+    },
+    {
+      "id": "rail-baron",
+      "name": "Rail Baron",
+      "text": "With all 4 railroads: your Precision Rolls cost 1 token instead of 2.",
+      "propertyType": "railroad",
+      "count": 4,
+      "modifiers": [ { "type": "PrecisionRollDiscount", "value": 1 } ]
+    },
+    {
+      "id": "utility-bill",
+      "name": "Utility Bill",
+      "text": "With both utilities: every time an opponent passes GO, they pay you $20 out of their salary.",
+      "propertyType": "utility",
+      "count": 2,
+      "modifiers": [ { "type": "UtilityBill", "value": 20 } ]
+    },
+    {
+      "id": "power-grid",
+      "name": "Power Grid",
+      "text": "With both utilities: every time an opponent builds a level, they pay you $10.",
+      "propertyType": "utility",
+      "count": 2,
+      "modifiers": [ { "type": "PowerGrid", "value": 10 } ]
+    }
+  ]
+}

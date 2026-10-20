@@ -17,7 +17,7 @@ A virtual board game inspired by Monopoly, written in C#. The full rules and the
 
 ## Playing
 
-Run `CityTycoon.Web` and the game opens in your browser. On the **New game** screen, pick 2 to 6 players and make each one a **Human** or an **Easy bot**, then press **Start game**.
+Run `CityTycoon.Web` and the game opens in your browser. On the **New game** screen, pick 2 to 6 players and make each one a **Human** or an **Easy bot**, choose how characters are handed out (**Pick**, **Random** or **None**), then press **Start game**.
 
 - Click the big buttons in the middle of the board to roll, bid and end your turn.
 - Click any space on the board to see its rent table.
@@ -27,7 +27,7 @@ Run `CityTycoon.Web` and the game opens in your browser. On the **New game** scr
 - Click an owned property to see **Rent right now**, a line-by-line breakdown including any Government tile next door.
 - Tick **Fast bots** to stop the short pause between bot moves.
 
-Right now the game has movement, auctions, rent, taxes, Jail, scoring, buildings, mortgages, loans, trades, Momentum tokens (Nudge and Precision Roll), the Hospital, Casino, Stadium, City Park and Mall, every Opportunity and Event card, and all 7 Government tiles. Color perks, characters and the City Council arrive in later phases (see Section 29 of the design doc).
+Right now the game has movement, auctions, rent, taxes, Jail, scoring, buildings, mortgages, loans, trades, Momentum tokens (Nudge and Precision Roll), the Hospital, Casino, Stadium, City Park and Mall, every Opportunity and Event card, all 7 Government tiles, all 8 color perks, the railroad and utility bonuses, and all 8 characters. The City Council arrives in a later phase (see Section 29 of the design doc).
 
 ## Running the tests in Visual Studio
 
@@ -39,7 +39,7 @@ Open **Test > Test Explorer** and click **Run All Tests** (the double green arro
 dotnet build                                  # build everything
 dotnet test                                   # run every test
 dotnet run --project src/CityTycoon.Web       # start the game, then open the address it prints
-dotnet run --project src/CityTycoon.Sim       # run bot games (add --bots easy, random or mixed)
+dotnet run --project src/CityTycoon.Sim       # run bot games (add --bots easy, random or mixed, and --characters none or random)
 ```
 
 ## How the folders fit together

@@ -20,6 +20,23 @@ public sealed class GameSetup
 
     /// <summary>Normally true. Tests turn it off so seat 0 always goes first.</summary>
     public bool ShuffleTurnOrder { get; set; } = true;
+
+    /// <summary>How the players who haven't been given a character get one (Section 5).</summary>
+    public CharacterMode Characters { get; set; } = CharacterMode.None;
 }
 
-public sealed record PlayerSetup(string Name);
+/// <summary>How characters are handed out when a game starts (Section 5).</summary>
+public enum CharacterMode
+{
+    /// <summary>No characters, unless a player was given one in <see cref="PlayerSetup"/>. Handy for tests of the plain rules.</summary>
+    None,
+
+    /// <summary>Players pick in reverse turn order, so the last player picks first. Bots pick at random.</summary>
+    Pick,
+
+    /// <summary>Everyone is dealt a random, different character.</summary>
+    Random,
+}
+
+/// <param name="CharacterId">A character chosen before the game starts. Leave empty to pick (or be dealt) one later.</param>
+public sealed record PlayerSetup(string Name, string? CharacterId = null);

@@ -55,7 +55,7 @@ public sealed class EasyBot : IPlayerController
             DecisionKind.RespondToDuel => decision.Duel!.Stake <= view.Me.Cash / 20 ? new AcceptDuel() : new DeclineDuel(),
             DecisionKind.ChooseStadiumGroup => new PickStadiumGroup(BestStadiumGroup(view)),
             // A card is usually worth more than one token, while there's room in the hand.
-            DecisionKind.CityParkChoice => view.MyHand.Count < content.Rules.HandLimit ? new DrawOpportunity() : new TakeMomentum(),
+            DecisionKind.CityParkChoice => view.MyHand.Count < view.Me.HandLimit ? new DrawOpportunity() : new TakeMomentum(),
             DecisionKind.MallVisit => MallChoice(view, legalActions),
             DecisionKind.DiscardCards => new DiscardCard(view.MyHand.MinBy(CardValue)!),
             DecisionKind.PlayReaction => ChooseReaction(view, decision, legalActions),
@@ -63,6 +63,12 @@ public sealed class EasyBot : IPlayerController
             DecisionKind.TransitHop => decision.AmountOwed > content.GovTile("transit-hub").Neighbor!.TransitHopCost ? new HopToTransitHub() : new NoThanks(),
             // The Easy bot doesn't take the train.
             DecisionKind.TransitRide => new NoThanks(),
+            // "AI players pick randomly from what's left" (Section 5).
+            DecisionKind.ChooseCharacter => legalActions[rng.NextInt(legalActions.Count)],
+            // A reroll is only offered when the roll is bad, so always take it.
+            DecisionKind.ChooseReroll => new RerollDice(),
+            DecisionKind.KeepCard => new KeepCard(decision.Cards!.MaxBy(CardValue)!),
+            DecisionKind.PeekTile => legalActions[rng.NextInt(legalActions.Count)],
             _ => PlayACard(view, decision, legalActions) ?? ManageMoney(view, decision, legalActions) ?? MainChoice(view, decision, legalActions),
         };
         return Task.FromResult(choice);
@@ -73,9 +79,9 @@ public sealed class EasyBot : IPlayerController
         // A Precision Roll costs tokens, so only use one when the tokens would
         // otherwise go to waste (it's at its token limit and GO would add more).
         DecisionKind.ChooseMoveMethod when legalActions.Contains(new PrecisionRoll())
-            && view.Me.Momentum >= content.Rules.MomentumCap => new PrecisionRoll(),
-        // Pay bail when comfortably rich; otherwise hope for doubles (it's free).
-        DecisionKind.JailChoice => legalActions.Contains(new PayBail()) && view.Me.Cash > SafetyReserve * 3
+            && view.Me.Momentum >= view.Me.MomentumCap => new PrecisionRoll(),
+        // Pay bail when comfortably rich (or when it's free); otherwise hope for doubles (it's free).
+        DecisionKind.JailChoice => legalActions.Contains(new PayBail()) && (view.Me.Bail == 0 || view.Me.Cash > SafetyReserve * 3)
             ? new PayBail()
             : new RollForDoubles(),
         _ => legalActions.First(a => a is not ManagementAction),
@@ -109,13 +115,28 @@ public sealed class EasyBot : IPlayerController
         // Only when really comfortable: get mortgaged properties back, then clear loans.
         if (legalActions.OfType<Unmortgage>().FirstOrDefault() is Unmortgage unmortgage && spare > SafetyReserve * 2)
             return unmortgage;
-        if (legalActions.Contains(new RepayLoan()) && spare > SafetyReserve * 2 + content.Rules.LoanRepay)
+        if (legalActions.Contains(new RepayLoan()) && spare > SafetyReserve * 2 + view.Me.LoanRepayCost)
             return new RepayLoan();
+
+        // The Red perk: force an auction on the one missing piece of a color group it nearly owns.
+        if (legalActions.OfType<HostileTakeover>().FirstOrDefault(t => CompletesAGroup(view, t.PropertyId)) is HostileTakeover takeover
+            && spare > content.Property(takeover.PropertyId).AssessedValue)
+        {
+            return takeover;
+        }
 
         return null;
     }
 
     private static int NextBuildCost(PlayerView view, string propertyId) => view.Properties[propertyId].NextLevelCost;
+
+    /// <summary>True if owning this property would give the bot a whole color group.</summary>
+    private bool CompletesAGroup(PlayerView view, string propertyId)
+    {
+        string? group = content.Property(propertyId).Group;
+        return group != null && content.GroupMembers(group).Where(id => id != propertyId)
+            .All(id => view.Properties[id].OwnerId == view.ViewerId && !view.Properties[id].IsPending);
+    }
 
     /// <summary>Owes money: mortgage first (no loss), then loans, then sell buildings (it loses half).</summary>
     private static GameAction RaiseMoney(IReadOnlyList<GameAction> legalActions) =>
@@ -410,12 +431,12 @@ public sealed class EasyBot : IPlayerController
     private GameAction MallChoice(PlayerView view, IReadOnlyList<GameAction> legalActions)
     {
         int spare = view.Me.Cash - SafetyReserve * 2;
-        if (view.MyHand.Count < content.Rules.HandLimit && legalActions.Contains(new BuyCard(0))
+        if (view.MyHand.Count < view.Me.HandLimit && legalActions.Contains(new BuyCard(0))
             && view.MallShop.Count > 0 && CardValue(view.MallShop[0]) >= 4 && spare >= content.Rules.MallPrices[0])
         {
             return new BuyCard(0);
         }
-        if (view.MyHand.Count >= content.Rules.HandLimit && view.MyHand.MinBy(CardValue) is string junk && CardValue(junk) <= 2)
+        if (view.MyHand.Count >= view.Me.HandLimit && view.MyHand.MinBy(CardValue) is string junk && CardValue(junk) <= 2)
             return new SellCard(junk);
         return new NoThanks();
     }

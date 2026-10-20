@@ -2,12 +2,13 @@ using CityTycoon.Engine.Actions;
 using CityTycoon.Engine.Cards;
 using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Events;
+using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.State;
 
 namespace CityTycoon.Engine.Steps;
 
-public enum PaymentReason { Rent, Tax, Bail, Hospital, Card, Tile }
+public enum PaymentReason { Rent, Tax, Bail, Hospital, Card, Tile, Perk }
 
 /// <summary>
 /// One player pays money to another player or to the bank.
@@ -35,6 +36,9 @@ public sealed class PaymentStep : Step
     /// <summary>For Government tile fees: which tile (Police Station, Landfill...).</summary>
     public string? TileId { get; set; }
 
+    /// <summary>For perk payments (Neighborhood Watch): the perk's name.</summary>
+    public string? PerkName { get; set; }
+
     /// <summary>For rent: the Rent Strike question, once it has been opened.</summary>
     public ReactionWindow? RentStrike { get; set; }
 
@@ -52,7 +56,10 @@ public sealed class PaymentStep : Step
         // Owing rent opens a Reaction window for Rent Strike (Section 15.4).
         if (Reason == PaymentReason.Rent)
         {
-            RentStrike ??= ReactionWindow.Open(ctx, CardTrigger.RentOwed, [FromId]);
+            // Dark Blue's Prime Real Estate ignores Rent Strike (Section 13.1), so nobody is asked.
+            RentStrike ??= RuleModifiers.IgnoresNegativeRent(ctx.State, ctx.Content, SpaceId!)
+                ? new ReactionWindow { Trigger = CardTrigger.RentOwed }
+                : ReactionWindow.Open(ctx, CardTrigger.RentOwed, [FromId]);
             if (RentStrike.Decision(ctx, $"You owe ${Amount} rent for {ctx.Content.Property(SpaceId!).Name}. Play a card?") is { } ask)
                 return StepResult.WaitFor(ask with { AmountOwed = Amount, PropertyId = SpaceId });
             if (RentStrike.Played is { } play && !PlayedRentStrike)
@@ -77,8 +84,17 @@ public sealed class PaymentStep : Step
                 PaymentReason.Hospital => new HospitalBillPaid(FromId, Amount),
                 PaymentReason.Card => new CardPaymentMade(FromId, ToId, Amount, CardId!),
                 PaymentReason.Tile => new TileFeePaid(FromId, ToId, Amount, TileId!),
+                PaymentReason.Perk => new PerkPaid(FromId, ToId!.Value, Amount, PerkName!),
                 _ => new BailPaid(FromId, Amount),
             });
+
+            // Toll Collector: the owner of 3 or more railroads gains a Momentum token for each railroad rent they are paid.
+            if (Reason == PaymentReason.Rent && ToId is int ownerId && !ctx.Player(ownerId).IsBankrupt)
+            {
+                PropertyType type = ctx.Content.Property(SpaceId!).Type;
+                foreach (var (tokens, source) in RuleModifiers.MomentumFromRents(ctx.State, ctx.Content, ownerId, type))
+                    MomentumRules.Gain(ctx, ctx.Player(ownerId), tokens, source);
+            }
             return StepResult.Done;
         }
 

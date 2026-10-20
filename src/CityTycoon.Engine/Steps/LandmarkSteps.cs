@@ -1,5 +1,6 @@
 using CityTycoon.Engine.Actions;
 using CityTycoon.Engine.Events;
+using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.State;
 
 namespace CityTycoon.Engine.Steps;
@@ -16,11 +17,12 @@ public sealed class HospitalVisitStep : Step
     public override StepResult Run(EngineContext ctx)
     {
         PlayerState player = ctx.Player(PlayerId);
-        if (Answered || player.IsInsured || player.Cash < ctx.Rules.InsuredMarkerCost)
+        int cost = RuleModifiers.InsuredMarkerCost(ctx.State, ctx.Content, PlayerId);
+        if (Answered || player.IsInsured || player.Cash < cost)
             return StepResult.Done;
 
         return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.HospitalVisit,
-            $"You're visiting the Hospital. Buy an Insured marker for ${ctx.Rules.InsuredMarkerCost}? It cancels one Hospital bill."));
+            $"You're visiting the Hospital. Buy an Insured marker for ${cost}? It cancels one Hospital bill."));
     }
 
     public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision) =>
@@ -33,9 +35,10 @@ public sealed class HospitalVisitStep : Step
             return;
 
         PlayerState player = ctx.Player(PlayerId);
-        player.Cash -= ctx.Rules.InsuredMarkerCost;
+        int cost = RuleModifiers.InsuredMarkerCost(ctx.State, ctx.Content, PlayerId);
+        player.Cash -= cost;
         player.IsInsured = true;
-        ctx.Emit(new InsuranceBought(PlayerId, ctx.Rules.InsuredMarkerCost));
+        ctx.Emit(new InsuranceBought(PlayerId, cost));
     }
 }
 
@@ -53,6 +56,13 @@ public sealed class CasinoStep : Step
 
     public bool Answered { get; set; }
 
+    /// <summary>The High/Low roll, once made (0 means not rolled yet). A losing Hustler may reroll it once.</summary>
+    public int Die1 { get; set; }
+    public int Die2 { get; set; }
+
+    /// <summary>True once the Hustler has been asked about a reroll, so they are asked at most once per visit.</summary>
+    public bool RerollOffered { get; set; }
+
     public override StepResult Run(EngineContext ctx)
     {
         PlayerState player = ctx.Player(PlayerId);
@@ -65,26 +75,45 @@ public sealed class CasinoStep : Step
         }
 
         if (HighLow is { } bet)
+        {
+            if (Die1 == 0)
+            {
+                Die1 = ctx.Dice.RollDie();
+                Die2 = ctx.Dice.RollDie();
+            }
+            // The Hustler may roll again, but only if this roll lost (Section 5). They are asked once.
+            if (!RerollOffered && !IsRight(ctx, bet) && RuleModifiers.CasinoReroll(ctx.State, ctx.Content, PlayerId))
+            {
+                RerollOffered = true;
+                return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.ChooseReroll,
+                    $"You bet {(bet.High ? "High" : "Low")} and rolled {Die1} + {Die2} = {Die1 + Die2}, which loses. Use your Hustler reroll?",
+                    Dice: [Die1, Die2]));
+            }
             PlayHighLow(ctx, player, bet);
+        }
         else if (Duel is { } duel)
+        {
             ctx.Push(new DiceDuelStep { ChallengerId = PlayerId, OpponentId = duel.OpponentId, Stake = duel.Amount });
+        }
         return StepResult.Done;
     }
 
+    private bool IsRight(EngineContext ctx, BetHighLow bet) =>
+        bet.High ? Die1 + Die2 >= ctx.Rules.CasinoHighMin : Die1 + Die2 <= ctx.Rules.CasinoLowMax;
+
     private void PlayHighLow(EngineContext ctx, PlayerState player, BetHighLow bet)
     {
-        int die1 = ctx.Dice.RollDie(), die2 = ctx.Dice.RollDie();
-        int total = die1 + die2;
-        bool right = bet.High ? total >= ctx.Rules.CasinoHighMin : total <= ctx.Rules.CasinoLowMax;
-        int net = !right ? -bet.Amount
-            : die1 == die2 ? bet.Amount * ctx.Rules.CasinoDoublesPayout
+        int net = !IsRight(ctx, bet) ? -bet.Amount
+            : Die1 == Die2 ? bet.Amount * ctx.Rules.CasinoDoublesPayout
             : bet.Amount;
         player.Cash += net;
-        ctx.Emit(new CasinoHighLow(PlayerId, bet.Amount, bet.High, die1, die2, net));
+        ctx.Emit(new CasinoHighLow(PlayerId, bet.Amount, bet.High, Die1, Die2, net));
     }
 
     public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision)
     {
+        if (decision.Kind == DecisionKind.ChooseReroll)
+            return [new RerollDice(), new NoThanks()];
         // Any whole-dollar amount up to the limit is legal too (see IsLegal).
         // These are just examples, so bots and the screen have something to start from.
         int example = Math.Min(10, decision.MaxBet);
@@ -96,6 +125,8 @@ public sealed class CasinoStep : Step
 
     public override bool IsLegal(EngineContext ctx, PendingDecision decision, GameAction action)
     {
+        if (decision.Kind == DecisionKind.ChooseReroll)
+            return action is RerollDice or NoThanks;
         int cash = ctx.Player(PlayerId).Cash;
         return action switch
         {
@@ -110,6 +141,15 @@ public sealed class CasinoStep : Step
 
     public override void Receive(EngineContext ctx, PendingDecision decision, GameAction action)
     {
+        if (decision.Kind == DecisionKind.ChooseReroll)
+        {
+            if (action is RerollDice)
+            {
+                ctx.Emit(new CasinoRerolled(PlayerId, "High/Low roll"));
+                Die1 = Die2 = 0;   // Run rolls again
+            }
+            return;
+        }
         Answered = true;
         HighLow = action as BetHighLow;
         Duel = action as ChallengeDuel;

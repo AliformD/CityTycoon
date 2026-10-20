@@ -21,6 +21,18 @@ public static class TileRules
             .ToList();
     }
 
+    /// <summary>The hidden Government tiles this player hasn't peeked at yet.</summary>
+    public static List<BoardSpace> HiddenTilesFor(GameState state, PlayerState player) =>
+        state.Board.Where(s => s.Kind == SpaceKind.GovernmentTile && !s.IsRevealed && !player.KnownTiles.Contains(s.Id)).ToList();
+
+    /// <summary>A player secretly looks at a hidden tile. Only they learn what it is (Inside Source, the City Planner).</summary>
+    public static void Peek(EngineContext ctx, PlayerState player, string spaceId)
+    {
+        if (!player.KnownTiles.Contains(spaceId))
+            player.KnownTiles.Add(spaceId);
+        ctx.Emit(new TilePeeked(player.Id, spaceId));
+    }
+
     /// <summary>The revealed Transit Hub next to this property, if there is one and it lets you hop.</summary>
     public static BoardSpace? TransitHubNextTo(GameState state, GameContent content, string propertyId)
     {

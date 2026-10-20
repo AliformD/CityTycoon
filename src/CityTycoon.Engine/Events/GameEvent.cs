@@ -85,6 +85,15 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(TileNotReadyYet), nameof(TileNotReadyYet))]
 [JsonDerivedType(typeof(TransitHopped), nameof(TransitHopped))]
 [JsonDerivedType(typeof(TransitRidden), nameof(TransitRidden))]
+[JsonDerivedType(typeof(CharacterChosen), nameof(CharacterChosen))]
+[JsonDerivedType(typeof(ExpressLineUsed), nameof(ExpressLineUsed))]
+[JsonDerivedType(typeof(HostileTakeoverUsed), nameof(HostileTakeoverUsed))]
+[JsonDerivedType(typeof(PerkIncome), nameof(PerkIncome))]
+[JsonDerivedType(typeof(PerkPaid), nameof(PerkPaid))]
+[JsonDerivedType(typeof(CasinoRerolled), nameof(CasinoRerolled))]
+[JsonDerivedType(typeof(CardKept), nameof(CardKept))]
+[JsonDerivedType(typeof(HospitalShrugged), nameof(HospitalShrugged))]
+[JsonDerivedType(typeof(BidEdgeWon), nameof(BidEdgeWon))]
 public abstract record GameEvent;
 
 public sealed record GameStarted(ulong Seed, IReadOnlyList<int> TurnOrder) : GameEvent;
@@ -260,3 +269,30 @@ public sealed record TransitHopped(int PlayerId, string PropertyId, int Cost) : 
 /// <summary>A player paid the Transit Hub fare to ride to a railroad.</summary>
 public sealed record TransitRidden(int PlayerId, string RailroadId, int Cost) : GameEvent;
 
+
+/// <summary>A player picked (or was dealt) a character at the start of the game (Section 5). Everyone sees it.</summary>
+public sealed record CharacterChosen(int PlayerId, string CharacterId) : GameEvent;
+
+/// <summary>Express Line: a player paid to jump to a railroad they own, then rolls 1 die (Section 13.3).</summary>
+public sealed record ExpressLineUsed(int PlayerId, string RailroadId, int Cost) : GameEvent;
+
+/// <summary>The Red perk: a player forced an auction on an opponent's property (Section 8.6).</summary>
+public sealed record HostileTakeoverUsed(int PlayerId, string PropertyId) : GameEvent;
+
+/// <summary>A perk paid its owner (Community Roots, Dividends). <paramref name="Perk"/> is the perk's name.</summary>
+public sealed record PerkIncome(int PlayerId, int Amount, string Perk) : GameEvent;
+
+/// <summary>A perk made one player pay another (Utility Bill, Neighborhood Watch, Power Grid).</summary>
+public sealed record PerkPaid(int FromId, int ToId, int Amount, string Perk) : GameEvent;
+
+/// <summary>The Hustler used their one reroll. <paramref name="What"/> says what was rerolled.</summary>
+public sealed record CasinoRerolled(int PlayerId, string What) : GameEvent;
+
+/// <summary>The Arts District perk: a player drew two Opportunity cards and kept one (the other is discarded, unseen).</summary>
+public sealed record CardKept(int PlayerId) : GameEvent;
+
+/// <summary>The Medic was sent to the Hospital and shrugged it off.</summary>
+public sealed record HospitalShrugged(int PlayerId) : GameEvent;
+
+/// <summary>The Mogul's edge won an auction their real bid did not top.</summary>
+public sealed record BidEdgeWon(int PlayerId, string PropertyId, int Bid, int TopBid) : GameEvent;

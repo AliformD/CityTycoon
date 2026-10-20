@@ -61,6 +61,15 @@ public sealed class GameEngine
             Rng = new Pcg32(seed),
         };
 
+        // Characters named in the setup must be real and different from each other.
+        var named = setup.Players.Select(p => p.CharacterId).OfType<string>().ToList();
+        foreach (string id in named)
+            content.Character(id);
+        if (named.Distinct().Count() != named.Count)
+            throw new ArgumentException("Every player needs a different character.", nameof(setup));
+        if (setup.Characters != CharacterMode.None && content.Characters.Count < setup.Players.Count)
+            throw new ArgumentException("There aren't enough characters for every player.", nameof(setup));
+
         // Create the players. Their ID is their seat number.
         for (int seat = 0; seat < setup.Players.Count; seat++)
         {
@@ -103,8 +112,40 @@ public sealed class GameEngine
         state.Stack.Add(new GameStep());
 
         var engine = new GameEngine(state, content, dice);
+        engine.SetUpCharacters(setup);
         engine.RunUntilInputNeeded();
         return engine;
+    }
+
+    /// <summary>
+    /// Setup steps 6, 11 and 12 (Section 6): characters are given out, then the City Planner
+    /// peeks. In Pick mode the picking is a question, so it is put on the stack and answered first.
+    /// </summary>
+    private void SetUpCharacters(GameSetup setup)
+    {
+        // Characters named in the setup itself.
+        foreach (PlayerState player in State.Players)
+        {
+            if (setup.Players[player.Id].CharacterId is string chosen)
+                CharacterRules.Assign(ctx, player, chosen);
+        }
+
+        var unpicked = State.Players.Where(p => p.CharacterId == null).ToList();
+        if (setup.Characters == CharacterMode.Random)
+        {
+            foreach (PlayerState player in unpicked)
+            {
+                List<string> available = CharacterRules.Available(State, Content);
+                CharacterRules.Assign(ctx, player, available[State.Rng.NextInt(available.Count)]);
+            }
+        }
+        else if (setup.Characters == CharacterMode.Pick && unpicked.Count > 0)
+        {
+            // Reverse turn order: the last player picks first.
+            State.Stack.Add(new CharacterPickStep { Order = unpicked.AsEnumerable().Reverse().Select(p => p.Id).ToList() });
+            return;
+        }
+        CharacterRules.FinishSetup(ctx);
     }
 
     /// <summary>Who needs to decide what right now. Several at once for sealed bids.</summary>

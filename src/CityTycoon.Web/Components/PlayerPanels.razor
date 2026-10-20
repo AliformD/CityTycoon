@@ -15,13 +15,22 @@
             }
             else
             {
+                @if (p.CharacterId != null)
+                {
+                    var character = Session.Content.Character(p.CharacterId);
+                    <p class="character" title="@character.Text"><strong>@character.Name</strong>: @character.Text</p>
+                }
+                @foreach (var perk in p.Perks)
+                {
+                    <p class="status perk">★ @perk</p>
+                }
                 <dl>
                     <dt>Cash</dt><dd>@UiHelpers.Money(p.Cash)</dd>
                     <dt>Net worth</dt><dd>@UiHelpers.Money(p.NetWorth)</dd>
                     <dt>Properties</dt><dd>@View.Properties.Values.Count(x => x.OwnerId == p.Id)</dd>
                     <dt>Cards</dt><dd>@p.HandCount</dd>
-                    <dt>Momentum</dt><dd><span aria-hidden="true">@(new string('●', p.Momentum))</span> @p.Momentum</dd>
-                    @if (p.Loans > 0) { <dt>Loans</dt><dd>@p.Loans (repay @UiHelpers.Money(p.Loans * Session.Content.Rules.LoanRepay))</dd> }
+                    <dt>Momentum</dt><dd><span aria-hidden="true">@(new string('●', p.Momentum))</span> @p.Momentum of @p.MomentumCap</dd>
+                    @if (p.Loans > 0) { <dt>Loans</dt><dd>@p.Loans (repay @UiHelpers.Money(p.Loans * p.LoanRepayCost))</dd> }
                     @{ var pending = View.Properties.Values.Where(x => x.OwnerId == p.Id && x.IsPending).ToList(); }
                     @if (pending.Count > 0) { <dt>Pending</dt><dd>@pending.Count (owes @UiHelpers.Money(pending.Sum(x => x.PendingBalance)) at GO)</dd> }
                 </dl>

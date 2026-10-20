@@ -1,4 +1,5 @@
 using CityTycoon.Engine.Cards;
+using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.Tiles;
 
 namespace CityTycoon.Engine.Content;
@@ -22,14 +23,22 @@ public sealed class GameContent
     public IReadOnlyList<GovTileDefinition> GovTiles { get; }
     public int GovTilesPerGame { get; }
 
+    /// <summary>The characters players can pick (Section 5), in file order.</summary>
+    public IReadOnlyList<CharacterDefinition> Characters { get; }
+
+    /// <summary>The railroad and utility bonuses (Sections 13.3 and 13.4).</summary>
+    public IReadOnlyList<BonusDefinition> Bonuses { get; }
+
     /// <summary>Every Opportunity and Event card, keyed by card ID (Section 21.2).</summary>
     public IReadOnlyDictionary<string, CardDefinition> Cards { get; }
 
     private readonly IReadOnlyList<CardsFile> cardFiles;
     private readonly Dictionary<string, GovTileDefinition> govTilesById;
+    private readonly Dictionary<string, CharacterDefinition> charactersById;
+    private readonly Dictionary<string, int> groupSizes;
 
     public GameContent(RulesConfig rules, BoardDefinition board, PropertiesFile properties, GroupsFile groups, GovTilesFile govTiles,
-        IReadOnlyList<CardsFile>? cards = null)
+        IReadOnlyList<CardsFile>? cards = null, CharactersFile? characters = null, BonusesFile? bonuses = null)
     {
         cardFiles = cards ?? [];
         Cards = ToDictionary(cardFiles.SelectMany(f => f.Cards), c => c.Id, "card");
@@ -40,6 +49,11 @@ public sealed class GameContent
         GovTiles = govTiles.Tiles;
         GovTilesPerGame = govTiles.TilesPerGame;
         govTilesById = ToDictionary(GovTiles, t => t.Id, "Government tile");
+        Characters = characters?.Characters ?? [];
+        charactersById = ToDictionary(Characters, c => c.Id, "character");
+        Bonuses = bonuses?.Bonuses ?? [];
+        ToDictionary(Bonuses, b => b.Id, "bonus");
+        groupSizes = Properties.Values.Where(p => p.Group != null).GroupBy(p => p.Group!).ToDictionary(g => g.Key, g => g.Count());
         Validate();
     }
 
@@ -49,7 +63,9 @@ public sealed class GameContent
         ContentLoader.Load<PropertiesFile>("properties.json"),
         ContentLoader.Load<GroupsFile>("groups.json"),
         ContentLoader.Load<GovTilesFile>("govtiles.json"),
-        ContentLoader.LoadCardFiles());
+        ContentLoader.LoadCardFiles(),
+        ContentLoader.Load<CharactersFile>("characters.json"),
+        ContentLoader.Load<BonusesFile>("bonuses.json"));
 
     /// <summary>
     /// A copy of this content with extra card files added, the way an expansion
@@ -60,13 +76,32 @@ public sealed class GameContent
         new PropertiesFile(1, Properties.Values.ToList()),
         new GroupsFile(1, Groups.Values.ToList()),
         new GovTilesFile(1, GovTilesPerGame, GovTiles),
-        [.. cardFiles, .. extra]);
+        [.. cardFiles, .. extra],
+        new CharactersFile(1, Characters),
+        new BonusesFile(1, Bonuses));
 
     public CardDefinition Card(string id) =>
         Cards.TryGetValue(id, out var c) ? c : throw new KeyNotFoundException($"Unknown card '{id}'.");
 
     public PropertyDefinition Property(string id) =>
         Properties.TryGetValue(id, out var p) ? p : throw new KeyNotFoundException($"Unknown property '{id}'.");
+
+    public CharacterDefinition Character(string id) =>
+        charactersById.TryGetValue(id, out var c) ? c : throw new KeyNotFoundException($"Unknown character '{id}'.");
+
+    /// <summary>How many properties are in a color group.</summary>
+    public int GroupSize(string groupId) => groupSizes[groupId];
+
+    /// <summary>
+    /// The skyscraper price as a multiple of the house cost for this property. Normally the rule from
+    /// rules.json, but a color perk can change it (Dark Blue's Prime Real Estate). Because only the
+    /// owner of the whole group can ever build there, the perk is always on when it matters,
+    /// and buying and selling always use the same price.
+    /// </summary>
+    public int SkyscraperCostMultiplier(PropertyDefinition def) =>
+        def.Group != null
+            ? Groups[def.Group].Perk.Modifiers?.FirstOrDefault(m => m.Type == "SkyscraperCostMultiplier")?.Value ?? Rules.SkyscraperCostMultiplier
+            : Rules.SkyscraperCostMultiplier;
 
     public GovTileDefinition GovTile(string id) =>
         govTilesById.TryGetValue(id, out var t) ? t : throw new KeyNotFoundException($"Unknown Government tile '{id}'.");
@@ -183,5 +218,36 @@ public sealed class GameContent
                 throw new ContentException($"Opportunity card '{card.Id}' needs a \"polarity\": \"helpful\" or \"negative\".");
         }
         if (Rules.MallPrices.Count == 0)
-            throw new ContentException("rules.json mallPrices needs at least one slot.");    }
+            throw new ContentException("rules.json mallPrices needs at least one slot.");
+
+        // Color perks, railroad/utility bonuses and characters: every modifier is a known type with the settings it needs.
+        foreach (GroupDefinition group in Groups.Values)
+        {
+            if (group.Perk.Modifiers is not { Count: > 0 })
+                throw new ContentException($"The perk of group '{group.Id}' needs at least one modifier.");
+            foreach (ModifierSpec spec in group.Perk.Modifiers)
+                ModifierTypes.Validate(spec, $"The perk of group '{group.Id}'", this);
+        }
+        foreach (BonusDefinition bonus in Bonuses)
+        {
+            if (bonus.PropertyType == PropertyType.Color)
+                throw new ContentException($"Bonus '{bonus.Id}' must be for railroads or utilities.");
+            int available = Properties.Values.Count(p => p.Type == bonus.PropertyType);
+            if (bonus.Count < 1 || bonus.Count > available)
+                throw new ContentException($"Bonus '{bonus.Id}' needs a count between 1 and {available}.");
+            if (bonus.Modifiers is not { Count: > 0 })
+                throw new ContentException($"Bonus '{bonus.Id}' needs at least one modifier.");
+            foreach (ModifierSpec spec in bonus.Modifiers)
+                ModifierTypes.Validate(spec, $"Bonus '{bonus.Id}'", this);
+        }
+        foreach (CharacterDefinition character in Characters)
+        {
+            if (character.Modifiers is not { Count: > 0 })
+                throw new ContentException($"Character '{character.Id}' needs at least one modifier.");
+            foreach (ModifierSpec spec in character.Modifiers)
+                ModifierTypes.Validate(spec, $"Character '{character.Id}'", this);
+        }
+        if (Characters.Count > 0 && Characters.Count < Rules.MaxPlayers)
+            throw new ContentException($"characters.json needs at least {Rules.MaxPlayers} characters, so every player can have a different one.");
+    }
 }

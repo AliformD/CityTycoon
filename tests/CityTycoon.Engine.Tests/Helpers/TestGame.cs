@@ -15,7 +15,7 @@ public sealed class TestGame
     public ScriptedDice Dice { get; } = new();
     public GameState State => Engine.State;
 
-    public TestGame(int players = 2, GameMode mode = GameMode.Timed, int maxRounds = 30, ulong seed = 12345)
+    public TestGame(int players = 2, GameMode mode = GameMode.Timed, int maxRounds = 30, ulong seed = 12345, string[]? characters = null)
     {
         var setup = new GameSetup
         {
@@ -25,8 +25,13 @@ public sealed class TestGame
             Seed = seed,
             ShuffleTurnOrder = false,
         };
+        if (characters != null)
+            setup.Players = setup.Players.Select((p, i) => i < characters.Length ? p with { CharacterId = characters[i] } : p).ToList();
         Engine = GameEngine.NewGame(setup, dice: Dice);
     }
+
+    /// <summary>Gives a player a character straight away (the pick step has its own tests).</summary>
+    public void SetCharacter(int playerId, string characterId) => Player(playerId).CharacterId = characterId;
 
     public PlayerState Player(int id) => State.Player(id);
 

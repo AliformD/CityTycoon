@@ -47,6 +47,12 @@ namespace CityTycoon.Engine.Actions;
 [JsonDerivedType(typeof(ClearRoadWork), nameof(ClearRoadWork))]
 [JsonDerivedType(typeof(HopToTransitHub), nameof(HopToTransitHub))]
 [JsonDerivedType(typeof(RideToRailroad), nameof(RideToRailroad))]
+[JsonDerivedType(typeof(PickCharacter), nameof(PickCharacter))]
+[JsonDerivedType(typeof(ExpressLine), nameof(ExpressLine))]
+[JsonDerivedType(typeof(HostileTakeover), nameof(HostileTakeover))]
+[JsonDerivedType(typeof(RerollDice), nameof(RerollDice))]
+[JsonDerivedType(typeof(KeepCard), nameof(KeepCard))]
+[JsonDerivedType(typeof(PeekAtTile), nameof(PeekAtTile))]
 public abstract record GameAction;
 
 /// <summary>Roll the normal 2 dice.</summary>
@@ -140,6 +146,24 @@ public sealed record HopToTransitHub : GameAction;
 /// <summary>On the Transit Hub: pay the fare and move to this railroad.</summary>
 public sealed record RideToRailroad(string PropertyId) : GameAction;
 
+/// <summary>At the start of the game: pick this character (Section 5).</summary>
+public sealed record PickCharacter(string CharacterId) : GameAction;
+
+/// <summary>Express Line (2 railroads): instead of rolling, pay and jump to this railroad you own, then roll 1 die (Section 13.3).</summary>
+public sealed record ExpressLine(string RailroadId) : GameAction;
+
+/// <summary>The Red perk: force an auction on this opponent's property, once per lap (Section 8.6).</summary>
+public sealed record HostileTakeover(string PropertyId) : GameAction;
+
+/// <summary>The Hustler: roll again instead of keeping a bad Casino roll.</summary>
+public sealed record RerollDice : GameAction;
+
+/// <summary>The Arts District perk: keep this one of the two Opportunity cards you drew.</summary>
+public sealed record KeepCard(string CardId) : GameAction;
+
+/// <summary>Secretly peek at the hidden Government tile on this space (the City Planner).</summary>
+public sealed record PeekAtTile(string SpaceId) : GameAction;
+
 /// <summary>Pick one property (for example which building the Fire! card hits when there's a tie).</summary>
 public sealed record ChooseProperty(string PropertyId) : GameAction;
 
@@ -230,6 +254,10 @@ public enum DecisionKind
     ArrangeEvents,
     TransitHop,
     TransitRide,
+    ChooseCharacter,
+    ChooseReroll,
+    KeepCard,
+    PeekTile,
 }
 
 /// <summary>

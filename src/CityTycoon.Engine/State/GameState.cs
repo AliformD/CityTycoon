@@ -84,6 +84,9 @@ public sealed class GameState
 
     public bool IsOver => Result != null;
 
+    /// <summary>The active rule modifiers from the last time they were gathered (see RuleModifiers.Active). Never saved.</summary>
+    internal Modifiers.ModifierCache? ModifierCache { get; set; }
+
     public PlayerState ActivePlayer => Players[ActivePlayerIndex];
 
     public PlayerState Player(int playerId) =>
@@ -131,6 +134,12 @@ public sealed class PlayerState
 
     /// <summary>Doubles rolled in a row this turn. Three sends you to Jail.</summary>
     public int DoublesInARow { get; set; }
+
+    /// <summary>The character this player picked (Section 5), or null in a game without characters.</summary>
+    public string? CharacterId { get; set; }
+
+    /// <summary>True once this player has used their Hostile Takeover this lap. Passing GO makes it available again (Section 15.1).</summary>
+    public bool TakeoverUsed { get; set; }
 
     /// <summary>Unpaid bank loans (Section 15.7).</summary>
     public int Loans { get; set; }

@@ -55,6 +55,13 @@
         </fieldset>
 
         <fieldset>
+            <legend>Characters</legend>
+            <label><input type="radio" name="chars" checked="@(characters == CharacterMode.Pick)" @onchange="() => characters = CharacterMode.Pick" /> Pick: each player chooses a character (the last player picks first)</label>
+            <label><input type="radio" name="chars" checked="@(characters == CharacterMode.Random)" @onchange="() => characters = CharacterMode.Random" /> Random: everyone is dealt a different character</label>
+            <label><input type="radio" name="chars" checked="@(characters == CharacterMode.None)" @onchange="() => characters = CharacterMode.None" /> None: plain rules, no character powers</label>
+        </fieldset>
+
+        <fieldset>
             <legend>Privacy</legend>
             <label><input type="radio" name="privacy" checked="@(privacy == PrivacyMode.Hidden)" @onchange="() => privacy = PrivacyMode.Hidden" /> Hidden: hide bids behind a "pass the device" screen</label>
             <label><input type="radio" name="privacy" checked="@(privacy == PrivacyMode.Open)" @onchange="() => privacy = PrivacyMode.Open" /> Open: no hiding (good for one person against bots)</label>
@@ -87,6 +94,7 @@
     private GameMode mode = GameMode.Timed;
     private int rounds = Rules.TimedModeDefaultRounds;
     private PrivacyMode privacy = PrivacyMode.Hidden;
+    private CharacterMode characters = CharacterMode.Pick;
     private string seedText = "";
     private string? error;
 
@@ -119,7 +127,7 @@
         foreach (var s in seats)
             s.Name = s.Name.Trim();
 
-        Session.Start(seats, mode, Math.Clamp(rounds, 1, 200), privacy, seed);
+        Session.Start(seats, mode, Math.Clamp(rounds, 1, 200), privacy, seed, characters);
         Nav.NavigateTo("play");
     }
 }

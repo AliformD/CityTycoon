@@ -222,12 +222,21 @@ public sealed class AuctionStep : Step
             return;
         }
 
-        int highest = realBids.Max(b => b.Value!.Value);
+        // Bids are compared with each bidder's bonus added (the Mogul's counts $10 higher), but
+        // everyone pays the bid they actually made. If the compared bids tie, the bidder with
+        // the bonus wins, then the order from Section 8.2.
+        int topBid = realBids.Max(b => b.Value!.Value);
+        var bonus = realBids.ToDictionary(b => b.Key, b => RuleModifiers.BidBonus(ctx.State, ctx.Content, b.Key));
+        int topCompared = realBids.Max(b => b.Value!.Value + bonus[b.Key]);
         int winnerId = realBids
-            .Where(b => b.Value == highest)
+            .Where(b => b.Value!.Value + bonus[b.Key] == topCompared)
             .Select(b => b.Key)
-            .OrderBy(id => SeatsAfterTieBreakStart(ctx.State, id))
+            .OrderByDescending(id => bonus[id] > 0)
+            .ThenBy(id => SeatsAfterTieBreakStart(ctx.State, id))
             .First();
+        int highest = Bids[winnerId]!.Value;   // what the winner pays
+        if (highest < topBid)
+            ctx.Emit(new BidEdgeWon(winnerId, PropertyId, highest, topBid));
 
         // The winner pays their own bid to the bank: all of it now, or just the
         // deposit now and the rest at their next GO (Section 8.5).

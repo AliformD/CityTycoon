@@ -1,4 +1,5 @@
 using CityTycoon.Engine.Content;
+using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.State;
 
 namespace CityTycoon.Engine.Rules;
@@ -6,7 +7,8 @@ namespace CityTycoon.Engine.Rules;
 /// <summary>The score (Section 16.3). Public, and shown live for every player.</summary>
 public static class NetWorth
 {
-    public static int Calculate(GameState state, GameContent content, int playerId)
+    /// <param name="active">The active modifiers, if the caller already gathered them (saves work when scoring many players).</param>
+    public static int Calculate(GameState state, GameContent content, int playerId, IReadOnlyList<IRuleModifier>? active = null)
     {
         PlayerState player = state.Player(playerId);
         if (player.IsBankrupt)
@@ -19,7 +21,9 @@ public static class NetWorth
             total += PropertyValue(content, def, owned);
             total += BuildingValue(content, def, owned.Level);
         }
-        total -= player.Loans * content.Rules.LoanRepay;
+        // Each unpaid loan counts as what it costs this player to repay (less with the Yellow perk).
+        if (player.Loans > 0)
+            total -= player.Loans * RuleModifiers.LoanRepayCost(state, content, playerId, active);
         return total;
     }
 

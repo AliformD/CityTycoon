@@ -65,6 +65,17 @@ static IEnumerable<string> ToCsv(List<GameStats> results)
     }
 }
 
+// For games with two kinds of bot in alternating seats: how often the first-listed kind (even seats) won.
+static void AddMatchupReport(List<string> lines, List<GameStats> finished, SimOptions options)
+{
+    if (options.Bots is not (BotKind.Mixed or BotKind.NormalVsEasy or BotKind.HardVsEasy or BotKind.HardVsNormal))
+        return;
+    int strongSeats = (options.Players + 1) / 2;
+    double even = (double)strongSeats / options.Players;
+    double wins = finished.Sum(r => r.WinnerSeats.Count(seat => seat % 2 == 0) / (double)r.WinnerSeats.Count);
+    lines.Add($"Matchup {options.Bots}: the even seats (first kind listed) won {wins / finished.Count:P1} of games. An even share would be {even:P1}.");
+}
+
 // Win rate by character (Section 26.3). A character's win rate is its wins divided by the games it played in
 // (a shared win counts as a fraction). The balance target: no more than 5 points above an even share.
 static void AddCharacterReport(List<string> lines, List<GameStats> finished, SimOptions options)
@@ -148,6 +159,7 @@ static string Summarize(List<GameStats> results, SimOptions options, TimeSpan el
             double wins = finished.Sum(r => r.WinnerTurnPositions.Contains(pos) ? 1.0 / r.WinnerTurnPositions.Count : 0);
             lines.Add($"  Position {pos + 1}: {wins / finished.Count:P1}");
         }
+        AddMatchupReport(lines, finished, options);
         AddCharacterReport(lines, finished, options);
         AddPerkReport(lines, finished, options);
     }

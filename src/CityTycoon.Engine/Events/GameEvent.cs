@@ -53,6 +53,33 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(DuelWon), nameof(DuelWon))]
 [JsonDerivedType(typeof(StadiumChosen), nameof(StadiumChosen))]
 [JsonDerivedType(typeof(StadiumEnded), nameof(StadiumEnded))]
+[JsonDerivedType(typeof(OpportunityDrawn), nameof(OpportunityDrawn))]
+[JsonDerivedType(typeof(EventDrawn), nameof(EventDrawn))]
+[JsonDerivedType(typeof(NoCardToDraw), nameof(NoCardToDraw))]
+[JsonDerivedType(typeof(DeckReshuffled), nameof(DeckReshuffled))]
+[JsonDerivedType(typeof(CardPlayed), nameof(CardPlayed))]
+[JsonDerivedType(typeof(CardCancelled), nameof(CardCancelled))]
+[JsonDerivedType(typeof(CardDiscarded), nameof(CardDiscarded))]
+[JsonDerivedType(typeof(MallCardBought), nameof(MallCardBought))]
+[JsonDerivedType(typeof(MallCardSold), nameof(MallCardSold))]
+[JsonDerivedType(typeof(CashFromBank), nameof(CashFromBank))]
+[JsonDerivedType(typeof(CashToBank), nameof(CashToBank))]
+[JsonDerivedType(typeof(CardPaymentMade), nameof(CardPaymentMade))]
+[JsonDerivedType(typeof(RentReduced), nameof(RentReduced))]
+[JsonDerivedType(typeof(Detoured), nameof(Detoured))]
+[JsonDerivedType(typeof(BuildingBurned), nameof(BuildingBurned))]
+[JsonDerivedType(typeof(FireAvoided), nameof(FireAvoided))]
+[JsonDerivedType(typeof(LotteryRolled), nameof(LotteryRolled))]
+[JsonDerivedType(typeof(LotteryWon), nameof(LotteryWon))]
+[JsonDerivedType(typeof(RoadWorkStarted), nameof(RoadWorkStarted))]
+[JsonDerivedType(typeof(RoadWorkCleared), nameof(RoadWorkCleared))]
+[JsonDerivedType(typeof(RentBoostStarted), nameof(RentBoostStarted))]
+[JsonDerivedType(typeof(RentBoostEnded), nameof(RentBoostEnded))]
+[JsonDerivedType(typeof(TilePeeked), nameof(TilePeeked))]
+[JsonDerivedType(typeof(EventsArranged), nameof(EventsArranged))]
+[JsonDerivedType(typeof(RecoverySkipped), nameof(RecoverySkipped))]
+[JsonDerivedType(typeof(CardNotReadyYet), nameof(CardNotReadyYet))]
+[JsonDerivedType(typeof(OwnerKeptProperty), nameof(OwnerKeptProperty))]
 public abstract record GameEvent;
 
 public sealed record GameStarted(ulong Seed, IReadOnlyList<int> TurnOrder) : GameEvent;
@@ -73,7 +100,8 @@ public sealed record AuctionStarted(string PropertyId, int MinBid) : GameEvent;
 public sealed record RevealedBid(int PlayerId, int? Amount);
 public sealed record BidsRevealed(string PropertyId, IReadOnlyList<RevealedBid> Bids) : GameEvent;
 /// <param name="PaidNow">The whole price, or just the deposit for a down payment.</param>
-public sealed record AuctionWon(string PropertyId, int PlayerId, int Price, int AssessedValue, bool DownPayment = false, int PaidNow = 0) : GameEvent;
+/// <param name="PaidToId">In a forced auction won by someone else, the owner who was paid. Otherwise null (the bank).</param>
+public sealed record AuctionWon(string PropertyId, int PlayerId, int Price, int AssessedValue, bool DownPayment = false, int PaidNow = 0, int? PaidToId = null) : GameEvent;
 public sealed record AuctionNoBids(string PropertyId) : GameEvent;
 public sealed record RentPaid(int FromId, int ToId, string PropertyId, int Amount) : GameEvent;
 public sealed record TaxPaid(int PlayerId, string SpaceId, int Amount) : GameEvent;
@@ -141,3 +169,73 @@ public sealed record DuelWon(int WinnerId, int LoserId, int Stake) : GameEvent;
 
 public sealed record StadiumChosen(int PlayerId, string GroupId) : GameEvent;
 public sealed record StadiumEnded(int PlayerId, string GroupId) : GameEvent;
+
+/// <summary>A player drew an Opportunity card. Which card it was stays secret.</summary>
+public sealed record OpportunityDrawn(int PlayerId, string Source) : GameEvent;
+
+/// <summary>A player drew an Event card. Everyone sees it, since it happens straight away.</summary>
+public sealed record EventDrawn(int PlayerId, string CardId) : GameEvent;
+
+/// <summary>Both the deck and its discard pile were empty, so no card could be drawn.</summary>
+public sealed record NoCardToDraw(int PlayerId, Content.CardDeck Deck) : GameEvent;
+
+/// <summary>A deck ran out, so its discard pile was shuffled into a new deck (Section 15.6).</summary>
+public sealed record DeckReshuffled(Content.CardDeck Deck, int Cards) : GameEvent;
+
+/// <summary>An Opportunity card was played from a hand. Its targets are filled in when it has them.</summary>
+public sealed record CardPlayed(int PlayerId, string CardId, int? TargetPlayerId = null, string? TargetSpaceId = null, int Number = 0) : GameEvent;
+
+/// <summary>An Insurance card cancelled another card.</summary>
+public sealed record CardCancelled(int PlayerId, string CardId, int CancelledById) : GameEvent;
+
+public sealed record CardDiscarded(int PlayerId, string CardId) : GameEvent;
+public sealed record MallCardBought(int PlayerId, string CardId, int Price) : GameEvent;
+public sealed record MallCardSold(int PlayerId, string CardId, int Price) : GameEvent;
+
+/// <summary>The bank paid a player because of a card. <paramref name="CardId"/> says which.</summary>
+public sealed record CashFromBank(int PlayerId, int Amount, string CardId) : GameEvent;
+
+/// <summary>A player paid the bank because of a card.</summary>
+public sealed record CashToBank(int PlayerId, int Amount, string CardId) : GameEvent;
+
+/// <summary>A card made one player pay another (or the bank, when <paramref name="ToId"/> is null).</summary>
+public sealed record CardPaymentMade(int FromId, int? ToId, int Amount, string CardId) : GameEvent;
+
+/// <summary>Rent Strike: rent owed went down.</summary>
+public sealed record RentReduced(int PlayerId, string PropertyId, int From, int To) : GameEvent;
+
+/// <summary>A Detour moved another player's landing spot.</summary>
+public sealed record Detoured(int ByPlayerId, int MoverId, int Spaces) : GameEvent;
+
+/// <summary>Fire!: a property lost a building level.</summary>
+public sealed record BuildingBurned(int PlayerId, string PropertyId, int NewLevel) : GameEvent;
+
+/// <summary>Fire!: nothing burned, for this reason.</summary>
+public sealed record FireAvoided(int PlayerId, string Reason) : GameEvent;
+
+public sealed record LotteryRoll(int PlayerId, int Die);
+
+/// <summary>One round of Lottery rolls. Ties roll again, so there can be several.</summary>
+public sealed record LotteryRolled(IReadOnlyList<LotteryRoll> Rolls) : GameEvent;
+public sealed record LotteryWon(int WinnerId, int Pot) : GameEvent;
+
+public sealed record RoadWorkStarted(int PlayerId) : GameEvent;
+public sealed record RoadWorkCleared(int PlayerId, int TokensSpent) : GameEvent;
+
+public sealed record RentBoostStarted(int PlayerId, string PropertyId, int Multiplier) : GameEvent;
+public sealed record RentBoostEnded(int PlayerId, string PropertyId) : GameEvent;
+
+/// <summary>Inside Source: a player secretly looked at a hidden tile. Only they learn what it is.</summary>
+public sealed record TilePeeked(int PlayerId, string SpaceId) : GameEvent;
+
+/// <summary>Tip-Off: a player looked at the top Event cards and put them back. The order stays secret.</summary>
+public sealed record EventsArranged(int PlayerId, int Count) : GameEvent;
+
+/// <summary>Get Out of Jail Free used to skip the 1-die Hospital recovery turn.</summary>
+public sealed record RecoverySkipped(int PlayerId) : GameEvent;
+
+/// <summary>A card whose effect needs a feature from a later phase (like the City Council) did nothing.</summary>
+public sealed record CardNotReadyYet(string CardId) : GameEvent;
+
+/// <summary>A forced auction got no bids, so the owner keeps the property (Section 8.6).</summary>
+public sealed record OwnerKeptProperty(string PropertyId, int OwnerId) : GameEvent;

@@ -48,6 +48,21 @@ else
                 {
                     <span class="boost">🏟️ @Session.Content.Groups[boost.GroupId].Name rent doubled by @view.Player(boost.ChosenById).Name</span>
                 }
+                @foreach (var boost in view.PropertyBoosts)
+                {
+                    <span class="boost">🎉 Grand Opening: @Session.Content.Property(boost.PropertyId).Name rent ×@boost.Multiplier until @view.Player(boost.ChosenById).Name's next turn</span>
+                }
+                <span class="decks">Opportunity deck @view.OpportunityDeckCount (discards @view.OpportunityDiscardCount) · Event deck @view.EventDeckCount (discards @view.EventDiscardCount)</span>
+                <details>
+                    <summary>For sale at the Mall</summary>
+                    <ul class="zoning">
+                        @for (int slot = 0; slot < view.MallShop.Count; slot++)
+                        {
+                            var card = Session.Content.Card(view.MallShop[slot]);
+                            <li><strong>@card.Name</strong> (@UiHelpers.Money(Session.Content.Rules.MallPrices[slot])): @card.Text</li>
+                        }
+                    </ul>
+                </details>
                 <details>
                     <summary>Zoning by district</summary>
                     <ul class="zoning">
@@ -112,6 +127,9 @@ else
         if (d.Kind == DecisionKind.ChoosePrecisionDice && d.Dice is { Count: 3 } dice)
             return request.LegalActions.OfType<ChooseDice>()
                 .Select(c => UiHelpers.LandingSpace(request.View, request.PlayerId, dice[c.First] + dice[c.Second]).Id).ToHashSet();
+        if (d.Kind == DecisionKind.PlayReaction && d.OtherPlayerId is int mover)
+            return request.LegalActions.OfType<PlayCard>()
+                .Select(p => UiHelpers.LandingSpace(request.View, mover, d.Spaces + p.Number).Id).ToHashSet();
         return null;
     }
 
@@ -135,7 +153,10 @@ else
             SpaceKind.Tax => $"{space.Name}: pay {UiHelpers.Money(space.Id == "income-tax" ? Session.Content.Rules.IncomeTax : Session.Content.Rules.LuxuryTax)} to the bank.",
             SpaceKind.GovernmentTile when space.IsHiddenTile => "A hidden Government tile. Nobody knows what it is yet. (Tile effects arrive in a later phase.)",
             SpaceKind.GovernmentTile => $"{UiHelpers.DisplayName(space, Session.Content)}: {Session.Content.GovTile(space.TileId!).NeighborText}",
-            SpaceKind.CityPark => $"City Park: land here to gain {Session.Content.Rules.CityParkMomentum} Momentum token. (The Opportunity card arrives in a later phase.)",
+            SpaceKind.CityPark => $"City Park: land here to take {Session.Content.Rules.CityParkMomentum} Momentum token or draw an Opportunity card.",
+            SpaceKind.Opportunity => "Opportunity: draw an Opportunity card. Only you see it; keep it in your hand to play later.",
+            SpaceKind.Event => "Event: draw an Event card. It happens straight away, and everyone sees it.",
+            SpaceKind.Landmark when space.Id == "mall" => $"The Mall: buy one of the three face-up Opportunity cards ({string.Join(", ", Session.Content.Rules.MallPrices.Select(UiHelpers.Money))}), or sell one of yours for {UiHelpers.Money(Session.Content.Rules.MallSellPrice)}.",
             SpaceKind.Landmark when space.Id == "hospital" => $"Hospital: visitors may buy an Insured marker for {UiHelpers.Money(Session.Content.Rules.InsuredMarkerCost)}. It cancels your next hospital bill.",
             SpaceKind.Landmark when space.Id == "casino" => "Casino: make one bet. High/Low against the bank, or a Dice Duel against another player.",
             SpaceKind.Landmark when space.Id == "stadium" => "Stadium: pick a color group. Its rent doubles until your next turn.",

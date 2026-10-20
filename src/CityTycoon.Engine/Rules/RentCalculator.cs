@@ -34,6 +34,10 @@ public static class RentCalculator
         if (def.Group != null && state.StadiumBoosts.Any(b => b.GroupId == def.Group))
             total *= content.Rules.StadiumRentMultiplier;
 
+        // A Grand Opening multiplies one property's rent. It adds to a Stadium boost.
+        foreach (PropertyBoost boost in state.PropertyBoosts.Where(b => b.PropertyId == propertyId))
+            total *= boost.Multiplier;
+
         // Step 4: frozen assets. The owner is in Jail, so rent is halved.
         if (state.Player(ownerId).InJail)
             total *= content.Rules.JailRentMultiplier;

@@ -43,6 +43,23 @@ public sealed class GameState
     /// <summary>Color groups whose rent is doubled by a Stadium visit (Section 15.3).</summary>
     public List<StadiumBoost> StadiumBoosts { get; set; } = [];
 
+    /// <summary>Single properties with boosted rent, like a Grand Opening card (Section 15.4).</summary>
+    public List<PropertyBoost> PropertyBoosts { get; set; } = [];
+
+    /// <summary>
+    /// The Opportunity draw pile, as card IDs. Index 0 is the top card.
+    /// A card with several copies appears several times.
+    /// </summary>
+    public List<string> OpportunityDeck { get; set; } = [];
+    public List<string> OpportunityDiscard { get; set; } = [];
+
+    /// <summary>The Event draw pile. Index 0 is the top card.</summary>
+    public List<string> EventDeck { get; set; } = [];
+    public List<string> EventDiscard { get; set; } = [];
+
+    /// <summary>The Mall shop: face-up Opportunity cards, cheapest slot first (Section 15.3).</summary>
+    public List<string> MallShop { get; set; } = [];
+
     public int Round { get; set; } = 1;
 
     /// <summary>Position in <see cref="Players"/> of the player whose turn it is.</summary>
@@ -132,10 +149,31 @@ public sealed class PlayerState
 
     /// <summary>Sent to the Hospital: rolls only 1 die on their next turn while they recover.</summary>
     public bool IsRecovering { get; set; }
+
+    /// <summary>Opportunity cards in hand, as card IDs (Section 15.4). Secret from other players.</summary>
+    public List<string> Hand { get; set; } = [];
+
+    /// <summary>Hidden Government tiles this player has secretly peeked at (space IDs).</summary>
+    public List<string> KnownTiles { get; set; } = [];
+
+    /// <summary>Extra building levels allowed this turn (Construction Permit).</summary>
+    public int ExtraBuildsThisTurn { get; set; }
+
+    /// <summary>Percent off every building level this turn (Construction Permit).</summary>
+    public int BuildDiscountThisTurn { get; set; }
+
+    /// <summary>
+    /// Road Work: next turn rolls only 1 die unless this many Momentum tokens are spent.
+    /// 0 means no Road Work.
+    /// </summary>
+    public int RoadWorkCost { get; set; }
 }
 
 /// <summary>A color group with doubled rent until the start of the chooser's next turn (Section 15.3).</summary>
 public sealed record StadiumBoost(string GroupId, int ChosenById);
+
+/// <summary>One property's rent multiplied until the start of the chooser's next turn (Grand Opening).</summary>
+public sealed record PropertyBoost(string PropertyId, int ChosenById, int Multiplier);
 
 public sealed class PropertyState
 {

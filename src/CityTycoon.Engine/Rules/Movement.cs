@@ -30,6 +30,18 @@ public static class Movement
             CollectGo(ctx, player);
     }
 
+    /// <summary>
+    /// Moves a player backwards (Section 7.4). Going back across GO never
+    /// collects GO, and the space they end on isn't resolved (Rush Hour).
+    /// </summary>
+    public static void MoveBackward(EngineContext ctx, PlayerState player, int spaces)
+    {
+        int from = player.Position;
+        int n = ctx.State.Board.Count;
+        player.Position = ((from - spaces) % n + n) % n;
+        ctx.Emit(new PlayerMoved(player.Id, from, player.Position));
+    }
+
     /// <summary>GO effects (Section 15.1). So far: the salary, a Momentum token, then any down-payment balances due.</summary>
     public static void CollectGo(EngineContext ctx, PlayerState player)
     {

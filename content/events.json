@@ -1,0 +1,70 @@
+{
+  "contentVersion": 1,
+  // Event cards (Section 15.5). They happen as soon as they're drawn.
+  // "effect.type" names a C# effect class (src/CityTycoon.Engine/Cards/CardEffects.cs); the other effect fields are its settings.
+  "cards": [
+    { "id": "sprained-ankle", "deck": "event", "name": "Sprained Ankle", "copies": 2,
+      "text": "Go to the Hospital.",
+      "effect": { "type": "SendToHospital" } },
+
+    { "id": "fire", "deck": "event", "name": "Fire!", "copies": 1,
+      "text": "Your most-built property loses 1 level, unless you have an Insured marker. If you have no buildings, nothing happens.",
+      "effect": { "type": "Fire" } },
+
+    { "id": "recession", "deck": "event", "name": "Recession", "copies": 1,
+      "text": "Every player pays 10% of their cash to the bank, except whoever has the least cash.",
+      "effect": { "type": "PayPercentOfCash", "percent": 10, "who": "everyoneButPoorest" } },
+
+    { "id": "housing-boom", "deck": "event", "name": "Housing Boom", "copies": 1,
+      "text": "Every player collects $50 for each hotel or skyscraper they own.",
+      "effect": { "type": "PerBuilding", "who": "everyone", "perHouse": 0, "perHotel": 50, "perSkyscraper": 50 } },
+
+    { "id": "city-festival", "deck": "event", "name": "City Festival", "copies": 1,
+      "text": "Everyone collects $50. You collect $100 instead.",
+      "effect": { "type": "CollectFromBank", "amount": 100, "everyoneElse": 50 } },
+
+    { "id": "block-party", "deck": "event", "name": "Block Party", "copies": 1,
+      "text": "Collect $25 from every other player.",
+      "effect": { "type": "CollectFromEachPlayer", "amount": 25 } },
+
+    { "id": "lottery", "deck": "event", "name": "Lottery", "copies": 1,
+      "text": "Everyone who can puts in $20 and rolls 1 die. The highest roll takes the pot. Reroll ties.",
+      "effect": { "type": "Lottery", "stake": 20 } },
+
+    { "id": "rush-hour", "deck": "event", "name": "Rush Hour", "copies": 1,
+      "text": "Every player moves back 2 spaces. Nobody resolves the space they land on, and nobody collects GO.",
+      "effect": { "type": "MoveEveryoneBack", "spaces": 2 } },
+
+    { "id": "road-work", "deck": "event", "name": "Road Work", "copies": 1,
+      "text": "Next turn you roll only 1 die, unless you spend 1 Momentum token.",
+      "effect": { "type": "RoadWork", "cost": 1 } },
+
+    { "id": "momentum-surge", "deck": "event", "name": "Momentum Surge", "copies": 1,
+      "text": "Everyone gains 1 Momentum token. You gain 2.",
+      "effect": { "type": "GainMomentum", "amount": 2, "everyoneElse": 1 } },
+
+    { "id": "property-reassessment", "deck": "event", "name": "Property Reassessment", "copies": 1,
+      "text": "Pay $25 per house and $100 per hotel or skyscraper you own.",
+      "effect": { "type": "PerBuilding", "who": "you", "pay": true, "perHouse": 25, "perHotel": 100, "perSkyscraper": 100 } },
+
+    { "id": "tax-refund", "deck": "event", "name": "Tax Refund", "copies": 1,
+      "text": "Collect $100.",
+      "effect": { "type": "CollectFromBank", "amount": 100 } },
+
+    { "id": "inheritance", "deck": "event", "name": "Inheritance", "copies": 1,
+      "text": "Collect $150.",
+      "effect": { "type": "CollectFromBank", "amount": 150 } },
+
+    { "id": "advance-to-go", "deck": "event", "name": "Advance to GO", "copies": 1,
+      "text": "Move to GO and collect GO effects.",
+      "effect": { "type": "AdvanceTo", "space": "go" } },
+
+    { "id": "go-to-jail", "deck": "event", "name": "Go to Jail", "copies": 1,
+      "text": "Go straight to Jail.",
+      "effect": { "type": "GoToJail" } },
+
+    { "id": "emergency-session", "deck": "event", "name": "Emergency Session", "copies": 1,
+      "text": "Start an Emergency Council session with you setting the agenda. (The City Council arrives in a later phase, so nothing happens yet.)",
+      "effect": { "type": "EmergencySession" } }
+  ]
+}

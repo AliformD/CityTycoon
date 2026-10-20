@@ -1,3 +1,5 @@
+using CityTycoon.Engine.Cards;
+
 namespace CityTycoon.Engine.Content;
 
 /// <summary>
@@ -19,8 +21,16 @@ public sealed class GameContent
     public IReadOnlyList<GovTileDefinition> GovTiles { get; }
     public int GovTilesPerGame { get; }
 
-    public GameContent(RulesConfig rules, BoardDefinition board, PropertiesFile properties, GroupsFile groups, GovTilesFile govTiles)
+    /// <summary>Every Opportunity and Event card, keyed by card ID (Section 21.2).</summary>
+    public IReadOnlyDictionary<string, CardDefinition> Cards { get; }
+
+    private readonly IReadOnlyList<CardsFile> cardFiles;
+
+    public GameContent(RulesConfig rules, BoardDefinition board, PropertiesFile properties, GroupsFile groups, GovTilesFile govTiles,
+        IReadOnlyList<CardsFile>? cards = null)
     {
+        cardFiles = cards ?? [];
+        Cards = ToDictionary(cardFiles.SelectMany(f => f.Cards), c => c.Id, "card");
         Rules = rules;
         Board = board;
         Properties = ToDictionary(properties.Properties, p => p.Id, "property");
@@ -35,7 +45,22 @@ public sealed class GameContent
         ContentLoader.Load<BoardDefinition>("board.json"),
         ContentLoader.Load<PropertiesFile>("properties.json"),
         ContentLoader.Load<GroupsFile>("groups.json"),
-        ContentLoader.Load<GovTilesFile>("govtiles.json"));
+        ContentLoader.Load<GovTilesFile>("govtiles.json"),
+        ContentLoader.LoadCardFiles());
+
+    /// <summary>
+    /// A copy of this content with extra card files added, the way an expansion
+    /// would be (Section 21.2). The new cards are checked like the built-in ones.
+    /// </summary>
+    public GameContent WithExtraCards(params CardsFile[] extra) => new(
+        Rules, Board,
+        new PropertiesFile(1, Properties.Values.ToList()),
+        new GroupsFile(1, Groups.Values.ToList()),
+        new GovTilesFile(1, GovTilesPerGame, GovTiles),
+        [.. cardFiles, .. extra]);
+
+    public CardDefinition Card(string id) =>
+        Cards.TryGetValue(id, out var c) ? c : throw new KeyNotFoundException($"Unknown card '{id}'.");
 
     public PropertyDefinition Property(string id) =>
         Properties.TryGetValue(id, out var p) ? p : throw new KeyNotFoundException($"Unknown property '{id}'.");
@@ -131,5 +156,22 @@ public sealed class GameContent
         ToDictionary(GovTiles, t => t.Id, "Government tile");
         if (GovTilesPerGame != Board.Districts.Count || GovTiles.Count < GovTilesPerGame)
             throw new ContentException("govtiles.json needs one tile per district, picked from at least that many tiles.");
-    }
+
+        // Cards: a known effect type with the settings it needs, and a timing that fits the deck.
+        foreach (CardDefinition card in Cards.Values)
+        {
+            if (card.Copies < 1)
+                throw new ContentException($"Card '{card.Id}' needs at least 1 copy.");
+            if (CardEffects.Find(card.EffectType) is not { } effect)
+                throw new ContentException($"Card '{card.Id}' uses the unknown effect type '{card.EffectType}'.");
+            if (card.Deck == CardDeck.Event && card.Timing != CardTiming.Immediate)
+                throw new ContentException($"Event card '{card.Id}' must happen immediately (no \"timing\").");
+            if (card.Deck == CardDeck.Opportunity && card.Timing == CardTiming.Immediate)
+                throw new ContentException($"Opportunity card '{card.Id}' needs a \"timing\" (ownTurn, reaction or council).");
+            if ((card.Timing == CardTiming.Reaction) != (card.Trigger != CardTrigger.None))
+                throw new ContentException($"Card '{card.Id}': reaction cards need a \"trigger\", and only reaction cards have one.");
+            effect.Validate(card);
+        }
+        if (Rules.MallPrices.Count == 0)
+            throw new ContentException("rules.json mallPrices needs at least one slot.");    }
 }

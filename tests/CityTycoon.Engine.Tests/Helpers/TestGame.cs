@@ -46,6 +46,22 @@ public sealed class TestGame
         Player(playerId).Position = (State.IndexOf(spaceId) - spaces + n) % n;
     }
 
+    /// <summary>Puts Opportunity cards straight into a player's hand.</summary>
+    public void GiveCard(int playerId, params string[] cardIds) => Player(playerId).Hand.AddRange(cardIds);
+
+    /// <summary>Puts these Event cards on top of the Event deck, first one on top.</summary>
+    public void StackEvents(params string[] cardIds) => State.EventDeck.InsertRange(0, cardIds);
+
+    /// <summary>Puts these Opportunity cards on top of the Opportunity deck, first one on top.</summary>
+    public void StackOpportunities(params string[] cardIds) => State.OpportunityDeck.InsertRange(0, cardIds);
+
+    /// <summary>Lands a player on an Event space with this card on top of the deck.</summary>
+    public ActionResult DrawEvent(int playerId, string cardId)
+    {
+        StackEvents(cardId);
+        return RollOnto(playerId, "midtown-event");
+    }
+
     /// <summary>Submits an action and fails the test if the engine rejects it.</summary>
     public ActionResult Do(int playerId, GameAction action)
     {
@@ -98,13 +114,23 @@ public sealed class TestGame
 
 public static class TestGameExtensions
 {
-    /// <summary>Plays a quiet turn: land on the Mall (does nothing until Phase 5) and end the turn.</summary>
+    /// <summary>Plays a quiet turn: land on Jail (just visiting, so nothing happens) and end the turn.</summary>
     public static void SkipTurn(this TestGame game, int playerId)
     {
-        game.PlaceBefore(playerId, "mall", 5);
+        game.PlaceBefore(playerId, "jail", 5);
         game.Roll(playerId, 2, 3);
         game.EndTurn(playerId);
     }
+
+    /// <summary>Rolls onto Jail (just visiting) and stops at the post-move actions, without ending the turn.</summary>
+    public static void SkipTurnWithoutEnding(this TestGame game, int playerId)
+    {
+        game.PlaceBefore(playerId, "jail", 5);
+        game.Roll(playerId, 2, 3);
+    }
+
+    /// <summary>Same as <see cref="SkipTurn"/>, for a turn that has already started.</summary>
+    public static void SkipTurnFromHere(this TestGame game, int playerId) => game.SkipTurn(playerId);
 
     /// <summary>Puts a player in Jail, then lets player 0 finish a quiet turn so the jailed player is up next.</summary>
     public static void JailThenStartTheirTurn(this TestGame game, int playerId)

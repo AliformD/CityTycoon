@@ -21,9 +21,11 @@ public sealed class HumanUiController(GameSession session) : IPlayerController
 
     public Task<GameAction> DecideAsync(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions)
     {
-        waiting = new TaskCompletionSource<GameAction>();
+        // Kept in a local too: ShowRequest may answer straight away (auto-pass), which clears "waiting".
+        var answer = new TaskCompletionSource<GameAction>();
+        waiting = answer;
         session.ShowRequest(new HumanRequest(decision.PlayerId, view, decision, legalActions));
-        return waiting.Task;
+        return answer.Task;
     }
 
     /// <summary>Called by the UI when the person clicks a button.</summary>

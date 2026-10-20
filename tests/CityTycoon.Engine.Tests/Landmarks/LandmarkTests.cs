@@ -83,12 +83,12 @@ public class LandmarkTests
 
         game.Player(0).Momentum = 3;
         Assert.DoesNotContain(new PrecisionRoll(), game.Engine.GetLegalActions(0));
-        game.PlaceBefore(0, "mall", 4);
+        game.PlaceBefore(0, "jail", 4);
         game.Dice.Add(4);
         game.Do(0, new RollDice());
         game.Do(0, new Nudge(0));
 
-        Assert.Equal(game.State.IndexOf("mall"), game.Player(0).Position);
+        Assert.Equal(game.State.IndexOf("jail"), game.Player(0).Position);
         Assert.Contains(game.State.Log, e => e is DiceRolled { IsOneDie: true, Die1: 4 });
         Assert.False(game.Player(0).IsRecovering);
     }
@@ -114,10 +114,12 @@ public class LandmarkTests
     }
 
     [Fact]
-    public void CityPark_GivesAToken()
+    public void CityPark_CanGiveAToken()
     {
         var game = new TestGame();
         game.RollOnto(0, "city-park");
+        Assert.Equal(DecisionKind.CityParkChoice, game.DecisionFor(0)!.Kind);
+        game.Do(0, new TakeMomentum());
         Assert.Equal(2, game.Player(0).Momentum);
     }
 }

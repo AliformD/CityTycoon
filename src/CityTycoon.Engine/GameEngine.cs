@@ -1,5 +1,6 @@
 using CityTycoon.Engine.Actions;
 using CityTycoon.Engine.Board;
+using CityTycoon.Engine.Cards;
 using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Events;
 using CityTycoon.Engine.Randomness;
@@ -94,6 +95,9 @@ public sealed class GameEngine
         PermitSupply permits = rules.PermitsFor(setup.Players.Count);
         state.HotelPermits = permits.HotelPermits;
         state.SkyscraperPermits = permits.SkyscraperPermits;
+
+        // Shuffle the Opportunity and Event decks and fill the Mall shop (Section 15).
+        CardRules.SetUpDecks(state, content);
 
         state.Log.Add(new GameStarted(seed, state.Players.Select(p => p.Id).ToList()));
         state.Stack.Add(new GameStep());

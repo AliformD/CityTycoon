@@ -1,0 +1,22 @@
+@* One Opportunity or Event card: its name, what it does, and when it can be played. *@
+@{ var card = Content.Card(CardId); }
+<div class="card-view deck-@card.Deck.ToString().ToLowerInvariant()">
+    <strong>@card.Name</strong>
+    <span class="timing">@TimingText(card)</span>
+    <p>@card.Text</p>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string CardId { get; set; } = "";
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private static string TimingText(CardDefinition card) => card.Timing switch
+    {
+        CardTiming.OwnTurn => "Your turn",
+        CardTiming.Reaction => "Reaction",
+        CardTiming.Council => "Council (coming later)",
+        _ => card.Deck == CardDeck.Event ? "Event" : "",
+    };
+}

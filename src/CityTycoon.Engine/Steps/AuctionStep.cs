@@ -17,6 +17,9 @@ public enum AuctionKind
 
     /// <summary>A pending property whose balance wasn't paid is re-auctioned (Section 8.5).</summary>
     Forfeit,
+
+    /// <summary>A Hostile Bid forces an auction on another player's property (Section 8.6).</summary>
+    Forced,
 }
 
 /// <summary>
@@ -35,6 +38,9 @@ public sealed class AuctionStep : Step
 
     /// <summary>A player who may not bid (for example the bankrupt player whose property this was).</summary>
     public int? ExcludedPlayerId { get; set; }
+
+    /// <summary>For a forced auction: the player who owns the property now.</summary>
+    public int? OwnerId { get; set; }
 
     public bool Started { get; set; }
     public int MinBid { get; set; }
@@ -90,7 +96,7 @@ public sealed class AuctionStep : Step
     /// <summary>The minimum bid, rounded up to the bid step (Section 8.3).</summary>
     public static int MinimumBid(RulesConfig rules, int assessedValue, AuctionKind kind)
     {
-        int percent = rules.AuctionMinBidPercent; // Normal, bankruptcy and forfeit auctions all use this.
+        int percent = kind == AuctionKind.Forced ? rules.ForcedAuctionMinBidPercent : rules.AuctionMinBidPercent;
         int raw = assessedValue * percent;          // still multiplied by 100 at this point
         int step = rules.BidIncrement * 100;
         int roundedUp = (raw + step - 1) / step;    // whole-number "round up" trick
@@ -120,8 +126,25 @@ public sealed class AuctionStep : Step
     /// The highest down-payment bid a player can make, or 0 if they can't make one.
     /// The deposit (not the whole bid) has to fit in their cash.
     /// </summary>
-    private static int MaxDownPaymentBidFor(EngineContext ctx, int playerId) =>
-        HasFreePendingSlot(ctx, playerId) ? MaxDepositBid(ctx.Rules, ctx.Player(playerId).Cash) : 0;
+    private int MaxDownPaymentBidFor(EngineContext ctx, int playerId) =>
+        AllowsDownPayment && HasFreePendingSlot(ctx, playerId) ? MaxDepositBid(ctx.Rules, ctx.Player(playerId).Cash) : 0;
+
+    /// <summary>Forced auctions are paid in full: the money goes straight to the owner (docs/DECISIONS.md).</summary>
+    private bool AllowsDownPayment => Kind != AuctionKind.Forced;
+
+    /// <summary>
+    /// Can a forced auction be held on this property (Section 8.6)? It must be
+    /// owned outright, with no buildings, not mortgaged, and not part of a full
+    /// color group its owner holds. (Police Stations arrive in Phase 6.)
+    /// </summary>
+    public static bool CanForceAuction(EngineContext ctx, string propertyId)
+    {
+        PropertyState owned = ctx.State.Properties[propertyId];
+        if (owned.OwnerId is not int ownerId || owned.IsPending || owned.IsMortgaged || owned.Level > 0)
+            return false;
+        PropertyDefinition def = ctx.Content.Property(propertyId);
+        return def.Group == null || !ctx.Content.GroupMembers(def.Group).All(id => ctx.State.Properties[id].IsOwnedOutright(ownerId));
+    }
 
     private static int MaxDepositBid(RulesConfig rules, int cash)
     {
@@ -139,7 +162,7 @@ public sealed class AuctionStep : Step
         int loansLeft = Math.Max(0, MoneyRules.MaxLoans(ctx, playerId) - player.Loans);
         int bestCash = player.Cash + loansLeft * ctx.Rules.LoanAmount;
         int best = MaxFullBid(ctx.Rules, bestCash);
-        if (HasFreePendingSlot(ctx, playerId))
+        if (AllowsDownPayment && HasFreePendingSlot(ctx, playerId))
             best = Math.Max(best, MaxDepositBid(ctx.Rules, bestCash));
         return best >= MinBid;
     }
@@ -166,7 +189,7 @@ public sealed class AuctionStep : Step
         // made, because they may have taken a loan since.
         int cash = ctx.Player(decision.PlayerId).Cash;
         return bid.DownPayment
-            ? HasFreePendingSlot(ctx, decision.PlayerId) && Deposit(ctx.Rules, bid.Amount) <= cash
+            ? AllowsDownPayment && HasFreePendingSlot(ctx, decision.PlayerId) && Deposit(ctx.Rules, bid.Amount) <= cash
             : bid.Amount <= cash;
     }
 
@@ -185,8 +208,12 @@ public sealed class AuctionStep : Step
         var realBids = Bids.Where(b => b.Value != null).ToList();
         if (realBids.Count == 0)
         {
-            // Nobody bid: the property stays with the bank (Section 8.2, rule 7).
-            ctx.Emit(new AuctionNoBids(PropertyId));
+            // Nobody bid: the property stays with the bank (Section 8.2, rule 7),
+            // or in a forced auction, with its owner (Section 8.6).
+            if (Kind == AuctionKind.Forced)
+                ctx.Emit(new OwnerKeptProperty(PropertyId, OwnerId!.Value));
+            else
+                ctx.Emit(new AuctionNoBids(PropertyId));
             return;
         }
 
@@ -200,8 +227,20 @@ public sealed class AuctionStep : Step
         // The winner pays their own bid to the bank: all of it now, or just the
         // deposit now and the rest at their next GO (Section 8.5).
         PropertyState owned = ctx.State.Properties[PropertyId];
-        owned.OwnerId = winnerId;
         int assessed = ctx.Content.Property(PropertyId).AssessedValue;
+        if (Kind == AuctionKind.Forced)
+        {
+            // The owner may bid too. If they win, they pay the bank and keep it.
+            // Otherwise the winner pays the owner (Section 8.6).
+            int? paidTo = winnerId == OwnerId ? null : OwnerId;
+            ctx.Player(winnerId).Cash -= highest;
+            if (paidTo is int ownerId)
+                ctx.Player(ownerId).Cash += highest;
+            owned.OwnerId = winnerId;
+            ctx.Emit(new AuctionWon(PropertyId, winnerId, highest, assessed, PaidNow: highest, PaidToId: paidTo));
+            return;
+        }
+        owned.OwnerId = winnerId;
         if (DownPaymentBidders.Contains(winnerId))
         {
             int deposit = Deposit(ctx.Rules, highest);

@@ -1,11 +1,13 @@
 using CityTycoon.Engine.Actions;
+using CityTycoon.Engine.Cards;
+using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Events;
 using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.State;
 
 namespace CityTycoon.Engine.Steps;
 
-public enum PaymentReason { Rent, Tax, Bail, Hospital }
+public enum PaymentReason { Rent, Tax, Bail, Hospital, Card }
 
 /// <summary>
 /// One player pays money to another player or to the bank.
@@ -27,14 +29,37 @@ public sealed class PaymentStep : Step
     /// <summary>The property (for rent) or tax space this payment is for.</summary>
     public string? SpaceId { get; set; }
 
+    /// <summary>For card payments: which card made this happen.</summary>
+    public string? CardId { get; set; }
+
+    /// <summary>For rent: the Rent Strike question, once it has been opened.</summary>
+    public ReactionWindow? RentStrike { get; set; }
+
     /// <summary>True once the "you need to raise money" message has been logged.</summary>
     public bool AnnouncedShortfall { get; set; }
+
+    public bool PlayedRentStrike { get; set; }
 
     public override StepResult Run(EngineContext ctx)
     {
         PlayerState payer = ctx.Player(FromId);
         if (payer.IsBankrupt)
             return StepResult.Done;
+
+        // Owing rent opens a Reaction window for Rent Strike (Section 15.4).
+        if (Reason == PaymentReason.Rent)
+        {
+            RentStrike ??= ReactionWindow.Open(ctx, CardTrigger.RentOwed, [FromId]);
+            if (RentStrike.Decision(ctx, $"You owe ${Amount} rent for {ctx.Content.Property(SpaceId!).Name}. Play a card?") is { } ask)
+                return StepResult.WaitFor(ask with { AmountOwed = Amount, PropertyId = SpaceId });
+            if (RentStrike.Played is { } play && !PlayedRentStrike)
+            {
+                // The card's effect runs on top of this step (the owner may cancel it with Insurance), then this step pays.
+                PlayedRentStrike = true;
+                ctx.Push(new CardPlayStep { PlayerId = FromId, Play = play });
+                return StepResult.Continue;
+            }
+        }
 
         if (payer.Cash >= Amount)
         {
@@ -47,6 +72,7 @@ public sealed class PaymentStep : Step
                 PaymentReason.Rent => new RentPaid(FromId, ToId!.Value, SpaceId!, Amount),
                 PaymentReason.Tax => new TaxPaid(FromId, SpaceId!, Amount),
                 PaymentReason.Hospital => new HospitalBillPaid(FromId, Amount),
+                PaymentReason.Card => new CardPaymentMade(FromId, ToId, Amount, CardId!),
                 _ => new BailPaid(FromId, Amount),
             });
             return StepResult.Done;
@@ -68,4 +94,10 @@ public sealed class PaymentStep : Step
             $"You owe ${Amount} but have ${payer.Cash}. Sell buildings, mortgage, or take a loan to raise the rest.",
             SpaceId, Management: ManagementOptions.RaiseMoney, AmountOwed: Amount));
     }
+
+    public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision) =>
+        decision.Kind == DecisionKind.PlayReaction ? RentStrike!.LegalActions(ctx, decision) : [];
+
+    public override void Receive(EngineContext ctx, PendingDecision decision, GameAction action) =>
+        RentStrike!.Receive(ctx, decision, action);
 }

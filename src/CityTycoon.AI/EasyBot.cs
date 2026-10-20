@@ -45,6 +45,15 @@ public sealed class EasyBot : IPlayerController
             DecisionKind.SubmitBid => ChooseBid(view, decision),
             DecisionKind.RaiseMoney => RaiseMoney(legalActions),
             DecisionKind.RespondToTrade => IsGoodForMe(view, decision.Trade!) ? new AcceptTrade() : new DeclineTrade(),
+            DecisionKind.ChoosePrecisionDice => ChooseBestDice(view, decision),
+            DecisionKind.ChooseNudge => ChooseNudge(view, decision, legalActions),
+            // Insurance only when there's plenty of spare cash.
+            DecisionKind.HospitalVisit => view.Me.Cash - content.Rules.InsuredMarkerCost >= SafetyReserve * 2 ? new BuyInsurance() : new NoThanks(),
+            // The Casino loses money on average, so the Easy bot walks past.
+            DecisionKind.CasinoBet => new NoThanks(),
+            // A duel is a coin flip: fine for pocket change only.
+            DecisionKind.RespondToDuel => decision.Duel!.Stake <= view.Me.Cash / 20 ? new AcceptDuel() : new DeclineDuel(),
+            DecisionKind.ChooseStadiumGroup => new PickStadiumGroup(BestStadiumGroup(view)),
             _ => ManageMoney(view, decision, legalActions) ?? MainChoice(view, decision, legalActions),
         };
         return Task.FromResult(choice);
@@ -52,6 +61,10 @@ public sealed class EasyBot : IPlayerController
 
     private GameAction MainChoice(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions) => decision.Kind switch
     {
+        // A Precision Roll costs tokens, so only use one when the tokens would
+        // otherwise go to waste (it's at its token limit and GO would add more).
+        DecisionKind.ChooseMoveMethod when legalActions.Contains(new PrecisionRoll())
+            && view.Me.Momentum >= content.Rules.MomentumCap => new PrecisionRoll(),
         // Pay bail when comfortably rich; otherwise hope for doubles (it's free).
         DecisionKind.JailChoice => legalActions.Contains(new PayBail()) && view.Me.Cash > SafetyReserve * 3
             ? new PayBail()
@@ -204,4 +217,98 @@ public sealed class EasyBot : IPlayerController
         }
         return bonus;
     }
+
+    // ----- Movement: Precision Roll and Nudge (Section 7.3) -----
+
+    /// <summary>Roughly what a token is worth to the bot, in dollars. A Nudge must save more than this.</summary>
+    private const int TokenValue = 25;
+
+    private GameAction ChooseBestDice(PlayerView view, PendingDecision decision)
+    {
+        var dice = decision.Dice!;
+        var pairs = new[] { (0, 1), (0, 2), (1, 2) };
+        var best = pairs.MaxBy(p =>
+        {
+            int a = dice[p.Item1], b = dice[p.Item2];
+            // A small bonus for doubles, which give another turn.
+            return LandingScore(view, a + b) + (a == b ? 20 : 0);
+        });
+        return new ChooseDice(best.Item1, best.Item2);
+    }
+
+    private GameAction ChooseNudge(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions)
+    {
+        int rolled = decision.Dice!.Sum();
+        double stay = LandingScore(view, rolled);
+        var best = legalActions.OfType<Nudge>()
+            .Where(n => n.Spaces != 0)
+            .Select(n => (Nudge: n, Score: LandingScore(view, rolled + n.Spaces)))
+            .OrderByDescending(x => x.Score)
+            .FirstOrDefault();
+        return best.Nudge != null && best.Score - stay > TokenValue ? best.Nudge : new Nudge(0);
+    }
+
+    /// <summary>
+    /// How good it would be to land this many spaces ahead, in rough dollars:
+    /// paying rent or tax is bad, a property to bid on is good.
+    /// </summary>
+    private double LandingScore(PlayerView view, int spaces)
+    {
+        SpaceInfo space = view.Spaces[(view.Me.Position + spaces) % view.Spaces.Count];
+        return space.Kind switch
+        {
+            SpaceKind.Property => PropertyScore(view, space.Id, spaces),
+            SpaceKind.Tax => -(space.Id == "income-tax" ? content.Rules.IncomeTax : content.Rules.LuxuryTax),
+            SpaceKind.GoToJail => -100,
+            SpaceKind.CityPark => TokenValue,
+            _ => 0,
+        };
+    }
+
+    private double PropertyScore(PlayerView view, string id, int diceTotal)
+    {
+        PropertyInfo owned = view.Properties[id];
+        if (owned.OwnerId == null)
+            return view.Me.Cash - content.Property(id).AssessedValue / 2 > SafetyReserve ? 30 : 0;
+        if (owned.OwnerId == view.ViewerId)
+            return 5;
+        return -EstimateRent(view, id, diceTotal);
+    }
+
+    /// <summary>A rough copy of the rent rules, from what the bot can see.</summary>
+    private double EstimateRent(PlayerView view, string id, int diceTotal)
+    {
+        PropertyInfo owned = view.Properties[id];
+        if (owned.IsMortgaged || owned.IsPending || owned.OwnerId is not int ownerId)
+            return 0;
+        PropertyDefinition def = content.Property(id);
+        bool Counts(string otherId) => view.Properties[otherId].OwnerId == ownerId && !view.Properties[otherId].IsPending;
+        double rent = def.Type switch
+        {
+            PropertyType.Color => def.Rents![owned.Level]
+                * (owned.Level == 0 && content.GroupMembers(def.Group!).All(m => Counts(m) && !view.Properties[m].IsMortgaged) ? 2 : 1),
+            PropertyType.Railroad => content.Rules.RailroadRents[Math.Max(0, CountOfType(view, ownerId, PropertyType.Railroad) - 1)],
+            _ => content.Rules.UtilityRentMultipliers[Math.Max(0, CountOfType(view, ownerId, PropertyType.Utility) - 1)] * diceTotal,
+        };
+        if (def.Group != null && view.StadiumBoosts.Any(b => b.GroupId == def.Group))
+            rent *= content.Rules.StadiumRentMultiplier;
+        if (view.Player(ownerId).InJail)
+            rent *= content.Rules.JailRentMultiplier;
+        return rent;
+    }
+
+    private int CountOfType(PlayerView view, int ownerId, PropertyType type) =>
+        view.Properties.Values.Count(p => p.OwnerId == ownerId && !p.IsPending && content.Property(p.Id).Type == type);
+
+    /// <summary>
+    /// The Stadium doubles a group's rent: pick the group where the bot earns
+    /// the most, and where opponents earn the least.
+    /// </summary>
+    private string BestStadiumGroup(PlayerView view) =>
+        content.Groups.Keys.MaxBy(group => content.GroupMembers(group).Sum(id =>
+        {
+            int? owner = view.Properties[id].OwnerId;
+            double rent = EstimateRent(view, id, 7);
+            return owner == view.ViewerId ? rent : owner == null ? 0 : -rent;
+        }))!;
 }

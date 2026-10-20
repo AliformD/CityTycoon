@@ -3,7 +3,11 @@ using CityTycoon.Engine.State;
 
 namespace CityTycoon.Engine.Rules;
 
-/// <summary>Works out rent (Section 13.1). Phase 1 covers base rent, the full-set bonus, railroads and utilities.</summary>
+/// <summary>
+/// Works out rent (Section 13.1). So far: base rent (with the full-set bonus,
+/// railroads and utilities), the Stadium's ×2, and half rent while the owner
+/// is in Jail. Percentage modifiers and cards arrive in later phases.
+/// </summary>
 public static class RentCalculator
 {
     /// <param name="diceTotal">The dice total that brought the payer here (utilities use it).</param>
@@ -21,7 +25,21 @@ public static class RentCalculator
             PropertyType.Utility => content.Rules.UtilityRentMultipliers[CountOwned(state, content, ownerId, PropertyType.Utility) - 1] * diceTotal,
             _ => 0,
         };
-        return rent;
+        if (rent <= 0)
+            return 0;
+
+        // Step 3: multipliers. A Stadium boost doubles a color group's rent.
+        // Two boosts on the same group still only double it (docs/DECISIONS.md).
+        double total = rent;
+        if (def.Group != null && state.StadiumBoosts.Any(b => b.GroupId == def.Group))
+            total *= content.Rules.StadiumRentMultiplier;
+
+        // Step 4: frozen assets. The owner is in Jail, so rent is halved.
+        if (state.Player(ownerId).InJail)
+            total *= content.Rules.JailRentMultiplier;
+
+        // Step 6: round down, but never below $1.
+        return Math.Max(1, (int)Math.Floor(total));
     }
 
     private static int ColorRent(GameState state, GameContent content, PropertyDefinition def, PropertyState owned, int ownerId)

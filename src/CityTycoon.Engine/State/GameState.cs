@@ -40,6 +40,9 @@ public sealed class GameState
     /// <summary>Skyscraper permits left in the citywide supply.</summary>
     public int SkyscraperPermits { get; set; }
 
+    /// <summary>Color groups whose rent is doubled by a Stadium visit (Section 15.3).</summary>
+    public List<StadiumBoost> StadiumBoosts { get; set; } = [];
+
     public int Round { get; set; } = 1;
 
     /// <summary>Position in <see cref="Players"/> of the player whose turn it is.</summary>
@@ -120,7 +123,19 @@ public sealed class PlayerState
 
     /// <summary>Trade offers made this turn (a limit stops offer spam).</summary>
     public int TradesProposedThisTurn { get; set; }
+
+    /// <summary>Momentum tokens, for Nudges and Precision Rolls (Section 7.3).</summary>
+    public int Momentum { get; set; }
+
+    /// <summary>Holds an Insured marker, which cancels one Hospital bill (Section 15.3).</summary>
+    public bool IsInsured { get; set; }
+
+    /// <summary>Sent to the Hospital: rolls only 1 die on their next turn while they recover.</summary>
+    public bool IsRecovering { get; set; }
 }
+
+/// <summary>A color group with doubled rent until the start of the chooser's next turn (Section 15.3).</summary>
+public sealed record StadiumBoost(string GroupId, int ChosenById);
 
 public sealed class PropertyState
 {

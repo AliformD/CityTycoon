@@ -44,10 +44,89 @@ else if (decision.Kind == DecisionKind.RespondToTrade && decision.Trade is { } o
         </div>
     </div>
 }
+else if (decision.Kind == DecisionKind.ChoosePrecisionDice && decision.Dice is { Count: 3 } dice)
+{
+    @* Precision Roll (Section 10.3): three dice were rolled, keep the two you like. *@
+    <div class="decision precision">
+        <h2>@view.Me.Name, keep two of these dice</h2>
+        <div class="dice three" aria-label="Your three dice: @string.Join(", ", dice)">
+            @foreach (var die in dice) { <span class="die">@die</span> }
+        </div>
+        <div class="buttons stacked">
+            @* Two dice the same (like 2, 2, 6) would give the same choice twice, so each pair of numbers is shown once. *@
+            @foreach (var action in main.OfType<ChooseDice>().DistinctBy(c => (Math.Min(dice[c.First], dice[c.Second]), Math.Max(dice[c.First], dice[c.Second]))))
+            {
+                var a = dice[action.First];
+                var b = dice[action.Second];
+                var land = UiHelpers.LandingSpace(view, Request.PlayerId, a + b);
+                <button class="big" @onclick="() => OnAnswer.InvokeAsync(action)"
+                        @onmouseover="() => Preview(land.Id)" @onfocus="() => Preview(land.Id)">
+                    Keep @a and @b = @(a + b)@(a == b ? " (doubles!)" : "") → @UiHelpers.DisplayName(land, Content)
+                </button>
+            }
+        </div>
+    </div>
+}
+else if (decision.Kind == DecisionKind.ChooseNudge)
+{
+    @* Nudge (Section 10.2): spend a Momentum token to move up to 2 spaces more or less. The board lights up where each choice lands. *@
+    var rolled = decision.Dice?.Sum() ?? 0;
+    <div class="decision nudge">
+        <h2>@view.Me.Name, you rolled @rolled. Nudge it?</h2>
+        <p>You have @view.Me.Momentum Momentum token@(view.Me.Momentum == 1 ? "" : "s"). Point at a choice to see where it lands.</p>
+        <div class="buttons nudge-options">
+            @foreach (var action in main.OfType<Nudge>().OrderBy(n => n.Spaces))
+            {
+                var land = UiHelpers.LandingSpace(view, Request.PlayerId, rolled + action.Spaces);
+                <button class="big @(action.Spaces == 0 ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)"
+                        @onmouseover="() => Preview(land.Id)" @onmouseout="() => Preview(null)"
+                        @onfocus="() => Preview(land.Id)" @onblur="() => Preview(null)">
+                    <span>@UiHelpers.ActionLabel(action, view, Content)</span>
+                    <small>Move @(rolled + action.Spaces) → @UiHelpers.DisplayName(land, Content)</small>
+                </button>
+            }
+        </div>
+    </div>
+}
+else if (decision.Kind == DecisionKind.CasinoBet)
+{
+    <CasinoPanel Request="Request" Content="Content" OnAnswer="OnAnswer" />
+}
+else if (decision.Kind == DecisionKind.RespondToDuel && decision.Duel is { } duel)
+{
+    <div class="decision duel">
+        <h2>@view.Me.Name, @view.Player(duel.ChallengerId).Name challenges you to a Dice Duel!</h2>
+        <p>You each roll two dice and the higher total wins <strong>@UiHelpers.Money(duel.Stake)</strong> from the other. Ties roll again.</p>
+        <div class="buttons">
+            @foreach (var action in main)
+            {
+                <button class="big @(action is AcceptDuel ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)">@UiHelpers.ActionLabel(action, view, Content)</button>
+            }
+        </div>
+    </div>
+}
+else if (decision.Kind == DecisionKind.ChooseStadiumGroup)
+{
+    @* The Stadium (Section 13.3): pick a color group whose rent doubles until your next turn. *@
+    <div class="decision stadium">
+        <h2>@view.Me.Name, @AfterName(decision.Prompt)</h2>
+        <div class="buttons groups">
+            @foreach (var action in main.OfType<PickStadiumGroup>())
+            {
+                var group = Content.Groups[action.GroupId];
+                <button class="group-choice" @onclick="() => OnAnswer.InvokeAsync(action)">
+                    <span class="band" style="background:@group.Color"></span>
+                    <strong>@group.Name</strong>
+                    <small>@GroupOwners(action.GroupId)</small>
+                </button>
+            }
+        </div>
+    </div>
+}
 else
 {
     <div class="decision">
-        <h2>@view.Me.Name, @decision.Prompt</h2>
+        <h2>@view.Me.Name, @AfterName(decision.Prompt)</h2>
         <div class="buttons">
             @foreach (var action in main)
             {
@@ -86,6 +165,9 @@ else
     [Parameter, EditorRequired] public GameSession Session { get; set; } = default!;
     [Parameter] public EventCallback<GameAction> OnAnswer { get; set; }
 
+    /// <summary>Called with a space id to light up on the board while the player points at a choice (null clears it).</summary>
+    [Parameter] public EventCallback<string?> OnPreview { get; set; }
+
     private bool showTrade;
 
     private RenderFragment TradeSide(int cash, IReadOnlyList<string> properties) => __builder =>
@@ -96,6 +178,24 @@ else
             @if (cash == 0 && properties.Count == 0) { <li>Nothing</li> }
         </ul>
     };
+
+    // "Angel, " + "Anything else?" reads better as "Angel, anything else?".
+    private static string AfterName(string prompt) =>
+        prompt.Length > 1 && char.IsUpper(prompt[0]) && char.IsLower(prompt[1]) ? char.ToLowerInvariant(prompt[0]) + prompt[1..] : prompt;
+
+    private Task Preview(string? spaceId) => OnPreview.InvokeAsync(spaceId);
+
+    /// <summary>Who owns what in a color group, e.g. "You 2, Bo 1, 1 unsold".</summary>
+    private string GroupOwners(string groupId)
+    {
+        var ids = Content.Properties.Values.Where(p => p.Group == groupId).Select(p => p.Id).ToList();
+        var owners = ids.Select(id => Request.View.Properties[id].OwnerId).ToList();
+        var parts = owners.Where(o => o != null).GroupBy(o => o!.Value)
+            .Select(g => $"{(g.Key == Request.PlayerId ? "You" : Request.View.Player(g.Key).Name)} {g.Count()}").ToList();
+        int unsold = owners.Count(o => o == null);
+        if (unsold > 0) parts.Add($"{unsold} unsold");
+        return string.Join(", ", parts);
+    }
 
     private async Task Propose(TradeOffer offer)
     {

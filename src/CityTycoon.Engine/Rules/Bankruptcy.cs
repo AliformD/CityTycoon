@@ -33,6 +33,8 @@ public static class Bankruptcy
             ctx.Player(toId).Cash += cash;
             foreach (PropertyState p in outright)
                 p.OwnerId = toId;
+            // Momentum tokens go to them too (up to their token limit).
+            MomentumRules.Gain(ctx, ctx.Player(toId), player.Momentum, $"{player.Name}'s bankruptcy");
         }
         else
         {
@@ -49,6 +51,10 @@ public static class Bankruptcy
         }
 
         player.Cash = 0;
+        player.Momentum = 0;
+        player.IsInsured = false;
+        player.IsRecovering = false;
+        ctx.State.StadiumBoosts.RemoveAll(b => b.ChosenById == player.Id);
         player.IsBankrupt = true;
         player.InJail = false;
         ctx.Emit(new PlayerBankrupt(player.Id, creditorId, cash, outright.Select(p => p.PropertyId).ToList()));

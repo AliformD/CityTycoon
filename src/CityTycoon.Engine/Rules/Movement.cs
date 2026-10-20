@@ -30,11 +30,14 @@ public static class Movement
             CollectGo(ctx, player);
     }
 
-    /// <summary>GO effects (Section 15.1). So far: the salary, then any down-payment balances due.</summary>
+    /// <summary>GO effects (Section 15.1). So far: the salary, a Momentum token, then any down-payment balances due.</summary>
     public static void CollectGo(EngineContext ctx, PlayerState player)
     {
         player.Cash += ctx.Rules.GoSalary;
         ctx.Emit(new PassedGo(player.Id, ctx.Rules.GoSalary));
+
+        // Step 5: gain a Momentum token.
+        MomentumRules.Gain(ctx, player, ctx.Rules.GoMomentumGain, "GO");
 
         // Step 6: pending balances are due, paid right after the salary (Section 8.5).
         // Pushed in reverse board order so the first one on the board is handled first.
@@ -43,6 +46,27 @@ public static class Movement
             .OrderByDescending(p => ctx.State.IndexOf(p.PropertyId));
         foreach (PropertyState p in pending)
             ctx.Push(new DownPaymentDueStep { PlayerId = player.Id, PropertyId = p.PropertyId });
+    }
+
+    /// <summary>
+    /// Sends a player straight to the Hospital without passing GO (Section 15.3).
+    /// An Insured marker cancels the bill and the recovery turn and is used up.
+    /// Otherwise they pay the bill and roll only 1 die on their next turn.
+    /// Event cards that do this arrive in Phase 5.
+    /// </summary>
+    public static void SendToHospital(EngineContext ctx, PlayerState player, string reason)
+    {
+        player.Position = ctx.State.IndexOf("hospital");
+        ctx.Emit(new SentToHospital(player.Id, reason));
+        if (player.IsInsured)
+        {
+            player.IsInsured = false;
+            ctx.Emit(new InsuranceUsed(player.Id));
+            return;
+        }
+
+        player.IsRecovering = true;
+        ctx.Push(new PaymentStep { FromId = player.Id, Amount = ctx.Rules.HospitalBill, Reason = PaymentReason.Hospital });
     }
 
     /// <summary>Sends a player straight to Jail without passing GO (Section 14.1).</summary>

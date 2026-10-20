@@ -54,11 +54,17 @@ public sealed class TestGame
         return result;
     }
 
-    /// <summary>Scripts the next two dice, then rolls them.</summary>
+    /// <summary>
+    /// Scripts the next two dice, then rolls them. If the player could Nudge,
+    /// they choose not to, so the move is exactly the dice total.
+    /// </summary>
     public ActionResult Roll(int playerId, int die1, int die2)
     {
         Dice.Add(die1, die2);
-        return Do(playerId, new RollDice());
+        ActionResult result = Do(playerId, new RollDice());
+        if (DecisionFor(playerId)?.Kind == DecisionKind.ChooseNudge)
+            result = Do(playerId, new Nudge(0));
+        return result;
     }
 
     /// <summary>
@@ -92,10 +98,10 @@ public sealed class TestGame
 
 public static class TestGameExtensions
 {
-    /// <summary>Plays a quiet turn: land on the Casino (does nothing yet) and end the turn.</summary>
+    /// <summary>Plays a quiet turn: land on the Mall (does nothing until Phase 5) and end the turn.</summary>
     public static void SkipTurn(this TestGame game, int playerId)
     {
-        game.PlaceBefore(playerId, "casino", 5);
+        game.PlaceBefore(playerId, "mall", 5);
         game.Roll(playerId, 2, 3);
         game.EndTurn(playerId);
     }

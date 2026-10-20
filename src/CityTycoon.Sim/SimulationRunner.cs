@@ -35,6 +35,15 @@ public sealed record GameStats(
     public int DownPaymentWins { get; init; }
     public int Forfeits { get; init; }
     public int TradesCompleted { get; init; }
+
+    // Phase 4 numbers: Momentum and landmarks.
+    public int Nudges { get; init; }
+    public int PrecisionRolls { get; init; }
+    public int CasinoBets { get; init; }
+    /// <summary>What players won (positive) or lost (negative) at High/Low in total.</summary>
+    public int CasinoNet { get; init; }
+    public int Duels { get; init; }
+    public int InsuranceBought { get; init; }
 }
 
 /// <summary>Plays many bot-vs-bot games and gathers statistics (Section 26.3).</summary>
@@ -118,6 +127,12 @@ public static class SimulationRunner
             DownPaymentWins = wins.Count(w => w.DownPayment),
             Forfeits = log.OfType<PropertyForfeited>().Count(),
             TradesCompleted = log.OfType<TradeCompleted>().Count(),
+            Nudges = log.OfType<Nudged>().Count(),
+            PrecisionRolls = log.OfType<PrecisionRolled>().Count(),
+            CasinoBets = log.OfType<CasinoHighLow>().Count(),
+            CasinoNet = log.OfType<CasinoHighLow>().Sum(c => c.Net),
+            Duels = log.OfType<DuelWon>().Count(),
+            InsuranceBought = log.OfType<InsuranceBought>().Count(),
         };
     }
 }

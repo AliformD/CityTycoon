@@ -83,6 +83,10 @@ static string Summarize(List<GameStats> results, SimOptions options, TimeSpan el
         lines.Add($"Per game: {finished.Average(r => r.BuildingsBuilt):0.0} buildings built, {finished.Average(r => r.Mortgages):0.0} mortgages, "
             + $"{finished.Average(r => r.LoansTaken):0.0} loans, {finished.Average(r => r.TradesCompleted):0.0} trades, "
             + $"{finished.Average(r => r.DownPaymentWins):0.0} down-payment wins, {finished.Average(r => r.Forfeits):0.00} forfeits");
+        lines.Add($"Per game: {finished.Average(r => r.Nudges):0.0} Nudges, {finished.Average(r => r.PrecisionRolls):0.0} Precision Rolls, "
+            + $"{finished.Average(r => r.InsuranceBought):0.0} Insured markers bought, {finished.Average(r => r.Duels):0.0} Dice Duels");
+        int bets = finished.Sum(r => r.CasinoBets);
+        lines.Add($"Casino: {(double)bets / finished.Count:0.0} High/Low bets per game, players' total result {finished.Sum(r => r.CasinoNet):N0} dollars");
         lines.Add("Win rate by turn position (1 = goes first). Even share would be " + (1.0 / options.Players).ToString("P0") + ":");
         for (int pos = 0; pos < options.Players; pos++)
         {

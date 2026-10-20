@@ -26,6 +26,16 @@ namespace CityTycoon.Engine.Actions;
 [JsonDerivedType(typeof(TakeLoan), nameof(TakeLoan))]
 [JsonDerivedType(typeof(RepayLoan), nameof(RepayLoan))]
 [JsonDerivedType(typeof(ProposeTrade), nameof(ProposeTrade))]
+[JsonDerivedType(typeof(PrecisionRoll), nameof(PrecisionRoll))]
+[JsonDerivedType(typeof(ChooseDice), nameof(ChooseDice))]
+[JsonDerivedType(typeof(Nudge), nameof(Nudge))]
+[JsonDerivedType(typeof(NoThanks), nameof(NoThanks))]
+[JsonDerivedType(typeof(BuyInsurance), nameof(BuyInsurance))]
+[JsonDerivedType(typeof(BetHighLow), nameof(BetHighLow))]
+[JsonDerivedType(typeof(ChallengeDuel), nameof(ChallengeDuel))]
+[JsonDerivedType(typeof(AcceptDuel), nameof(AcceptDuel))]
+[JsonDerivedType(typeof(DeclineDuel), nameof(DeclineDuel))]
+[JsonDerivedType(typeof(PickStadiumGroup), nameof(PickStadiumGroup))]
 public abstract record GameAction;
 
 /// <summary>Roll the normal 2 dice.</summary>
@@ -57,6 +67,42 @@ public sealed record DeclineTrade : GameAction;
 
 /// <summary>Give up a pending property instead of paying its balance (Section 8.5).</summary>
 public sealed record ForfeitProperty : GameAction;
+
+/// <summary>Spend Momentum tokens to roll 3 dice and keep 2 (Section 7.3).</summary>
+public sealed record PrecisionRoll : GameAction;
+
+/// <summary>After a Precision Roll: keep these two dice (positions 0, 1 or 2 in the roll).</summary>
+public sealed record ChooseDice(int First, int Second) : GameAction;
+
+/// <summary>
+/// After rolling: move this many spaces more (positive) or fewer (negative)
+/// than the dice say. 0 means no Nudge and costs nothing (Section 7.3).
+/// </summary>
+public sealed record Nudge(int Spaces) : GameAction;
+
+/// <summary>Turn down an optional offer, like an Insured marker or a Casino bet.</summary>
+public sealed record NoThanks : GameAction;
+
+/// <summary>At the Hospital: buy an Insured marker (Section 15.3).</summary>
+public sealed record BuyInsurance : GameAction;
+
+/// <summary>At the Casino: bet that the next 2 dice total High (8-12) or Low (2-6).</summary>
+public sealed record BetHighLow(int Amount, bool High) : GameAction;
+
+/// <summary>At the Casino: challenge another player to a Dice Duel for this stake.</summary>
+public sealed record ChallengeDuel(int OpponentId, int Amount) : GameAction;
+
+/// <summary>Say yes to a Dice Duel.</summary>
+public sealed record AcceptDuel : GameAction;
+
+/// <summary>Say no to a Dice Duel.</summary>
+public sealed record DeclineDuel : GameAction;
+
+/// <summary>At the Stadium: double this color group's rent until your next turn.</summary>
+public sealed record PickStadiumGroup(string GroupId) : GameAction;
+
+/// <summary>A Dice Duel challenge waiting for an answer.</summary>
+public sealed record DuelChallenge(int ChallengerId, int OpponentId, int Stake);
 
 /// <summary>
 /// "Management" actions: things you can do in between the main choices, like
@@ -111,7 +157,21 @@ public enum ManagementOptions
 }
 
 /// <summary>What the engine is waiting for.</summary>
-public enum DecisionKind { ChooseMoveMethod, JailChoice, PostMoveActions, SubmitBid, RaiseMoney, RespondToTrade }
+public enum DecisionKind
+{
+    ChooseMoveMethod,
+    JailChoice,
+    PostMoveActions,
+    SubmitBid,
+    RaiseMoney,
+    RespondToTrade,
+    ChoosePrecisionDice,
+    ChooseNudge,
+    HospitalVisit,
+    CasinoBet,
+    RespondToDuel,
+    ChooseStadiumGroup,
+}
 
 /// <summary>
 /// A choice the engine is waiting for, and from whom (Section 20.4).
@@ -126,6 +186,9 @@ public enum DecisionKind { ChooseMoveMethod, JailChoice, PostMoveActions, Submit
 /// <param name="Management">Which management actions (build, loans...) are allowed while deciding.</param>
 /// <param name="AmountOwed">For raising money: how much must be paid.</param>
 /// <param name="Trade">For trade replies: the offer.</param>
+/// <param name="Dice">For Precision Rolls: the dice rolled. For Nudges: the dice being used.</param>
+/// <param name="MaxBet">For the Casino: the most this player can bet.</param>
+/// <param name="Duel">For Dice Duel replies: the challenge.</param>
 public sealed record PendingDecision(
     int PlayerId,
     DecisionKind Kind,
@@ -137,4 +200,7 @@ public sealed record PendingDecision(
     int MaxDownPaymentBid = 0,
     ManagementOptions Management = ManagementOptions.None,
     int AmountOwed = 0,
-    TradeOffer? Trade = null);
+    TradeOffer? Trade = null,
+    IReadOnlyList<int>? Dice = null,
+    int MaxBet = 0,
+    DuelChallenge? Duel = null);

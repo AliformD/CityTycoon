@@ -2,7 +2,8 @@
 <div class="board" role="group" aria-label="Game board">
     @foreach (var space in View.Spaces)
     {
-        <SpaceCell Space="space" View="View" Content="Content" Highlight="space.Id == HighlightSpaceId" OnSelect="OnSelect" />
+        <SpaceCell Space="space" View="View" Content="Content" Highlight="space.Id == HighlightSpaceId"
+                   Preview="PreviewSpaceIds?.Contains(space.Id) == true" PreviewFocus="space.Id == PreviewFocusId" OnSelect="OnSelect" />
     }
     <div class="board-center">
         @ChildContent
@@ -13,6 +14,12 @@
     [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
     [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
     [Parameter] public string? HighlightSpaceId { get; set; }
+
+    /// <summary>Spaces the current player could land on (for the Nudge preview).</summary>
+    [Parameter] public IReadOnlyCollection<string>? PreviewSpaceIds { get; set; }
+
+    /// <summary>The landing spot of the option the mouse or keyboard focus is on.</summary>
+    [Parameter] public string? PreviewFocusId { get; set; }
     [Parameter] public EventCallback<SpaceInfo> OnSelect { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
 }

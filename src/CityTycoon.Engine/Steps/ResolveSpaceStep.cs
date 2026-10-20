@@ -37,8 +37,24 @@ public sealed class ResolveSpaceStep : Step
                 Movement.SendToJail(ctx, player, "landed on Go To Jail");
                 break;
 
+            case SpaceKind.CityPark:
+                // City Park offers a token or an Opportunity card. Cards arrive in
+                // Phase 5, so for now the token is the only choice (docs/DECISIONS.md).
+                MomentumRules.Gain(ctx, player, ctx.Rules.CityParkMomentum, "City Park");
+                break;
+
+            case SpaceKind.Landmark:
+                switch (space.Landmark)
+                {
+                    case LandmarkType.Hospital: ctx.Push(new HospitalVisitStep { PlayerId = PlayerId }); break;
+                    case LandmarkType.Casino: ctx.Push(new CasinoStep { PlayerId = PlayerId }); break;
+                    case LandmarkType.Stadium: ctx.Push(new StadiumStep { PlayerId = PlayerId }); break;
+                    // The Mall sells Opportunity cards, which arrive in Phase 5.
+                }
+                break;
+
             // GO was already paid while moving. Jail is "Just Visiting".
-            // Cards, landmarks, City Park and Government tiles arrive in later phases.
+            // Event and Opportunity cards and Government tiles arrive in later phases.
             default:
                 break;
         }

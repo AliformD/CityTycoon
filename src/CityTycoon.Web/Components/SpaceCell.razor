@@ -15,15 +15,18 @@
         label += ", mortgaged";
     if (owned?.IsPending == true)
         label += ", pending";
+    if (group != null && View.StadiumBoosts.Any(b => b.GroupId == group.Id))
+        label += ", rent doubled by the Stadium";
 }
-<button class="space side-@UiHelpers.Side(Space.Index) kind-@Space.Kind.ToString().ToLowerInvariant() @(Highlight ? "highlight" : "")"
+<button class="space side-@UiHelpers.Side(Space.Index) kind-@Space.Kind.ToString().ToLowerInvariant() @(Highlight ? "highlight" : "") @(Preview ? "preview" : "") @(PreviewFocus ? "preview-focus" : "")"
         style="grid-column:@col; grid-row:@row;"
         title="@label"
         aria-label="@label"
         @onclick="() => OnSelect.InvokeAsync(Space)">
     @if (group != null)
     {
-        <span class="band" style="background:@group.Color">@group.Code</span>
+        bool boosted = View.StadiumBoosts.Any(b => b.GroupId == group.Id);
+        <span class="band" style="background:@group.Color">@group.Code@(boosted ? " ×2" : "")</span>
     }
     else if (def != null)
     {
@@ -65,5 +68,7 @@
     [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
     [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
     [Parameter] public bool Highlight { get; set; }
+    [Parameter] public bool Preview { get; set; }
+    [Parameter] public bool PreviewFocus { get; set; }
     [Parameter] public EventCallback<SpaceInfo> OnSelect { get; set; }
 }

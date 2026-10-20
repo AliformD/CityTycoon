@@ -39,14 +39,30 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(TradeCompleted), nameof(TradeCompleted))]
 [JsonDerivedType(typeof(TradeDeclined), nameof(TradeDeclined))]
 [JsonDerivedType(typeof(RaisingMoney), nameof(RaisingMoney))]
+[JsonDerivedType(typeof(MomentumGained), nameof(MomentumGained))]
+[JsonDerivedType(typeof(PrecisionRolled), nameof(PrecisionRolled))]
+[JsonDerivedType(typeof(Nudged), nameof(Nudged))]
+[JsonDerivedType(typeof(InsuranceBought), nameof(InsuranceBought))]
+[JsonDerivedType(typeof(InsuranceUsed), nameof(InsuranceUsed))]
+[JsonDerivedType(typeof(SentToHospital), nameof(SentToHospital))]
+[JsonDerivedType(typeof(HospitalBillPaid), nameof(HospitalBillPaid))]
+[JsonDerivedType(typeof(CasinoHighLow), nameof(CasinoHighLow))]
+[JsonDerivedType(typeof(DuelChallenged), nameof(DuelChallenged))]
+[JsonDerivedType(typeof(DuelDeclined), nameof(DuelDeclined))]
+[JsonDerivedType(typeof(DuelRolled), nameof(DuelRolled))]
+[JsonDerivedType(typeof(DuelWon), nameof(DuelWon))]
+[JsonDerivedType(typeof(StadiumChosen), nameof(StadiumChosen))]
+[JsonDerivedType(typeof(StadiumEnded), nameof(StadiumEnded))]
 public abstract record GameEvent;
 
 public sealed record GameStarted(ulong Seed, IReadOnlyList<int> TurnOrder) : GameEvent;
 public sealed record TurnStarted(int PlayerId, int Round) : GameEvent;
+/// <summary>The dice used to move. On a one-die turn (Hospital recovery), <see cref="Die2"/> is 0.</summary>
 public sealed record DiceRolled(int PlayerId, int Die1, int Die2) : GameEvent
 {
     public int Total => Die1 + Die2;
-    public bool IsDoubles => Die1 == Die2;
+    public bool IsOneDie => Die2 == 0;
+    public bool IsDoubles => !IsOneDie && Die1 == Die2;
 }
 public sealed record PlayerMoved(int PlayerId, int From, int To) : GameEvent;
 public sealed record PassedGo(int PlayerId, int Salary) : GameEvent;
@@ -92,3 +108,36 @@ public sealed record TradeDeclined(Actions.TradeOffer Offer, string Reason) : Ga
 
 /// <summary>A player owes more cash than they have and must raise money first.</summary>
 public sealed record RaisingMoney(int PlayerId, int AmountOwed) : GameEvent;
+
+/// <summary>Momentum tokens gained (already limited by the token cap). <paramref name="Source"/> says why, like "GO".</summary>
+public sealed record MomentumGained(int PlayerId, int Amount, string Source) : GameEvent;
+
+/// <summary>A Precision Roll: the tokens spent and all 3 dice, before choosing 2 (Section 7.3).</summary>
+public sealed record PrecisionRolled(int PlayerId, int TokensSpent, IReadOnlyList<int> Dice) : GameEvent;
+
+/// <summary>A Nudge: moved <paramref name="Spaces"/> more (or fewer, if negative) than rolled.</summary>
+public sealed record Nudged(int PlayerId, int Spaces, int TokensSpent) : GameEvent;
+
+public sealed record InsuranceBought(int PlayerId, int Cost) : GameEvent;
+
+/// <summary>An Insured marker was used up to cancel a Hospital bill.</summary>
+public sealed record InsuranceUsed(int PlayerId) : GameEvent;
+
+public sealed record SentToHospital(int PlayerId, string Reason) : GameEvent;
+public sealed record HospitalBillPaid(int PlayerId, int Amount) : GameEvent;
+
+/// <summary>A High/Low bet at the Casino. <paramref name="Net"/> is what the player won (or lost, if negative).</summary>
+public sealed record CasinoHighLow(int PlayerId, int Bet, bool CalledHigh, int Die1, int Die2, int Net) : GameEvent
+{
+    public int Total => Die1 + Die2;
+}
+
+public sealed record DuelChallenged(int ChallengerId, int OpponentId, int Stake) : GameEvent;
+public sealed record DuelDeclined(int ChallengerId, int OpponentId) : GameEvent;
+
+/// <summary>One round of Dice Duel rolls. Ties roll again, so there can be several.</summary>
+public sealed record DuelRolled(int ChallengerId, int ChallengerTotal, int OpponentId, int OpponentTotal) : GameEvent;
+public sealed record DuelWon(int WinnerId, int LoserId, int Stake) : GameEvent;
+
+public sealed record StadiumChosen(int PlayerId, string GroupId) : GameEvent;
+public sealed record StadiumEnded(int PlayerId, string GroupId) : GameEvent;

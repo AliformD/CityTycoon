@@ -1,0 +1,48 @@
+{
+  "contentVersion": 1,
+  "tilesPerGame": 4,
+  "tiles": [
+    {
+      "id": "police-station",
+      "name": "Police Station",
+      "neighborText": "Neighbors can't be targeted by Opportunity cards or Hostile Takeover.",
+      "landingText": "Pay a $25 parking ticket to the bank."
+    },
+    {
+      "id": "fire-station",
+      "name": "Fire Station",
+      "neighborText": "Neighbors are safe from the Fire! Event.",
+      "landingText": "Gain 1 Momentum token."
+    },
+    {
+      "id": "school",
+      "name": "School",
+      "neighborText": "Building on neighbors costs 25% less.",
+      "landingText": "Draw 1 Opportunity card."
+    },
+    {
+      "id": "city-hall",
+      "name": "City Hall",
+      "neighborText": "Neighbor rent is +25%.",
+      "landingText": "Pay $10 per building level you own, then start an Emergency Council session with you setting the agenda."
+    },
+    {
+      "id": "power-plant",
+      "name": "Power Plant",
+      "neighborText": "Neighbor rent is -25%, and building there costs 50% less.",
+      "landingText": "Pay $50 to the player who owns both utilities, or to the bank if nobody does."
+    },
+    {
+      "id": "transit-hub",
+      "name": "Transit Hub",
+      "neighborText": "When you land on a neighbor owned by someone else, you may pay $25 and hop onto the Transit Hub instead of paying rent.",
+      "landingText": "You may pay $50 to move to any railroad."
+    },
+    {
+      "id": "landfill",
+      "name": "Landfill",
+      "neighborText": "Neighbor rent is -50%.",
+      "landingText": "Pay a $25 cleanup fee to the bank."
+    }
+  ]
+}

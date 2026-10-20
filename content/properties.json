@@ -1,0 +1,415 @@
+{
+  "contentVersion": 1,
+  "properties": [
+    {
+      "id": "mill-street",
+      "name": "Mill Street",
+      "type": "color",
+      "group": "brown",
+      "assessedValue": 60,
+      "houseCost": 50,
+      "rents": [
+        2,
+        10,
+        30,
+        90,
+        160,
+        250,
+        375
+      ]
+    },
+    {
+      "id": "cobble-lane",
+      "name": "Cobble Lane",
+      "type": "color",
+      "group": "brown",
+      "assessedValue": 60,
+      "houseCost": 50,
+      "rents": [
+        4,
+        20,
+        60,
+        180,
+        320,
+        450,
+        675
+      ]
+    },
+    {
+      "id": "elm-avenue",
+      "name": "Elm Avenue",
+      "type": "color",
+      "group": "light-blue",
+      "assessedValue": 100,
+      "houseCost": 50,
+      "rents": [
+        6,
+        30,
+        90,
+        270,
+        400,
+        550,
+        825
+      ]
+    },
+    {
+      "id": "maple-avenue",
+      "name": "Maple Avenue",
+      "type": "color",
+      "group": "light-blue",
+      "assessedValue": 100,
+      "houseCost": 50,
+      "rents": [
+        6,
+        30,
+        90,
+        270,
+        400,
+        550,
+        825
+      ]
+    },
+    {
+      "id": "birch-avenue",
+      "name": "Birch Avenue",
+      "type": "color",
+      "group": "light-blue",
+      "assessedValue": 120,
+      "houseCost": 50,
+      "rents": [
+        8,
+        40,
+        100,
+        300,
+        450,
+        600,
+        900
+      ]
+    },
+    {
+      "id": "gallery-row",
+      "name": "Gallery Row",
+      "type": "color",
+      "group": "pink",
+      "assessedValue": 140,
+      "houseCost": 100,
+      "rents": [
+        10,
+        50,
+        150,
+        450,
+        625,
+        750,
+        1125
+      ]
+    },
+    {
+      "id": "theater-way",
+      "name": "Theater Way",
+      "type": "color",
+      "group": "pink",
+      "assessedValue": 140,
+      "houseCost": 100,
+      "rents": [
+        10,
+        50,
+        150,
+        450,
+        625,
+        750,
+        1125
+      ]
+    },
+    {
+      "id": "studio-street",
+      "name": "Studio Street",
+      "type": "color",
+      "group": "pink",
+      "assessedValue": 160,
+      "houseCost": 100,
+      "rents": [
+        12,
+        60,
+        180,
+        500,
+        700,
+        900,
+        1350
+      ]
+    },
+    {
+      "id": "market-street",
+      "name": "Market Street",
+      "type": "color",
+      "group": "orange",
+      "assessedValue": 180,
+      "houseCost": 100,
+      "rents": [
+        14,
+        70,
+        200,
+        550,
+        750,
+        950,
+        1425
+      ]
+    },
+    {
+      "id": "baker-street",
+      "name": "Baker Street",
+      "type": "color",
+      "group": "orange",
+      "assessedValue": 180,
+      "houseCost": 100,
+      "rents": [
+        14,
+        70,
+        200,
+        550,
+        750,
+        950,
+        1425
+      ]
+    },
+    {
+      "id": "fountain-square",
+      "name": "Fountain Square",
+      "type": "color",
+      "group": "orange",
+      "assessedValue": 200,
+      "houseCost": 100,
+      "rents": [
+        16,
+        80,
+        220,
+        600,
+        800,
+        1000,
+        1500
+      ]
+    },
+    {
+      "id": "pier-road",
+      "name": "Pier Road",
+      "type": "color",
+      "group": "red",
+      "assessedValue": 220,
+      "houseCost": 150,
+      "rents": [
+        18,
+        90,
+        250,
+        700,
+        875,
+        1050,
+        1575
+      ]
+    },
+    {
+      "id": "anchor-street",
+      "name": "Anchor Street",
+      "type": "color",
+      "group": "red",
+      "assessedValue": 220,
+      "houseCost": 150,
+      "rents": [
+        18,
+        90,
+        250,
+        700,
+        875,
+        1050,
+        1575
+      ]
+    },
+    {
+      "id": "lighthouse-lane",
+      "name": "Lighthouse Lane",
+      "type": "color",
+      "group": "red",
+      "assessedValue": 240,
+      "houseCost": 150,
+      "rents": [
+        20,
+        100,
+        300,
+        750,
+        925,
+        1100,
+        1650
+      ]
+    },
+    {
+      "id": "harbor-boulevard",
+      "name": "Harbor Boulevard",
+      "type": "color",
+      "group": "yellow",
+      "assessedValue": 260,
+      "houseCost": 150,
+      "rents": [
+        22,
+        110,
+        330,
+        800,
+        975,
+        1150,
+        1725
+      ]
+    },
+    {
+      "id": "wharf-street",
+      "name": "Wharf Street",
+      "type": "color",
+      "group": "yellow",
+      "assessedValue": 260,
+      "houseCost": 150,
+      "rents": [
+        22,
+        110,
+        330,
+        800,
+        975,
+        1150,
+        1725
+      ]
+    },
+    {
+      "id": "marina-drive",
+      "name": "Marina Drive",
+      "type": "color",
+      "group": "yellow",
+      "assessedValue": 280,
+      "houseCost": 150,
+      "rents": [
+        24,
+        120,
+        360,
+        850,
+        1025,
+        1200,
+        1800
+      ]
+    },
+    {
+      "id": "summit-avenue",
+      "name": "Summit Avenue",
+      "type": "color",
+      "group": "green",
+      "assessedValue": 300,
+      "houseCost": 200,
+      "rents": [
+        26,
+        130,
+        390,
+        900,
+        1100,
+        1275,
+        1925
+      ]
+    },
+    {
+      "id": "grand-plaza",
+      "name": "Grand Plaza",
+      "type": "color",
+      "group": "green",
+      "assessedValue": 300,
+      "houseCost": 200,
+      "rents": [
+        26,
+        130,
+        390,
+        900,
+        1100,
+        1275,
+        1925
+      ]
+    },
+    {
+      "id": "crown-street",
+      "name": "Crown Street",
+      "type": "color",
+      "group": "green",
+      "assessedValue": 320,
+      "houseCost": 200,
+      "rents": [
+        28,
+        150,
+        450,
+        1000,
+        1200,
+        1400,
+        2100
+      ]
+    },
+    {
+      "id": "skyline-drive",
+      "name": "Skyline Drive",
+      "type": "color",
+      "group": "dark-blue",
+      "assessedValue": 350,
+      "houseCost": 200,
+      "rents": [
+        35,
+        175,
+        500,
+        1100,
+        1300,
+        1500,
+        2250
+      ]
+    },
+    {
+      "id": "platinum-row",
+      "name": "Platinum Row",
+      "type": "color",
+      "group": "dark-blue",
+      "assessedValue": 400,
+      "houseCost": 200,
+      "rents": [
+        50,
+        200,
+        600,
+        1400,
+        1700,
+        2000,
+        3000
+      ]
+    },
+    {
+      "id": "old-town-station",
+      "name": "Old Town Station",
+      "type": "railroad",
+      "assessedValue": 200
+    },
+    {
+      "id": "midtown-station",
+      "name": "Midtown Station",
+      "type": "railroad",
+      "assessedValue": 200
+    },
+    {
+      "id": "harbor-station",
+      "name": "Harbor Station",
+      "type": "railroad",
+      "assessedValue": 200
+    },
+    {
+      "id": "uptown-station",
+      "name": "Uptown Station",
+      "type": "railroad",
+      "assessedValue": 200
+    },
+    {
+      "id": "city-power-light",
+      "name": "City Power & Light",
+      "type": "utility",
+      "assessedValue": 150
+    },
+    {
+      "id": "city-water-works",
+      "name": "City Water Works",
+      "type": "utility",
+      "assessedValue": 150
+    }
+  ]
+}

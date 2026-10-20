@@ -22,6 +22,7 @@ public static class ContentLoader
     {
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
     public static RulesConfig LoadRules() => Load<RulesConfig>("rules.json");

@@ -1,0 +1,93 @@
+{
+  "contentVersion": 1,
+  "groups": [
+    {
+      "id": "brown",
+      "name": "Brown",
+      "color": "#8B5A2B",
+      "code": "BR",
+      "perk": {
+        "id": "community-roots",
+        "name": "Community Roots",
+        "text": "Collect an extra $50 every time you pass GO."
+      }
+    },
+    {
+      "id": "light-blue",
+      "name": "Light Blue",
+      "color": "#87CEEB",
+      "code": "LB",
+      "perk": {
+        "id": "commuter-belt",
+        "name": "Commuter Belt",
+        "text": "Gain 1 extra Momentum token when you pass GO. Your token limit goes up by 2."
+      }
+    },
+    {
+      "id": "pink",
+      "name": "Pink",
+      "color": "#D63384",
+      "code": "PK",
+      "perk": {
+        "id": "arts-district",
+        "name": "Arts District",
+        "text": "When you draw an Opportunity card, draw 2 and keep 1. Your hand limit becomes 4."
+      }
+    },
+    {
+      "id": "orange",
+      "name": "Orange",
+      "color": "#F28C28",
+      "code": "OR",
+      "perk": {
+        "id": "neighborhood-watch",
+        "name": "Neighborhood Watch",
+        "text": "Any opponent in Jail or recovering from the Hospital pays you $25 at the start of each of their turns there."
+      }
+    },
+    {
+      "id": "red",
+      "name": "Red",
+      "color": "#D62828",
+      "code": "RD",
+      "perk": {
+        "id": "hostile-takeover",
+        "name": "Hostile Takeover",
+        "text": "Once per lap, force an auction on one eligible opponent property."
+      }
+    },
+    {
+      "id": "yellow",
+      "name": "Yellow",
+      "color": "#F5D000",
+      "code": "YL",
+      "perk": {
+        "id": "bank-partner",
+        "name": "Bank Partner",
+        "text": "Your loans cost $210 to repay instead of $250, and you can hold 3 instead of 2."
+      }
+    },
+    {
+      "id": "green",
+      "name": "Green",
+      "color": "#2A9D47",
+      "code": "GR",
+      "perk": {
+        "id": "dividends",
+        "name": "Dividends",
+        "text": "At the start of each of your turns, collect $20 for every hotel or skyscraper you own."
+      }
+    },
+    {
+      "id": "dark-blue",
+      "name": "Dark Blue",
+      "color": "#1D3B8F",
+      "code": "DB",
+      "perk": {
+        "id": "prime-real-estate",
+        "name": "Prime Real Estate",
+        "text": "Immune to negative rent modifiers. Skyscraper levels cost 1 x house cost."
+      }
+    }
+  ]
+}

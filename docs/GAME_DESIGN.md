@@ -505,7 +505,7 @@ Government tiles are city-owned spaces that affect the properties right next to 
 
 | Tile | Neighbor effect (after reveal) | Landing effect |
 | --- | --- | --- |
-| **Police Station** | Neighbors can't be targeted by Opportunity cards or Hostile Takeover. | Pay a $25 parking ticket to the bank. |
+| **Police Station** | Neighbors can't be targeted by negative Opportunity cards (ones played against someone else) or Hostile Takeover. Helpful cards still work. | Pay a $25 parking ticket to the bank. |
 | **Fire Station** | Neighbors are safe from the Fire! Event. | Gain 1 Momentum token. |
 | **School** | Building on neighbors costs 25% less. | Draw 1 Opportunity card. |
 | **City Hall** | Neighbor rent is +25%. | Pay $10 per building level you own, then start an Emergency Council session with you setting the agenda. |

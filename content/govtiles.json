@@ -10,7 +10,7 @@
     {
       "id": "police-station",
       "name": "Police Station",
-      "neighborText": "Neighbors can't be targeted by Opportunity cards or Hostile Takeover.",
+      "neighborText": "Neighbors can't be targeted by negative Opportunity cards or Hostile Takeover.",
       "landingText": "Pay a $25 parking ticket to the bank.",
       "neighbor": { "protectFromCards": true },
       "landing": { "type": "PayBank", "amount": 25 }

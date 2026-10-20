@@ -25,8 +25,8 @@ public interface IRuleModifier
     /// <summary>A percentage taken off the cost of building on this property. Section 9.4.</summary>
     int BuildDiscountPercent(GameState state, string propertyId) => 0;
 
-    /// <summary>False if Opportunity cards (and Hostile Takeover) may not target this property.</summary>
-    bool CanBeTargetedByCards(GameState state, string propertyId) => true;
+    /// <summary>False if a card of this polarity may not target this property. Helpful cards are never stopped here.</summary>
+    bool CanBeTargetedByCards(GameState state, string propertyId, CardPolarity polarity) => true;
 
     /// <summary>True if the Fire! Event can't touch this property.</summary>
     bool ProtectsFromFire(GameState state, string propertyId) => false;
@@ -59,8 +59,8 @@ public static class RuleModifiers
         IReadOnlyList<IRuleModifier>? active = null) =>
         (active ?? Active(state, content)).Sum(m => m.BuildDiscountPercent(state, propertyId));
 
-    public static bool CanBeTargetedByCards(GameState state, GameContent content, string propertyId) =>
-        Active(state, content).All(m => m.CanBeTargetedByCards(state, propertyId));
+    public static bool CanBeTargetedByCards(GameState state, GameContent content, string propertyId, CardPolarity polarity) =>
+        Active(state, content).All(m => m.CanBeTargetedByCards(state, propertyId, polarity));
 
     public static bool IsFireSafe(GameState state, GameContent content, string propertyId) =>
         Active(state, content).Any(m => m.ProtectsFromFire(state, propertyId));

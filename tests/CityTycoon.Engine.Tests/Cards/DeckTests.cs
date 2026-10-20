@@ -138,7 +138,7 @@ public class CardContentTests
             {
               "contentVersion": 1,
               "cards": [
-                { "id": "tax-inspector", "deck": "opportunity", "name": "Tax Inspector",
+                { "id": "tax-inspector", "deck": "opportunity", "polarity": "negative", "name": "Tax Inspector",
                   "text": "Choose an opponent. They pay 20% of their cash to the bank.",
                   "timing": "ownTurn", "target": "opponent",
                   "effect": { "type": "PayPercentOfCash", "percent": 20, "who": "target" } }
@@ -169,10 +169,22 @@ public class CardContentTests
     {
         string json = $$"""
             { "contentVersion": 1, "cards": [
-              { "id": "broken", "deck": "opportunity", "name": "Broken", "text": "?", "timing": "{{timing}}", "effect": {{effect}} } ] }
+              { "id": "broken", "deck": "opportunity", "polarity": "negative", "name": "Broken", "text": "?", "timing": "{{timing}}", "effect": {{effect}} } ] }
             """;
         var error = Assert.ThrowsAny<Exception>(() => GameContent.Default.WithExtraCards(ContentLoader.ParseCards(json)));
         Assert.Contains(expected, error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void AnOpportunityCardWithoutAPolarity_IsRejected()
+    {
+        const string json = """
+            { "contentVersion": 1, "cards": [
+              { "id": "no-flag", "deck": "opportunity", "name": "No Flag", "text": "?", "timing": "ownTurn", "target": "opponent",
+                "effect": { "type": "PayPercentOfCash", "percent": 10, "who": "target" } } ] }
+            """;
+        var error = Assert.ThrowsAny<Exception>(() => GameContent.Default.WithExtraCards(ContentLoader.ParseCards(json)));
+        Assert.Contains("polarity", error.Message);
     }
 
     [Fact]
@@ -180,7 +192,7 @@ public class CardContentTests
     {
         const string json = """
             { "contentVersion": 1, "cards": [
-              { "id": "audit", "deck": "opportunity", "name": "Audit 2", "text": "?", "timing": "ownTurn", "target": "opponent",
+              { "id": "audit", "deck": "opportunity", "polarity": "negative", "name": "Audit 2", "text": "?", "timing": "ownTurn", "target": "opponent",
                 "effect": { "type": "PayPercentOfCash", "percent": 10, "who": "target" } } ] }
             """;
         Assert.ThrowsAny<Exception>(() => GameContent.Default.WithExtraCards(ContentLoader.ParseCards(json)));

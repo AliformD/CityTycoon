@@ -27,3 +27,12 @@ A running list of rulings and design decisions, so nobody has to rediscover them
 | 14 | Until Phase 3, any payment you can't cover with cash makes you bankrupt straight away (no mortgages, loans or selling yet). Bail can only be chosen with enough cash on hand. | Builder | Phase 1 asks for "basic bankruptcy". |
 | 15 | Railroad and utility rent counts mortgaged railroads and utilities the owner holds. | Builder | Section 13.1 only says pending ones don't count. |
 | 16 | The Sim stops a Classic game after 500 rounds and reports it as "stalled" instead of an error. With no buildings until Phase 3, most Classic games stall, which is expected for now. | Builder | Classic mode has no round limit, so a safety stop is needed. |
+
+## Phase 2: first playable version (2026-10-20)
+
+| # | Decision | Who | Why |
+| --- | --- | --- | --- |
+| 17 | The pass-the-device screen appears only before a private choice (a sealed bid), and only when two or more humans are playing in Hidden mode. | Builder | With one human and some bots, there's nobody to hide from. Public choices like "Roll dice" don't need hiding. |
+| 18 | Bots pause for 0.35 seconds before each move so people can follow along. "Fast bots" turns the pause off. | Builder | Section 24.2 asks for a fast-bots option. Proper animations come later. |
+| 19 | Easy bots won't bid into a safety reserve ($100 to $250, random per bot) or much past assessed value (90% to 130%, random per bot). In Jail they pay bail only when they have plenty of cash. | Builder | Section 23.2 "basic sense", plus a small personality so bots don't all play alike. |
+| 20 | The board and log are drawn from a "spectator" view (no secrets), and the log text is built from a view too, so the screen can never show a hidden tile or an unrevealed bid. | Builder | Fair play (Section 23.1) applies to what's on a shared screen as well. |

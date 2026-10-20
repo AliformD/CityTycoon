@@ -1,0 +1,59 @@
+@* One square on the board: color band, name, owner, and any player tokens standing on it. *@
+@{
+    var (col, row) = UiHelpers.GridCell(Space.Index);
+    var group = UiHelpers.GroupOf(Content, Space.Id);
+    View.Properties.TryGetValue(Space.Id, out var owned);
+    var def = Content.Properties.GetValueOrDefault(Space.Id);
+    var tokens = View.Players.Where(p => !p.IsBankrupt && p.Position == Space.Index).ToList();
+    string name = UiHelpers.DisplayName(Space, Content);
+    string label = Space.IsHiddenTile ? "Hidden Government tile" : name;
+    if (owned?.OwnerId is int ownerForLabel)
+        label += $", owned by {View.Player(ownerForLabel).Name}";
+}
+<button class="space side-@UiHelpers.Side(Space.Index) kind-@Space.Kind.ToString().ToLowerInvariant() @(Highlight ? "highlight" : "")"
+        style="grid-column:@col; grid-row:@row;"
+        title="@label"
+        aria-label="@label"
+        @onclick="() => OnSelect.InvokeAsync(Space)">
+    @if (group != null)
+    {
+        <span class="band" style="background:@group.Color">@group.Code</span>
+    }
+    else if (def != null)
+    {
+        @* Railroads and utilities get a plain band with a short code, so every property looks alike. *@
+        <span class="band" style="background:#555">@(def.Type == PropertyType.Railroad ? "RR" : "UT")</span>
+    }
+    else
+    {
+        <span class="icon" aria-hidden="true">@UiHelpers.KindIcon(Space)</span>
+    }
+    <span class="name">@name</span>
+    @if (def != null && owned?.OwnerId == null)
+    {
+        <span class="price">@UiHelpers.Money(def.AssessedValue)</span>
+    }
+    @if (owned?.OwnerId is int ownerId)
+    {
+        <span class="owner" style="background:@UiHelpers.PlayerColor(ownerId)">
+            @UiHelpers.Initial(View.Player(ownerId).Name)@(owned.IsMortgaged ? " (M)" : "")
+        </span>
+    }
+    @if (tokens.Count > 0)
+    {
+        <span class="tokens">
+            @foreach (var p in tokens)
+            {
+                <span class="token @(p.IsActive ? "active" : "")" style="background:@UiHelpers.PlayerColor(p.Id)" title="@p.Name">@UiHelpers.Initial(p.Name)</span>
+            }
+        </span>
+    }
+</button>
+
+@code {
+    [Parameter, EditorRequired] public SpaceInfo Space { get; set; } = default!;
+    [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+    [Parameter] public bool Highlight { get; set; }
+    [Parameter] public EventCallback<SpaceInfo> OnSelect { get; set; }
+}

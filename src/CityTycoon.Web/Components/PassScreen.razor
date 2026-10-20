@@ -1,0 +1,11 @@
+@* Hidden mode (Section 25): covers everything until the right person has the device. *@
+<div class="pass-screen" role="dialog" aria-modal="true" aria-labelledby="pass-title">
+    <h2 id="pass-title">Pass to @Name</h2>
+    <p>Everyone else, look away. @Name, tap when you're ready.</p>
+    <button class="big primary" @onclick="OnReady">I'm @Name, show me</button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = "";
+    [Parameter] public EventCallback OnReady { get; set; }
+}

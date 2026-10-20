@@ -1,0 +1,32 @@
+@* The big buttons in the middle of the board for whatever the current person must decide. *@
+@if (Request.Decision.Kind == DecisionKind.SubmitBid)
+{
+    <AuctionPanel Request="Request" Content="Content" OnAnswer="OnAnswer" />
+}
+else
+{
+    <div class="decision">
+        <h2>@Request.View.Me.Name, @Request.Decision.Prompt</h2>
+        <div class="buttons">
+            @foreach (var action in Request.LegalActions)
+            {
+                <button class="big @(action == Request.LegalActions[0] ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)">@Label(action)</button>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public HumanRequest Request { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+    [Parameter] public EventCallback<GameAction> OnAnswer { get; set; }
+
+    private string Label(GameAction action) => action switch
+    {
+        RollDice => "🎲 Roll dice",
+        EndTurn => "End turn",
+        PayBail => $"Pay {UiHelpers.Money(Content.Rules.JailBail)} bail",
+        RollForDoubles => "Try for doubles",
+        _ => action.GetType().Name,
+    };
+}

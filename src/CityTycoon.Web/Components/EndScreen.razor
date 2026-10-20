@@ -1,0 +1,66 @@
+@* The final scoreboard (Section 16.3 and 24.1): each player's net-worth breakdown and a few stats. *@
+@{
+    var result = View.Result!;
+}
+<div class="end-screen" role="dialog" aria-labelledby="end-title">
+    <h2 id="end-title">🏆 @string.Join(" and ", result.WinnerIds.Select(id => View.Player(id).Name)) @(result.WinnerIds.Count > 1 ? "share the win" : "wins")!</h2>
+    <p>@result.Reason</p>
+    <table class="scoreboard">
+        <thead>
+            <tr>
+                <th scope="col">Rank</th><th scope="col">Player</th><th scope="col">Cash</th><th scope="col">Property</th>
+                <th scope="col">Buildings</th><th scope="col">Net worth</th><th scope="col">Rent collected</th><th scope="col">Auctions won</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var s in result.Standings)
+            {
+                var p = View.Player(s.PlayerId);
+                var (property, buildings) = Holdings(s.PlayerId);
+                <tr class="@(result.WinnerIds.Contains(s.PlayerId) ? "winner" : "")">
+                    <td>@(s.IsBankrupt ? "–" : s.Rank)</td>
+                    <th scope="row"><span class="token" style="background:@UiHelpers.PlayerColor(p.Id)" aria-hidden="true">@UiHelpers.Initial(p.Name)</span> @p.Name</th>
+                    @if (s.IsBankrupt)
+                    {
+                        <td colspan="4">Bankrupt</td>
+                    }
+                    else
+                    {
+                        <td>@UiHelpers.Money(s.Cash)</td>
+                        <td>@UiHelpers.Money(property)</td>
+                        <td>@UiHelpers.Money(buildings)</td>
+                        <td><strong>@UiHelpers.Money(s.NetWorth)</strong></td>
+                    }
+                    <td>@UiHelpers.Money(RentCollected(s.PlayerId))</td>
+                    <td>@AuctionsWon(s.PlayerId)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <div class="buttons">
+        <button class="big primary" @onclick="OnNewGame">New game</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+    [Parameter] public EventCallback OnNewGame { get; set; }
+
+    private int RentCollected(int playerId) => View.Log.OfType<RentPaid>().Where(r => r.ToId == playerId).Sum(r => r.Amount);
+
+    private int AuctionsWon(int playerId) => View.Log.OfType<AuctionWon>().Count(a => a.PlayerId == playerId);
+
+    /// <summary>Property value (half if mortgaged) and building value, matching the net-worth rules.</summary>
+    private (int Property, int Buildings) Holdings(int playerId)
+    {
+        int property = 0, buildings = 0;
+        foreach (var owned in View.Properties.Values.Where(p => p.OwnerId == playerId))
+        {
+            var def = Content.Property(owned.Id);
+            property += owned.IsMortgaged ? def.AssessedValue - CityTycoon.Engine.Rules.NetWorth.MortgageValue(Content, def) : def.AssessedValue;
+            buildings += CityTycoon.Engine.Rules.NetWorth.BuildingValue(Content, def, owned.Level);
+        }
+        return (property, buildings);
+    }
+}

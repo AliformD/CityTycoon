@@ -1,0 +1,52 @@
+@* A property's details: group, assessed value, and its full rent table. *@
+@{
+    var def = Content.Property(PropertyId);
+    var group = def.Group != null ? Content.Groups[def.Group] : null;
+    View.Properties.TryGetValue(PropertyId, out var owned);
+}
+<div class="property-card">
+    <div class="card-band" style="background:@(group?.Color ?? "#444")">
+        @if (group != null) { <span class="code">@group.Code</span> }
+        <strong>@def.Name</strong>
+    </div>
+    <p>
+        @(def.Type switch { PropertyType.Railroad => "Railroad", PropertyType.Utility => "Utility", _ => group!.Name + " group" })
+        · Assessed value <strong>@UiHelpers.Money(def.AssessedValue)</strong>
+    </p>
+    <p>Owner: <strong>@(owned?.OwnerId is int o ? View.Player(o).Name : "the bank")</strong>@(owned?.IsMortgaged == true ? " (mortgaged)" : "")</p>
+    <table class="rents">
+        <caption class="visually-hidden">Rent table</caption>
+        <tbody>
+            @if (def.Type == PropertyType.Color)
+            {
+                string[] labels = ["Base rent", "1 house", "2 houses", "3 houses", "4 houses", "Hotel", "Skyscraper"];
+                for (int level = 0; level < labels.Length; level++)
+                {
+                    <tr class="@(owned?.Level == level && owned.OwnerId != null ? "current" : "")"><th scope="row">@labels[level]</th><td>@UiHelpers.Money(def.Rents![level])</td></tr>
+                }
+                <tr><th scope="row">Whole group, no buildings</th><td>@UiHelpers.Money(def.Rents![0] * 2)</td></tr>
+                <tr><th scope="row">Cost per building level</th><td>@UiHelpers.Money(def.HouseCost)</td></tr>
+            }
+            else if (def.Type == PropertyType.Railroad)
+            {
+                for (int i = 0; i < Content.Rules.RailroadRents.Count; i++)
+                {
+                    <tr><th scope="row">Own @(i + 1) railroad@(i > 0 ? "s" : "")</th><td>@UiHelpers.Money(Content.Rules.RailroadRents[i])</td></tr>
+                }
+            }
+            else
+            {
+                for (int i = 0; i < Content.Rules.UtilityRentMultipliers.Count; i++)
+                {
+                    <tr><th scope="row">Own @(i + 1) utilit@(i > 0 ? "ies" : "y")</th><td>@Content.Rules.UtilityRentMultipliers[i] × dice total</td></tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string PropertyId { get; set; } = "";
+    [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+}

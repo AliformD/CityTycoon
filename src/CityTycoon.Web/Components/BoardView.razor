@@ -1,0 +1,18 @@
+@* The board: 48 spaces around the edge of a 13 x 13 grid, with the middle area for dice, decisions and the log. *@
+<div class="board" role="group" aria-label="Game board">
+    @foreach (var space in View.Spaces)
+    {
+        <SpaceCell Space="space" View="View" Content="Content" Highlight="space.Id == HighlightSpaceId" OnSelect="OnSelect" />
+    }
+    <div class="board-center">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+    [Parameter] public string? HighlightSpaceId { get; set; }
+    [Parameter] public EventCallback<SpaceInfo> OnSelect { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

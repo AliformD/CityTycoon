@@ -15,6 +15,17 @@ A virtual board game inspired by Monopoly, written in C#. The full rules and the
    - `CityTycoon.Sim` runs bot-vs-bot games in a console window.
 3. Press **F5** (run with the debugger) or **Ctrl+F5** (run without it).
 
+## Playing
+
+Run `CityTycoon.Web` and the game opens in your browser. On the **New game** screen, pick 2 to 6 players and make each one a **Human** or an **Easy bot**, then press **Start game**.
+
+- Click the big buttons in the middle of the board to roll, bid and end your turn.
+- Click any space on the board to see its rent table.
+- With two or more humans in **Hidden** mode, a "Pass to ..." screen covers the board before each secret bid, so the next person can take the device without anyone peeking.
+- Tick **Fast bots** to stop the short pause between bot moves.
+
+Right now the game has movement, auctions, rent, taxes, Jail and scoring. Buildings, cards, Government tiles, characters and the City Council arrive in later phases (see Section 29 of the design doc).
+
 ## Running the tests in Visual Studio
 
 Open **Test > Test Explorer** and click **Run All Tests** (the double green arrow). Every test should show a green tick.

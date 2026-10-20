@@ -1,0 +1,32 @@
+@* One card per player: cash, net worth, and status. *@
+<section class="players" aria-label="Players">
+    @foreach (var p in View.Players)
+    {
+        <article class="player-card @(p.IsActive ? "active" : "") @(p.IsBankrupt ? "bankrupt" : "")" style="border-color:@UiHelpers.PlayerColor(p.Id)">
+            <header>
+                <span class="token" style="background:@UiHelpers.PlayerColor(p.Id)" aria-hidden="true">@UiHelpers.Initial(p.Name)</span>
+                <strong>@p.Name</strong>
+                <span class="seat-kind">@(Session.IsHuman(p.Id) ? "Human" : "Bot")</span>
+                @if (p.IsActive && !View.IsOver) { <span class="badge">Their turn</span> }
+            </header>
+            @if (p.IsBankrupt)
+            {
+                <p class="status">Bankrupt</p>
+            }
+            else
+            {
+                <dl>
+                    <dt>Cash</dt><dd>@UiHelpers.Money(p.Cash)</dd>
+                    <dt>Net worth</dt><dd>@UiHelpers.Money(p.NetWorth)</dd>
+                    <dt>Properties</dt><dd>@View.Properties.Values.Count(x => x.OwnerId == p.Id)</dd>
+                </dl>
+                @if (p.InJail) { <p class="status">▦ In Jail@(p.JailTurns > 0 ? $" (turn {p.JailTurns})" : "")</p> }
+            }
+        </article>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
+    [Parameter, EditorRequired] public GameSession Session { get; set; } = default!;
+}

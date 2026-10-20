@@ -1,0 +1,71 @@
+@* A sealed bid (Section 8.2): type an amount or use the quick buttons, then bid or pass. *@
+<div class="decision auction">
+    <h2>Auction: @Content.Property(Request.Decision.PropertyId!).Name</h2>
+    <PropertyCard PropertyId="@(Request.Decision.PropertyId!)" View="Request.View" Content="Content" />
+    <p>
+        <strong>@Request.View.Me.Name</strong>, your bid is secret until everyone has chosen.
+        Minimum bid <strong>@UiHelpers.Money(Request.Decision.MinBid)</strong>.
+        You have <strong>@UiHelpers.Money(Request.View.Me.Cash)</strong>.
+    </p>
+
+    @if (CanBid)
+    {
+        <div class="bid-entry">
+            <button class="small" @onclick="() => Change(-Inc)" disabled="@(bid <= Request.Decision.MinBid)" aria-label="Lower by $@Inc">−$@Inc</button>
+            <label>
+                <span class="visually-hidden">Your bid in dollars</span>
+                $<input type="number" min="@Request.Decision.MinBid" max="@Request.Decision.MaxBid" step="@Inc" @bind="bid" @bind:event="oninput" />
+            </label>
+            <button class="small" @onclick="() => Change(Inc)">+$@Inc</button>
+            <button class="small" @onclick="() => Change(5 * Inc)">+$@(5 * Inc)</button>
+            <button class="small" @onclick="() => Change(10 * Inc)">+$@(10 * Inc)</button>
+        </div>
+        @if (Problem is string problem)
+        {
+            <p class="error" role="alert">@problem</p>
+        }
+    }
+    else
+    {
+        <p>You don't have enough cash to bid.</p>
+    }
+
+    <div class="buttons">
+        @if (CanBid)
+        {
+            <button class="big primary" disabled="@(Problem != null)" @onclick="() => OnAnswer.InvokeAsync(new PlaceBid(bid))">Bid @UiHelpers.Money(bid)</button>
+        }
+        <button class="big" @onclick="() => OnAnswer.InvokeAsync(new PassBid())">Pass</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public HumanRequest Request { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+    [Parameter] public EventCallback<GameAction> OnAnswer { get; set; }
+
+    private int bid;
+    private HumanRequest? shownFor;
+
+    private int Inc => Request.Decision.BidIncrement;
+    private bool CanBid => Request.Decision.MaxBid >= Request.Decision.MinBid;
+
+    private string? Problem =>
+        bid < Request.Decision.MinBid ? $"The minimum bid is {UiHelpers.Money(Request.Decision.MinBid)}."
+        : bid > Request.Decision.MaxBid ? $"You only have {UiHelpers.Money(Request.View.Me.Cash)}."
+        : bid % Inc != 0 ? $"Bids go up in steps of ${Inc}."
+        : null;
+
+    protected override void OnParametersSet()
+    {
+        // A new auction (or a new bidder) starts at the minimum bid.
+        if (!ReferenceEquals(shownFor, Request))
+        {
+            shownFor = Request;
+            bid = Request.Decision.MinBid;
+        }
+    }
+
+    private void Change(int amount) =>
+        bid = Math.Clamp(bid + amount, Request.Decision.MinBid, Math.Max(Request.Decision.MinBid, Request.Decision.MaxBid));
+}

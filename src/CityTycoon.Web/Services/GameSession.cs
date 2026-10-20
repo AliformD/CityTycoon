@@ -10,7 +10,7 @@ using Microsoft.JSInterop;
 
 namespace CityTycoon.Web.Services;
 
-public enum SeatKind { Human, EasyBot }
+public enum SeatKind { Human, EasyBot, NormalBot, HardBot }
 
 /// <summary>One seat on the new-game screen.</summary>
 public sealed class SeatSetup
@@ -143,7 +143,13 @@ public sealed class GameSession(SettingsService settings, IJSRuntime js)
             }
             else
             {
-                controllers[id] = new EasyBot(Engine.State.Settings.Seed * 31 + (ulong)id, Content);
+                ulong botSeed = Engine.State.Settings.Seed * 31 + (ulong)id;
+                controllers[id] = kind switch
+                {
+                    SeatKind.HardBot => new HardBot(botSeed, Content),
+                    SeatKind.NormalBot => new NormalBot(botSeed, Content),
+                    _ => new EasyBot(botSeed, Content),
+                };
             }
         }
 

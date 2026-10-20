@@ -56,6 +56,8 @@
                         <select @bind="seats[seat].Kind">
                             <option value="@SeatKind.Human">Human</option>
                             <option value="@SeatKind.EasyBot">Bot (Easy)</option>
+                            <option value="@SeatKind.NormalBot">Bot (Normal)</option>
+                            <option value="@SeatKind.HardBot">Bot (Hard)</option>
                         </select>
                     </label>
                     @if (seats.Count > Rules.MinPlayers)

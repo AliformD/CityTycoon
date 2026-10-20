@@ -241,3 +241,9 @@ On one shared screen, the board and log are drawn from a **spectator view**: the
 - `RulesReference` builds the text of the `/rules` page from the content files, so card text stays in one place.
 - `NetWorth.Breakdown` splits net worth into parts. `PlayerView.NetWorthBreakdowns` hands it to the end screen.
 - Tests: `SaveLoadTests` saves and reloads after every step of a full game and checks the game continues the same way.
+
+## Bots: Easy, Normal and Hard (Phase 10)
+
+- `EasyBot` answers every kind of decision. `NormalBot` and `HardBot` inherit from it and override a few `virtual` methods: `Reserve`, `PropertyWorth`, `SealedAmount`, `PickBuild`, `Vote`, `NudgeThreshold`.
+- The estimates (set bonus, blocking, vote impact) use only the bot's `PlayerView`.
+- The Sim has mixed-table modes so one kind of bot can be measured against another. Results are written up in `docs/BALANCE.md`.

@@ -16,10 +16,10 @@ namespace CityTycoon.AI;
 /// Each Easy bot gets a small random "personality" (how much it's willing to
 /// overpay), so a table of Easy bots doesn't all play the same.
 /// </summary>
-public sealed class EasyBot : IPlayerController
+public class EasyBot : IPlayerController
 {
-    private readonly Pcg32 rng;
-    private readonly GameContent content;
+    protected readonly Pcg32 rng;
+    protected readonly GameContent content;
 
     /// <summary>The round it last offered a trade, so it offers at most one per turn.</summary>
     private int lastTradeRound = -1;
@@ -27,12 +27,15 @@ public sealed class EasyBot : IPlayerController
     /// <summary>Cash the bot keeps back so it can pay rent and taxes.</summary>
     public int SafetyReserve { get; }
 
+    /// <summary>Cash to keep back right now. Smarter bots change this with what is ahead on the board.</summary>
+    protected virtual int Reserve(PlayerView view) => SafetyReserve;
+
     /// <summary>The most it will pay, as a share of assessed value (for example 1.1 = 110%).</summary>
     public double MaxPriceRatio { get; }
 
-    public EasyBot(ulong seed, GameContent? content = null)
+    public EasyBot(ulong seed, GameContent? content = null, ulong stream = 101)
     {
-        rng = new Pcg32(seed, stream: 101);
+        rng = new Pcg32(seed, stream);
         this.content = content ?? GameContent.Default;
         SafetyReserve = rng.NextInt(100, 250);
         MaxPriceRatio = 0.9 + rng.NextDouble() * 0.4; // 90% to 130%
@@ -48,7 +51,7 @@ public sealed class EasyBot : IPlayerController
             DecisionKind.ChoosePrecisionDice => ChooseBestDice(view, decision),
             DecisionKind.ChooseNudge => ChooseNudge(view, decision, legalActions),
             // Insurance only when there's plenty of spare cash.
-            DecisionKind.HospitalVisit => view.Me.Cash - content.Rules.InsuredMarkerCost >= SafetyReserve * 2 ? new BuyInsurance() : new NoThanks(),
+            DecisionKind.HospitalVisit => view.Me.Cash - content.Rules.InsuredMarkerCost >= Reserve(view) * 2 ? new BuyInsurance() : new NoThanks(),
             // The Casino loses money on average, so the Easy bot walks past.
             DecisionKind.CasinoBet => new NoThanks(),
             // A duel is a coin flip: fine for pocket change only.
@@ -101,17 +104,17 @@ public sealed class EasyBot : IPlayerController
     /// Votes for what helps it and against what hurts it, and lobbies a little when it feels strongly and
     /// has cash to spare. It plays a Lobbyist card whenever it takes a side.
     /// </summary>
-    private GameAction Vote(PlayerView view, PendingDecision decision)
+    protected virtual GameAction Vote(PlayerView view, PendingDecision decision)
     {
         int benefit = Benefit(view, decision.OrdinanceId!, decision.DistrictId);
         if (benefit == 0)
             return new CastVote(VoteChoice.Abstain);
-        int spare = Math.Max(0, view.Me.Cash - SafetyReserve * 2);
+        int spare = Math.Max(0, view.Me.Cash - Reserve(view) * 2);
         int lobby = Math.Min(decision.MaxLobby, Math.Min(spare / 6, 40 * Math.Abs(benefit)));
         return new CastVote(benefit > 0 ? VoteChoice.Yes : VoteChoice.No, lobby, PlayLobbyist: decision.HasLobbyist);
     }
 
-    private int MyRailroads(PlayerView view) =>
+    protected int MyRailroads(PlayerView view) =>
         view.Properties.Values.Count(p => p.OwnerId == view.ViewerId && content.Property(p.Id).Type == PropertyType.Railroad);
 
     private int BestBenefit(PlayerView view, string ordinanceId)
@@ -123,7 +126,7 @@ public sealed class EasyBot : IPlayerController
     }
 
     /// <summary>How much an ordinance helps this bot: above 0 helps, below 0 hurts, 0 doesn't matter much.</summary>
-    private int Benefit(PlayerView view, string ordinanceId, string? districtId)
+    protected int Benefit(PlayerView view, string ordinanceId, string? districtId)
     {
         OrdinanceDefinition def = content.Ordinance(ordinanceId);
         int mineHere = 0, theirsHere = 0;
@@ -169,7 +172,7 @@ public sealed class EasyBot : IPlayerController
         DecisionKind.ChooseMoveMethod when legalActions.Contains(new PrecisionRoll())
             && view.Me.Momentum >= view.Me.MomentumCap => new PrecisionRoll(),
         // Pay bail when comfortably rich (or when it's free); otherwise hope for doubles (it's free).
-        DecisionKind.JailChoice => legalActions.Contains(new PayBail()) && (view.Me.Bail == 0 || view.Me.Cash > SafetyReserve * 3)
+        DecisionKind.JailChoice => legalActions.Contains(new PayBail()) && (view.Me.Bail == 0 || view.Me.Cash > Reserve(view) * 3)
             ? new PayBail()
             : new RollForDoubles(),
         _ => legalActions.First(a => a is not ManagementAction),
@@ -182,7 +185,7 @@ public sealed class EasyBot : IPlayerController
     /// </summary>
     private GameAction? ManageMoney(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions)
     {
-        int spare = view.Me.Cash - SafetyReserve;
+        int spare = view.Me.Cash - Reserve(view);
 
         if (decision.Management.HasFlag(ManagementOptions.Trade) && lastTradeRound != view.Round
             && SetCompletingTrade(view) is TradeOffer offer)
@@ -192,18 +195,13 @@ public sealed class EasyBot : IPlayerController
         }
 
         // Build on the cheapest spot it can afford.
-        var build = legalActions.OfType<Build>()
-            .Select(b => (Action: b, Cost: NextBuildCost(view, b.PropertyId)))
-            .Where(b => b.Cost <= spare)
-            .OrderBy(b => b.Cost)
-            .FirstOrDefault();
-        if (build.Action != null)
-            return build.Action;
+        if (PickBuild(view, legalActions, spare) is Build build)
+            return build;
 
         // Only when really comfortable: get mortgaged properties back, then clear loans.
-        if (legalActions.OfType<Unmortgage>().FirstOrDefault() is Unmortgage unmortgage && spare > SafetyReserve * 2)
+        if (legalActions.OfType<Unmortgage>().FirstOrDefault() is Unmortgage unmortgage && spare > Reserve(view) * 2)
             return unmortgage;
-        if (legalActions.Contains(new RepayLoan()) && spare > SafetyReserve * 2 + view.Me.LoanRepayCost)
+        if (legalActions.Contains(new RepayLoan()) && spare > Reserve(view) * 2 + view.Me.LoanRepayCost)
             return new RepayLoan();
 
         // The Red perk: force an auction on the one missing piece of a color group it nearly owns.
@@ -216,7 +214,14 @@ public sealed class EasyBot : IPlayerController
         return null;
     }
 
-    private static int NextBuildCost(PlayerView view, string propertyId) => view.Properties[propertyId].NextLevelCost;
+    /// <summary>Which building to build, if any. The Easy bot takes the cheapest one it can afford.</summary>
+    protected virtual Build? PickBuild(PlayerView view, IReadOnlyList<GameAction> legalActions, int spare) =>
+        legalActions.OfType<Build>()
+            .Where(b => NextBuildCost(view, b.PropertyId) <= spare)
+            .OrderBy(b => NextBuildCost(view, b.PropertyId))
+            .FirstOrDefault();
+
+    protected static int NextBuildCost(PlayerView view, string propertyId) => view.Properties[propertyId].NextLevelCost;
 
     /// <summary>True if owning this property would give the bot a whole color group.</summary>
     private bool CompletesAGroup(PlayerView view, string propertyId)
@@ -236,26 +241,33 @@ public sealed class EasyBot : IPlayerController
     private GameAction ChooseBid(PlayerView view, PendingDecision decision)
     {
         int inc = decision.BidIncrement;
-        int assessed = content.Property(decision.PropertyId!).AssessedValue;
-        int worth = (int)(assessed * MaxPriceRatio);
-        int affordable = view.Me.Cash - SafetyReserve;
+        int worth = (int)PropertyWorth(view, decision);
+        int affordable = view.Me.Cash - Reserve(view);
         int limit = Math.Min(affordable, worth) / inc * inc;
         if (limit >= decision.MinBid)
         {
             // In an open auction the bot raises one step at a time, so it climbs to its limit and stops.
-            return new PlaceBid(decision.OpenAuction ? decision.MinBid : PickBetween(decision.MinBid, limit, inc));
+            return new PlaceBid(decision.OpenAuction ? decision.MinBid : SealedAmount(view, decision, limit, inc));
         }
 
         // Short on cash: a down payment, if the deposit still leaves half the reserve.
         int dpLimit = Math.Min(decision.MaxDownPaymentBid, worth) / inc * inc;
         if (dpLimit >= decision.MinBid
-            && view.Me.Cash - AuctionStep.Deposit(content.Rules, decision.MinBid) >= SafetyReserve / 2)
+            && view.Me.Cash - AuctionStep.Deposit(content.Rules, decision.MinBid) >= Reserve(view) / 2)
         {
             return new PlaceBid(decision.MinBid, DownPayment: true);
         }
 
         return new PassBid();
     }
+
+    /// <summary>The most this bot thinks the property is worth to it.</summary>
+    protected virtual double PropertyWorth(PlayerView view, PendingDecision decision) =>
+        content.Property(decision.PropertyId!).AssessedValue * MaxPriceRatio;
+
+    /// <summary>What to put in a sealed bid, given the most it is willing to pay.</summary>
+    protected virtual int SealedAmount(PlayerView view, PendingDecision decision, int limit, int inc) =>
+        PickBetween(decision.MinBid, limit, inc);
 
     /// <summary>Somewhere between the minimum and the limit, leaning towards the limit.</summary>
     private int PickBetween(int min, int max, int inc)
@@ -288,7 +300,7 @@ public sealed class EasyBot : IPlayerController
             }
 
             int price = (int)(content.Property(target.Id).AssessedValue * 1.5) / 10 * 10;
-            if (view.Me.Cash - price < SafetyReserve)
+            if (view.Me.Cash - price < Reserve(view))
                 continue;
 
             return new TradeOffer(myId, ownerId, price, 0, [], [target.Id]);
@@ -306,7 +318,7 @@ public sealed class EasyBot : IPlayerController
         // The offer is written from the proposer's side; this bot is the receiver.
         int me = view.ViewerId;
         int them = offer.FromId;
-        if (view.Me.Cash - offer.GetCash < SafetyReserve / 2)
+        if (view.Me.Cash - offer.GetCash < Reserve(view) / 2)
             return false;
 
         double gain = offer.GiveCash - offer.GetCash
@@ -341,7 +353,10 @@ public sealed class EasyBot : IPlayerController
     // ----- Movement: Precision Roll and Nudge (Section 7.3) -----
 
     /// <summary>Roughly what a token is worth to the bot, in dollars. A Nudge must save more than this.</summary>
-    private const int TokenValue = 25;
+    protected const int TokenValue = 25;
+
+    /// <summary>How much better a Nudge must make the landing spot before the bot spends a token.</summary>
+    protected virtual double NudgeThreshold => TokenValue;
 
     private GameAction ChooseBestDice(PlayerView view, PendingDecision decision)
     {
@@ -365,7 +380,7 @@ public sealed class EasyBot : IPlayerController
             .Select(n => (Nudge: n, Score: LandingScore(view, rolled + n.Spaces)))
             .OrderByDescending(x => x.Score)
             .FirstOrDefault();
-        return best.Nudge != null && best.Score - stay > TokenValue ? best.Nudge : new Nudge(0);
+        return best.Nudge != null && best.Score - stay > NudgeThreshold ? best.Nudge : new Nudge(0);
     }
 
     /// <summary>
@@ -389,14 +404,14 @@ public sealed class EasyBot : IPlayerController
     {
         PropertyInfo owned = view.Properties[id];
         if (owned.OwnerId == null)
-            return view.Me.Cash - content.Property(id).AssessedValue / 2 > SafetyReserve ? 30 : 0;
+            return view.Me.Cash - content.Property(id).AssessedValue / 2 > Reserve(view) ? 30 : 0;
         if (owned.OwnerId == view.ViewerId)
             return 5;
         return -EstimateRent(view, id, diceTotal);
     }
 
     /// <summary>A rough copy of the rent rules, from what the bot can see.</summary>
-    private double EstimateRent(PlayerView view, string id, int diceTotal)
+    protected double EstimateRent(PlayerView view, string id, int diceTotal)
     {
         PropertyInfo owned = view.Properties[id];
         if (owned.IsMortgaged || owned.IsPending || owned.OwnerId is not int ownerId)
@@ -418,7 +433,7 @@ public sealed class EasyBot : IPlayerController
         return rent;
     }
 
-    private int CountOfType(PlayerView view, int ownerId, PropertyType type) =>
+    protected int CountOfType(PlayerView view, int ownerId, PropertyType type) =>
         view.Properties.Values.Count(p => p.OwnerId == ownerId && !p.IsPending && content.Property(p.Id).Type == type);
 
     /// <summary>
@@ -484,7 +499,7 @@ public sealed class EasyBot : IPlayerController
         // A Construction Permit only after moving, when there's money to build with.
         if (decision.Kind == DecisionKind.PostMoveActions && Find("ConstructionPermit") is PlayCard permit
             && view.Me.BuildDiscountThisTurn == 0
-            && legalActions.OfType<Build>().Any(b => NextBuildCost(view, b.PropertyId) * 3 <= view.Me.Cash - SafetyReserve))
+            && legalActions.OfType<Build>().Any(b => NextBuildCost(view, b.PropertyId) * 3 <= view.Me.Cash - Reserve(view)))
         {
             return permit;
         }
@@ -521,7 +536,7 @@ public sealed class EasyBot : IPlayerController
     /// <summary>Buys the cheapest shop card if the hand has room and cash is plentiful; sells junk when the hand is full.</summary>
     private GameAction MallChoice(PlayerView view, IReadOnlyList<GameAction> legalActions)
     {
-        int spare = view.Me.Cash - SafetyReserve * 2;
+        int spare = view.Me.Cash - Reserve(view) * 2;
         if (view.MyHand.Count < view.Me.HandLimit && legalActions.Contains(new BuyCard(0))
             && view.MallShop.Count > 0 && CardValue(view.MallShop[0]) >= 4 && spare >= content.Rules.MallPrices[0])
         {

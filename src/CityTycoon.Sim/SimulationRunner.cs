@@ -68,6 +68,12 @@ public sealed record GameStats(
 
     /// <summary>How often each railroad or utility bonus came into play (the log says so: Express Line jumps, Toll Collector tokens...).</summary>
     public int ExpressLines { get; init; }
+
+    /// <summary>Sealed and open auctions, sealed auctions where two or more players made the same top bid, and sealed auctions the Mogul won on their edge or a tie.</summary>
+    public int SealedAuctions { get; init; }
+    public int OpenAuctions { get; init; }
+    public int TiedSealedAuctions { get; init; }
+    public int MogulEdgeWins { get; init; }
     public int HostileTakeovers { get; init; }
     public int PerkPayments { get; init; }
 }
@@ -138,6 +144,30 @@ public static class SimulationRunner
         _ => playerId % 2 == 0 ? new EasyBot(botSeed) : new RandomBot(botSeed),
     };
 
+    /// <summary>One sealed auction that ended with bids: was the top bid tied, and did the Mogul win it on their edge or a tie?</summary>
+    private sealed record SealedOutcome(bool Tied, bool MogulWonOnEdgeOrTie);
+
+    private static List<SealedOutcome> SealedAuctionOutcomes(GameState state)
+    {
+        var outcomes = new List<SealedOutcome>();
+        BidsRevealed? revealed = null;
+        bool edge = false;
+        foreach (var e in state.Log)
+        {
+            if (e is BidsRevealed b) { revealed = b; edge = false; }
+            else if (e is BidEdgeWon) edge = true;
+            else if (e is AuctionWon w && revealed != null && revealed.PropertyId == w.PropertyId)
+            {
+                int top = revealed.Bids.Max(x => x.Amount ?? 0);
+                bool tied = revealed.Bids.Count(x => x.Amount == top) > 1;
+                bool mogul = state.Player(w.PlayerId).CharacterId == "mogul";
+                outcomes.Add(new SealedOutcome(tied, mogul && (edge || tied)));
+                revealed = null;
+            }
+        }
+        return outcomes;
+    }
+
     private static GameStats Summarize(int game, ulong seed, GameEngine engine, string? error)
     {
         GameState state = engine.State;
@@ -180,6 +210,10 @@ public static class SimulationRunner
             GroupHolders = GroupHoldings(state, engine.Content, state.Players.Select(p => p.Id)),
             GroupWinners = GroupHoldings(state, engine.Content, winners),
             ExpressLines = log.OfType<ExpressLineUsed>().Count(),
+            SealedAuctions = log.OfType<AuctionStarted>().Count(a => !a.Open),
+            OpenAuctions = log.OfType<AuctionStarted>().Count(a => a.Open),
+            TiedSealedAuctions = SealedAuctionOutcomes(state).Count(o => o.Tied),
+            MogulEdgeWins = SealedAuctionOutcomes(state).Count(o => o.MogulWonOnEdgeOrTie),
             HostileTakeovers = log.OfType<HostileTakeoverUsed>().Count(),
             PerkPayments = log.OfType<PerkPaid>().Count() + log.OfType<PerkIncome>().Count(),
         };

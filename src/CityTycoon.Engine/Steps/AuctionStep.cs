@@ -125,15 +125,19 @@ public sealed class AuctionStep : Step
     }
 
     /// <summary>
-    /// Open or sealed? The first property of a color to be sold is sealed-bid; once any other
-    /// property of that color has an owner, the rest are open auctions. Only a landing auction
-    /// can be open. Railroads, utilities and the other kinds of auction stay sealed (docs/DECISIONS.md #91).
+    /// Open or sealed? The first property of a set to be sold is sealed-bid; once any other
+    /// property of that set has an owner, the rest are open auctions. A set is a color group,
+    /// all the railroads, or both utilities. Only a landing auction can be open; the other kinds
+    /// of auction stay sealed (docs/DECISIONS.md #91).
     /// </summary>
     public static bool ShouldBeOpen(EngineContext ctx, AuctionKind kind, string propertyId)
     {
-        string? group = ctx.Content.Property(propertyId).Group;
-        return kind == AuctionKind.Normal && group != null
-            && ctx.Content.GroupMembers(group).Any(id => id != propertyId && ctx.State.Properties[id].OwnerId != null);
+        if (kind != AuctionKind.Normal)
+            return false;
+        PropertyDefinition def = ctx.Content.Property(propertyId);
+        return ctx.Content.Properties.Values
+            .Where(p => p.Id != propertyId && (def.Group != null ? p.Group == def.Group : p.Group == null && p.Type == def.Type))
+            .Any(p => ctx.State.Properties[p.Id].OwnerId != null);
     }
 
     /// <summary>The minimum bid, rounded up to the bid step (Section 8.3).</summary>

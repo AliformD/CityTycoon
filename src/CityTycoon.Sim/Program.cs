@@ -100,6 +100,11 @@ static void AddPerkReport(List<string> lines, List<GameStats> finished, SimOptio
     }
     lines.Add($"Perks and bonuses per game: {finished.Average(r => r.PerkPayments):0.0} perk payments, "
         + $"{finished.Average(r => r.ExpressLines):0.00} Express Line jumps, {finished.Average(r => r.HostileTakeovers):0.00} Hostile Takeovers");
+    int sealedAuctions = finished.Sum(r => r.SealedAuctions);
+    lines.Add($"Auctions per game: {finished.Average(r => r.SealedAuctions):0.0} sealed, {finished.Average(r => r.OpenAuctions):0.0} open. "
+        + $"Sealed auctions with a tied top bid: {(sealedAuctions == 0 ? 0 : (double)finished.Sum(r => r.TiedSealedAuctions) / sealedAuctions):P1}. "
+        + $"Sealed auctions the Mogul won on their edge or a tie: {finished.Average(r => r.MogulEdgeWins):0.00} per game.");
+    lines.Add($"Dice Duels in all {finished.Count} games: {finished.Sum(r => r.Duels)}.");
 }
 
 static string Summarize(List<GameStats> results, SimOptions options, TimeSpan elapsed)

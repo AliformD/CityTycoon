@@ -152,12 +152,39 @@ public class OpenAuctionTests
     }
 
     [Fact]
-    public void ARailroad_IsAlwaysSealed()
+    public void TheFirstRailroad_IsSealed_ButTheNextOnesAreOpen()
     {
         var game = new TestGame(players: 3);
-        game.Give(2, "old-town-station");
         game.RollOnto(0, "midtown-station");
         Assert.Equal(3, game.Engine.GetPendingDecisions().Count);
+        game.EveryonePasses();
+        game.EndTurn(0);
+        game.Give(2, "old-town-station");
+        game.RollOnto(1, "harbor-station");
+        Assert.Equal([1], game.Engine.GetPendingDecisions().Select(d => d.PlayerId));
+        Assert.True(game.DecisionFor(1)!.OpenAuction);
+    }
+
+    [Fact]
+    public void Utilities_FollowTheSameRule()
+    {
+        var game = new TestGame(players: 3);
+        game.RollOnto(0, "city-power-light");
+        Assert.All(game.Engine.GetPendingDecisions(), d => Assert.False(d.OpenAuction));
+        game.EveryonePasses();
+        game.EndTurn(0);
+        game.Give(2, "city-power-light");
+        game.RollOnto(1, "city-water-works");
+        Assert.True(game.DecisionFor(1)!.OpenAuction);
+    }
+
+    [Fact]
+    public void RailroadsAndUtilities_AreSeparateSets()
+    {
+        var game = new TestGame(players: 3);
+        game.Give(2, "old-town-station"); // a railroad is owned, but the utilities are not
+        game.RollOnto(0, "city-power-light");
+        Assert.All(game.Engine.GetPendingDecisions(), d => Assert.False(d.OpenAuction));
     }
 
     [Fact]

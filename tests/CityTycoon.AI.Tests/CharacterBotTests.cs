@@ -80,4 +80,27 @@ public class CharacterBotTests
             new PendingDecision(0, DecisionKind.ChooseReroll, ""), [new RerollDice(), new NoThanks()]);
         Assert.IsType<RerollDice>(action);
     }
+
+    [Fact]
+    public async Task EasyBot_InAnOpenAuction_RaisesOneStepAtATime()
+    {
+        var engine = GameEngine.NewGame(new GameSetup { Players = [new("A"), new("B")], Seed = 3 });
+        var decision = new PendingDecision(0, DecisionKind.SubmitBid, "", "market-street", MinBid: 130, MaxBid: 1500, BidIncrement: 10,
+            OpenAuction: true, HighBidderId: 1, HighBid: 120);
+        for (int i = 0; i < 20; i++)
+        {
+            var action = await new EasyBot((ulong)i).DecideAsync(engine.GetView(0), decision, [new PassBid(), new PlaceBid(130)]);
+            Assert.Equal(new PlaceBid(130), action);
+        }
+    }
+
+    [Fact]
+    public async Task EasyBot_InAnOpenAuction_DropsOutAtItsLimit()
+    {
+        var engine = GameEngine.NewGame(new GameSetup { Players = [new("A"), new("B")], Seed = 3 });
+        var decision = new PendingDecision(0, DecisionKind.SubmitBid, "", "market-street", MinBid: 900, MaxBid: 1500, BidIncrement: 10,
+            OpenAuction: true, HighBidderId: 1, HighBid: 890);
+        var action = await new EasyBot(1).DecideAsync(engine.GetView(0), decision, [new PassBid(), new PlaceBid(900)]);
+        Assert.IsType<PassBid>(action);
+    }
 }

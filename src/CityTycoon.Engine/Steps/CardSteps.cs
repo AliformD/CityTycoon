@@ -224,27 +224,38 @@ public sealed class DiceDuelStep : Step
                 OpponentTotal = ctx.Dice.RollDie() + ctx.Dice.RollDie();
                 ctx.Emit(new DuelRolled(ChallengerId, ChallengerTotal, OpponentId, OpponentTotal));
             }
+            // A tie normally rolls again, but the Mogul wins it.
+            int? tieWinnerId = null;
             if (ChallengerTotal == OpponentTotal)
             {
-                ChallengerTotal = OpponentTotal = 0;   // a tie: roll again
-                continue;
+                string? challengerEdge = RuleModifiers.DiceTieBreaker(ctx.State, ctx.Content, ChallengerId);
+                string? opponentEdge = RuleModifiers.DiceTieBreaker(ctx.State, ctx.Content, OpponentId);
+                if (challengerEdge == null && opponentEdge == null)
+                {
+                    ChallengerTotal = OpponentTotal = 0;   // a tie: roll again
+                    continue;
+                }
+                tieWinnerId = challengerEdge != null ? ChallengerId : OpponentId;
             }
 
             // The player who is losing may be a Hustler with a reroll to use.
-            int loserId = ChallengerTotal < OpponentTotal ? ChallengerId : OpponentId;
+            int loserId = tieWinnerId is int tw ? (tw == ChallengerId ? OpponentId : ChallengerId)
+                : ChallengerTotal < OpponentTotal ? ChallengerId : OpponentId;
             if (!RerollOffered.Contains(loserId) && RuleModifiers.CasinoReroll(ctx.State, ctx.Content, loserId))
             {
                 RerollOffered.Add(loserId);
                 int mine = loserId == ChallengerId ? ChallengerTotal : OpponentTotal;
                 int theirs = loserId == ChallengerId ? OpponentTotal : ChallengerTotal;
                 return StepResult.WaitFor(new PendingDecision(loserId, DecisionKind.ChooseReroll,
-                    $"In the ${Stake} duel you rolled {mine} and {ctx.Player(loserId == ChallengerId ? OpponentId : ChallengerId).Name} rolled {theirs}. Use your Hustler reroll on your dice?",
+                    $"In the ${Stake} duel you rolled {mine} and {ctx.Player(loserId == ChallengerId ? OpponentId : ChallengerId).Name} rolled {theirs}{(tieWinnerId != null ? ", which they win as a tie" : "")}. Use your Hustler reroll on your dice?",
                     Duel: new DuelChallenge(ChallengerId, OpponentId, Stake)));
             }
 
             // The stake may not be affordable any more (a payment in between); then it shrinks to what both have.
             int stake = Math.Min(Stake, Math.Min(ctx.Player(ChallengerId).Cash, ctx.Player(OpponentId).Cash));
-            int winnerId = ChallengerTotal > OpponentTotal ? ChallengerId : OpponentId;
+            int winnerId = tieWinnerId ?? (ChallengerTotal > OpponentTotal ? ChallengerId : OpponentId);
+            if (tieWinnerId is int edged)
+                ctx.Emit(new DiceTieWon(edged, RuleModifiers.DiceTieBreaker(ctx.State, ctx.Content, edged)!));
             int lostId = winnerId == ChallengerId ? OpponentId : ChallengerId;
             ctx.Player(winnerId).Cash += stake;
             ctx.Player(lostId).Cash -= stake;

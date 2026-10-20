@@ -1,12 +1,32 @@
 @* A sealed bid (Section 8.2): type an amount or use the quick buttons, choose how to pay, then bid or pass. *@
 <div class="decision auction">
-    <h2>Auction: @Content.Property(Request.Decision.PropertyId!).Name</h2>
+    <h2>@(Request.Decision.OpenAuction ? "Open auction" : "Auction"): @Content.Property(Request.Decision.PropertyId!).Name</h2>
     <PropertyCard PropertyId="@(Request.Decision.PropertyId!)" View="Request.View" Content="Content" />
-    <p>
-        <strong>@Request.View.Me.Name</strong>, your bid is secret until everyone has chosen.
-        Minimum bid <strong>@UiHelpers.Money(Request.Decision.MinBid)</strong>.
-        You have <strong>@UiHelpers.Money(Request.View.Me.Cash)</strong>.
-    </p>
+    @if (Request.Decision.OpenAuction)
+    {
+        @* Open auction: everyone sees every bid. Players take turns, and dropping out is for good. *@
+        <p>
+            <strong>@Request.View.Me.Name</strong>, it's your turn.
+            @if (Request.Decision.HighBidderId is int leader)
+            {
+                <span><strong>@Request.View.Player(leader).Name</strong> leads with <strong>@UiHelpers.Money(Request.Decision.HighBid)</strong>.</span>
+            }
+            else
+            {
+                <span>Nobody has bid yet.</span>
+            }
+            Raise to at least <strong>@UiHelpers.Money(Request.Decision.MinBid)</strong>, or drop out (you can't come back in).
+            You have <strong>@UiHelpers.Money(Request.View.Me.Cash)</strong>.
+        </p>
+    }
+    else
+    {
+        <p>
+            <strong>@Request.View.Me.Name</strong>, your bid is secret until everyone has chosen.
+            Minimum bid <strong>@UiHelpers.Money(Request.Decision.MinBid)</strong>.
+            You have <strong>@UiHelpers.Money(Request.View.Me.Cash)</strong>.
+        </p>
+    }
 
     @if (CanBid)
     {
@@ -43,9 +63,9 @@
     <div class="buttons">
         @if (CanBid)
         {
-            <button class="big primary" disabled="@(Problem != null)" @onclick="() => OnAnswer.InvokeAsync(new PlaceBid(bid, downPayment))">Bid @UiHelpers.Money(bid)@(downPayment ? " (down payment)" : "")</button>
+            <button class="big primary" disabled="@(Problem != null)" @onclick="() => OnAnswer.InvokeAsync(new PlaceBid(bid, downPayment))">@(Request.Decision.OpenAuction ? "Raise to" : "Bid") @UiHelpers.Money(bid)@(downPayment ? " (down payment)" : "")</button>
         }
-        <button class="big" @onclick="() => OnAnswer.InvokeAsync(new PassBid())">Pass</button>
+        <button class="big" @onclick="() => OnAnswer.InvokeAsync(new PassBid())">@(Request.Decision.OpenAuction ? "Drop out" : "Pass")</button>
     </div>
 </div>
 

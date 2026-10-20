@@ -18,6 +18,9 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(BidsRevealed), nameof(BidsRevealed))]
 [JsonDerivedType(typeof(AuctionWon), nameof(AuctionWon))]
 [JsonDerivedType(typeof(AuctionNoBids), nameof(AuctionNoBids))]
+[JsonDerivedType(typeof(BidRaised), nameof(BidRaised))]
+[JsonDerivedType(typeof(AuctionPassed), nameof(AuctionPassed))]
+[JsonDerivedType(typeof(DiceTieWon), nameof(DiceTieWon))]
 [JsonDerivedType(typeof(RentPaid), nameof(RentPaid))]
 [JsonDerivedType(typeof(TaxPaid), nameof(TaxPaid))]
 [JsonDerivedType(typeof(BailPaid), nameof(BailPaid))]
@@ -108,7 +111,16 @@ public sealed record DiceRolled(int PlayerId, int Die1, int Die2) : GameEvent
 public sealed record PlayerMoved(int PlayerId, int From, int To) : GameEvent;
 public sealed record PassedGo(int PlayerId, int Salary) : GameEvent;
 public sealed record LandedOn(int PlayerId, string SpaceId) : GameEvent;
-public sealed record AuctionStarted(string PropertyId, int MinBid) : GameEvent;
+public sealed record AuctionStarted(string PropertyId, int MinBid, bool Open = false) : GameEvent;
+
+/// <summary>In an open auction, a player raised the bid.</summary>
+public sealed record BidRaised(string PropertyId, int PlayerId, int Amount, bool DownPayment = false) : GameEvent;
+
+/// <summary>In an open auction, a player dropped out.</summary>
+public sealed record AuctionPassed(string PropertyId, int PlayerId) : GameEvent;
+
+/// <summary>A dice tie was settled in a player's favor by their character (the Mogul).</summary>
+public sealed record DiceTieWon(int PlayerId, string Source) : GameEvent;
 
 /// <summary>One revealed sealed bid. A null amount means the player passed.</summary>
 public sealed record RevealedBid(int PlayerId, int? Amount);

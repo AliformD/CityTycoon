@@ -30,7 +30,11 @@ public static class EventDescriber
             PlayerMoved m => $"{Name(m.PlayerId)} moved to {SpaceAt(m.To)}.",
             PassedGo g => $"{Name(g.PlayerId)} passed GO and collected ${g.Salary}.",
             LandedOn _ => "",
-            AuctionStarted a => $"Auction for {Space(a.PropertyId)} (minimum bid ${a.MinBid}).",
+            AuctionStarted { Open: true } a => $"Open auction for {Space(a.PropertyId)} (opening bid ${a.MinBid}). Players take turns to raise or drop out.",
+            AuctionStarted a => $"Sealed-bid auction for {Space(a.PropertyId)} (minimum bid ${a.MinBid}).",
+            BidRaised r => $"{Name(r.PlayerId)} bid ${r.Amount}{(r.DownPayment ? " with a down payment" : "")}.",
+            AuctionPassed p => $"{Name(p.PlayerId)} dropped out of the auction for {Space(p.PropertyId)}.",
+            DiceTieWon t => $"The dice tied, and {Name(t.PlayerId)} wins the tie ({t.Source}).",
             BidsRevealed b => "Bids: " + string.Join(", ", b.Bids.Select(x => $"{Name(x.PlayerId)} {(x.Amount is int amount ? "$" + amount : "passed")}")) + ".",
             AuctionWon w => w.DownPayment
                 ? $"{Name(w.PlayerId)} won {Space(w.PropertyId)} for ${w.Price} with a down payment: ${w.PaidNow} now, ${w.Price - w.PaidNow} at their next GO."

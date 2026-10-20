@@ -86,7 +86,7 @@ Here's the stack while Ana's roll lands her on an unowned Market Street:
 - **GameStep** sits at the bottom for the whole game. Each time it's on top, a turn has just ended, so it starts the next player's turn, runs the end-of-round checks, and ends the game when it's time.
 - **TurnStep** is one player's turn. It remembers its `Stage` (start, choose move, roll, post-move...) so it can pause for a choice and carry on later. This pattern is called a **state machine**.
 - **ResolveSpaceStep** looks at the space you landed on and pushes whatever comes next.
-- **AuctionStep** collects sealed bids from everyone at once, then reveals them together.
+- **AuctionStep** is either a sealed-bid auction (everyone bids at once, then the bids are revealed together) or, for the 2nd and 3rd property of a color, an open auction where players take turns to raise or drop out (`AuctionStep.ShouldBeOpen`).
 - **PaymentStep** moves money, and declares bankruptcy if you can't pay.
 
 Because every step keeps its progress in properties, the **whole stack can be saved** in the middle of anything, even halfway through an auction, and loaded back later.

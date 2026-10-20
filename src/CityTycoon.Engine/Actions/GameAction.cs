@@ -279,6 +279,9 @@ public enum DecisionKind
 /// <param name="Cards">Card IDs to show: the triggering card for a reaction, or the Event cards a Tip-Off reveals.</param>
 /// <param name="OtherPlayerId">For a Detour: the player about to move.</param>
 /// <param name="Spaces">For a Detour: how far that player is about to move.</param>
+/// <param name="OpenAuction">True when this is a turn in an open (ascending) auction rather than a secret bid.</param>
+/// <param name="HighBidderId">In an open auction: who holds the highest bid so far (null before the first bid).</param>
+/// <param name="HighBid">In an open auction: the highest bid so far.</param>
 public sealed record PendingDecision(
     int PlayerId,
     DecisionKind Kind,
@@ -296,4 +299,7 @@ public sealed record PendingDecision(
     DuelChallenge? Duel = null,
     IReadOnlyList<string>? Cards = null,
     int? OtherPlayerId = null,
-    int Spaces = 0);
+    int Spaces = 0,
+    bool OpenAuction = false,
+    int? HighBidderId = null,
+    int HighBid = 0);

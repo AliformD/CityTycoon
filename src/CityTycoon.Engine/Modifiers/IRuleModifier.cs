@@ -127,6 +127,9 @@ public interface IRuleModifier
     /// <summary>How much higher this player's bid counts when bids are compared (the Mogul).</summary>
     int BidBonus(GameState state, int playerId) => 0;
 
+    /// <summary>True if this player wins a tie when two players roll dice against each other (the Mogul).</summary>
+    bool WinsDiceTies(GameState state, int playerId) => false;
+
     /// <summary>True if this player may reroll once at the Casino (the Hustler).</summary>
     bool CasinoReroll(GameState state, int playerId) => false;
 

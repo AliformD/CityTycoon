@@ -114,11 +114,18 @@ public sealed class TestGame
 
     public void EndTurn(int playerId) => Do(playerId, new EndTurn());
 
-    /// <summary>Every player still asked passes in the current auction.</summary>
+    /// <summary>Every player still asked passes in the current auction (sealed or open) until it is over.</summary>
     public void EveryonePasses()
     {
-        foreach (var d in Engine.GetPendingDecisions().Where(d => d.Kind == DecisionKind.SubmitBid).ToList())
-            Do(d.PlayerId, new PassBid());
+        for (int guard = 0; guard < 100; guard++)
+        {
+            var asked = Engine.GetPendingDecisions().Where(d => d.Kind == DecisionKind.SubmitBid).ToList();
+            if (asked.Count == 0)
+                return;
+            foreach (var d in asked)
+                Do(d.PlayerId, new PassBid());
+        }
+        throw new InvalidOperationException("The auction never ended.");
     }
 
     public PendingDecision? DecisionFor(int playerId) =>

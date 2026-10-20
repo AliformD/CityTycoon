@@ -1,6 +1,7 @@
 using CityTycoon.Engine.Actions;
 using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Events;
+using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.State;
 
@@ -141,6 +142,9 @@ public sealed class AuctionStep : Step
     {
         PropertyState owned = ctx.State.Properties[propertyId];
         if (owned.OwnerId is not int ownerId || owned.IsPending || owned.IsMortgaged || owned.Level > 0)
+            return false;
+        // A Police Station next door protects it (Section 12.3).
+        if (!RuleModifiers.CanBeTargetedByCards(ctx.State, ctx.Content, propertyId))
             return false;
         PropertyDefinition def = ctx.Content.Property(propertyId);
         return def.Group == null || !ctx.Content.GroupMembers(def.Group).All(id => ctx.State.Properties[id].IsOwnedOutright(ownerId));

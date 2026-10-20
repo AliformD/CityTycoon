@@ -1,48 +1,67 @@
 {
   "contentVersion": 1,
   "tilesPerGame": 4,
+  // Government tiles (Section 12). Each game uses 4 of these, one per district, face-down.
+  // "neighbor": what the tile does to the property just before and just after it, once revealed.
+  //   rentPercent, buildDiscountPercent, protectFromCards, protectFromFire, transitHopCost.
+  // "landing": what happens to whoever lands on it. "type" names a C# class in
+  //   src/CityTycoon.Engine/Tiles/TileLandings.cs; the other fields are its settings.
   "tiles": [
     {
       "id": "police-station",
       "name": "Police Station",
       "neighborText": "Neighbors can't be targeted by Opportunity cards or Hostile Takeover.",
-      "landingText": "Pay a $25 parking ticket to the bank."
+      "landingText": "Pay a $25 parking ticket to the bank.",
+      "neighbor": { "protectFromCards": true },
+      "landing": { "type": "PayBank", "amount": 25 }
     },
     {
       "id": "fire-station",
       "name": "Fire Station",
       "neighborText": "Neighbors are safe from the Fire! Event.",
-      "landingText": "Gain 1 Momentum token."
+      "landingText": "Gain 1 Momentum token.",
+      "neighbor": { "protectFromFire": true },
+      "landing": { "type": "GainMomentum", "amount": 1 }
     },
     {
       "id": "school",
       "name": "School",
       "neighborText": "Building on neighbors costs 25% less.",
-      "landingText": "Draw 1 Opportunity card."
+      "landingText": "Draw 1 Opportunity card.",
+      "neighbor": { "buildDiscountPercent": 25 },
+      "landing": { "type": "DrawOpportunity" }
     },
     {
       "id": "city-hall",
       "name": "City Hall",
       "neighborText": "Neighbor rent is +25%.",
-      "landingText": "Pay $10 per building level you own, then start an Emergency Council session with you setting the agenda."
+      "landingText": "Pay $10 per building level you own, then start an Emergency Council session with you setting the agenda.",
+      "neighbor": { "rentPercent": 25 },
+      "landing": { "type": "PayPerLevel", "perLevel": 10, "emergencySession": true }
     },
     {
       "id": "power-plant",
       "name": "Power Plant",
       "neighborText": "Neighbor rent is -25%, and building there costs 50% less.",
-      "landingText": "Pay $50 to the player who owns both utilities, or to the bank if nobody does."
+      "landingText": "Pay $50 to the player who owns both utilities, or to the bank if nobody does.",
+      "neighbor": { "rentPercent": -25, "buildDiscountPercent": 50 },
+      "landing": { "type": "PayOwnerOfAll", "amount": 50, "propertyType": "utility" }
     },
     {
       "id": "transit-hub",
       "name": "Transit Hub",
       "neighborText": "When you land on a neighbor owned by someone else, you may pay $25 and hop onto the Transit Hub instead of paying rent.",
-      "landingText": "You may pay $50 to move to any railroad."
+      "landingText": "You may pay $50 to move to any railroad.",
+      "neighbor": { "transitHopCost": 25 },
+      "landing": { "type": "RideToRailroad", "cost": 50 }
     },
     {
       "id": "landfill",
       "name": "Landfill",
       "neighborText": "Neighbor rent is -50%.",
-      "landingText": "Pay a $25 cleanup fee to the bank."
+      "landingText": "Pay a $25 cleanup fee to the bank.",
+      "neighbor": { "rentPercent": -50 },
+      "landing": { "type": "PayBank", "amount": 25 }
     }
   ]
 }

@@ -3,6 +3,7 @@ using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Events;
 using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.State;
+using CityTycoon.Engine.Tiles;
 
 namespace CityTycoon.Engine.Steps;
 
@@ -60,8 +61,11 @@ public sealed class ResolveSpaceStep : Step
                 }
                 break;
 
+            case SpaceKind.GovernmentTile:
+                TileRules.Land(ctx, player, space);
+                break;
+
             // GO was already paid while moving. Jail is "Just Visiting".
-            // Government tile effects arrive in Phase 6.
             default:
                 break;
         }
@@ -84,16 +88,30 @@ public sealed class ResolveSpaceStep : Step
             return;
 
         int rent = RentCalculator.Calculate(ctx.State, ctx.Content, propertyId, DiceTotal);
-        if (rent > 0)
+        if (rent <= 0)
+            return;
+
+        // Next to a revealed Transit Hub you may hop onto it instead of paying (Section 12.3).
+        if (TileRules.TransitHubNextTo(ctx.State, ctx.Content, propertyId) is { } hub)
         {
-            ctx.Push(new PaymentStep
+            int cost = ctx.Content.GovTile(hub.TileId!).Neighbor!.TransitHopCost;
+            if (player.Cash >= cost)
             {
-                FromId = PlayerId,
-                ToId = owned.OwnerId,
-                Amount = rent,
-                Reason = PaymentReason.Rent,
-                SpaceId = propertyId,
-            });
+                ctx.Push(new TransitHopStep { PlayerId = PlayerId, PropertyId = propertyId, HubSpaceId = hub.Id, Cost = cost, Rent = rent });
+                return;
+            }
         }
+        ChargeRent(ctx, PlayerId, propertyId, rent);
     }
+
+    /// <summary>Asks the player to pay rent to the property's owner (a Rent Strike may still change it).</summary>
+    public static void ChargeRent(EngineContext ctx, int playerId, string propertyId, int rent) =>
+        ctx.Push(new PaymentStep
+        {
+            FromId = playerId,
+            ToId = ctx.State.Properties[propertyId].OwnerId,
+            Amount = rent,
+            Reason = PaymentReason.Rent,
+            SpaceId = propertyId,
+        });
 }

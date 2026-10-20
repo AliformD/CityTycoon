@@ -1,6 +1,7 @@
 using CityTycoon.Engine.Actions;
 using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Events;
+using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.State;
 using CityTycoon.Engine.Steps;
@@ -88,8 +89,14 @@ public sealed class FireEffect : ICardEffect
             c.Ctx.Emit(new FireAvoided(c.Player.Id, "no buildings"));
             return;
         }
+        // Properties next to a revealed Fire Station can't burn (Section 12.3).
+        built = built.Where(p => !RuleModifiers.IsFireSafe(c.State, c.Ctx.Content, p.PropertyId)).ToList();
+        if (built.Count == 0)
+        {
+            c.Ctx.Emit(new FireAvoided(c.Player.Id, "Fire Station"));
+            return;
+        }
         // An Insured marker covers one Hospital bill or one Fire!, whichever comes first.
-        // (A revealed Fire Station next door will protect too, in Phase 6.)
         if (c.Player.IsInsured)
         {
             c.Player.IsInsured = false;

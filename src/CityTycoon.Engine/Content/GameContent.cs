@@ -1,4 +1,5 @@
 using CityTycoon.Engine.Cards;
+using CityTycoon.Engine.Tiles;
 
 namespace CityTycoon.Engine.Content;
 
@@ -25,6 +26,7 @@ public sealed class GameContent
     public IReadOnlyDictionary<string, CardDefinition> Cards { get; }
 
     private readonly IReadOnlyList<CardsFile> cardFiles;
+    private readonly Dictionary<string, GovTileDefinition> govTilesById;
 
     public GameContent(RulesConfig rules, BoardDefinition board, PropertiesFile properties, GroupsFile groups, GovTilesFile govTiles,
         IReadOnlyList<CardsFile>? cards = null)
@@ -37,6 +39,7 @@ public sealed class GameContent
         Groups = ToDictionary(groups.Groups, g => g.Id, "group");
         GovTiles = govTiles.Tiles;
         GovTilesPerGame = govTiles.TilesPerGame;
+        govTilesById = ToDictionary(GovTiles, t => t.Id, "Government tile");
         Validate();
     }
 
@@ -66,7 +69,7 @@ public sealed class GameContent
         Properties.TryGetValue(id, out var p) ? p : throw new KeyNotFoundException($"Unknown property '{id}'.");
 
     public GovTileDefinition GovTile(string id) =>
-        GovTiles.FirstOrDefault(t => t.Id == id) ?? throw new KeyNotFoundException($"Unknown Government tile '{id}'.");
+        govTilesById.TryGetValue(id, out var t) ? t : throw new KeyNotFoundException($"Unknown Government tile '{id}'.");
 
     /// <summary>The IDs of every property in a color group.</summary>
     public IEnumerable<string> GroupMembers(string groupId) =>
@@ -152,10 +155,15 @@ public sealed class GameContent
         if (Rules.UtilityRentMultipliers.Count < Properties.Values.Count(p => p.Type == PropertyType.Utility))
             throw new ContentException("rules.json utilityRentMultipliers needs one entry per utility.");
 
-        // Government tiles: unique IDs, and enough of them for one per district.
-        ToDictionary(GovTiles, t => t.Id, "Government tile");
+        // Government tiles: unique IDs (checked when the lookup was built), and enough of them for one per district.
         if (GovTilesPerGame != Board.Districts.Count || GovTiles.Count < GovTilesPerGame)
             throw new ContentException("govtiles.json needs one tile per district, picked from at least that many tiles.");
+        foreach (GovTileDefinition tile in GovTiles)
+        {
+            if (TileLandings.Find(tile.LandingType) is not { } landing)
+                throw new ContentException($"Government tile '{tile.Id}' uses the unknown landing type '{tile.LandingType}'.");
+            landing.Validate(tile);
+        }
 
         // Cards: a known effect type with the settings it needs, and a timing that fits the deck.
         foreach (CardDefinition card in Cards.Values)

@@ -43,6 +43,10 @@ public sealed class RulesConfig
     public required int SkyscraperCostMultiplier { get; init; }
     public required double SkyscraperRentMultiplier { get; init; }
     public required int MaxBuildDiscountPercent { get; init; }
+
+    // Section 13.1, step 2: percentage rent changes (tiles and more) add up, then stay in this range.
+    public required int MinRentPercent { get; init; }
+    public required int MaxRentPercent { get; init; }
     public required IReadOnlyList<PermitSupply> PermitsByPlayerCount { get; init; }
 
     // Section 11: City Council.

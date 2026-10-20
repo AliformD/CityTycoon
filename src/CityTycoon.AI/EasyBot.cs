@@ -59,6 +59,10 @@ public sealed class EasyBot : IPlayerController
             DecisionKind.MallVisit => MallChoice(view, legalActions),
             DecisionKind.DiscardCards => new DiscardCard(view.MyHand.MinBy(CardValue)!),
             DecisionKind.PlayReaction => ChooseReaction(view, decision, legalActions),
+            // Hop onto the Transit Hub when the rent costs more than the hop.
+            DecisionKind.TransitHop => decision.AmountOwed > content.GovTile("transit-hub").Neighbor!.TransitHopCost ? new HopToTransitHub() : new NoThanks(),
+            // The Easy bot doesn't take the train.
+            DecisionKind.TransitRide => new NoThanks(),
             _ => PlayACard(view, decision, legalActions) ?? ManageMoney(view, decision, legalActions) ?? MainChoice(view, decision, legalActions),
         };
         return Task.FromResult(choice);
@@ -111,9 +115,7 @@ public sealed class EasyBot : IPlayerController
         return null;
     }
 
-    private int NextBuildCost(PlayerView view, string propertyId) => BuildingRules.ApplyDiscount(content.Rules,
-        BuildingRules.LevelCost(content, content.Property(propertyId), view.Properties[propertyId].Level + 1),
-        view.Me.BuildDiscountThisTurn);
+    private static int NextBuildCost(PlayerView view, string propertyId) => view.Properties[propertyId].NextLevelCost;
 
     /// <summary>Owes money: mortgage first (no loss), then loans, then sell buildings (it loses half).</summary>
     private static GameAction RaiseMoney(IReadOnlyList<GameAction> legalActions) =>
@@ -298,6 +300,7 @@ public sealed class EasyBot : IPlayerController
         };
         if (def.Group != null && view.StadiumBoosts.Any(b => b.GroupId == def.Group))
             rent *= content.Rules.StadiumRentMultiplier;
+        rent = rent * (100 + owned.RentPercent) / 100; // revealed tiles next door
         if (view.Player(ownerId).InJail)
             rent *= content.Rules.JailRentMultiplier;
         return rent;

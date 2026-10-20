@@ -1,6 +1,7 @@
 using CityTycoon.Engine.Actions;
 using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Events;
+using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.State;
 using CityTycoon.Engine.Steps;
 
@@ -135,10 +136,16 @@ public static class CardRules
                 _ => false,
             };
             if (fits)
-                plays.AddRange(effect.Plays(ctx, player, card));
+                plays.AddRange(effect.Plays(ctx, player, card).Where(p => TargetAllowed(ctx, p)));
         }
         return plays;
     }
+
+    /// <summary>A property next to a revealed Police Station can't be the target of an Opportunity card (Section 12.3).</summary>
+    public static bool TargetAllowed(EngineContext ctx, PlayCard play) =>
+        play.TargetSpaceId is not string id
+        || !ctx.State.Properties.ContainsKey(id)
+        || RuleModifiers.CanBeTargetedByCards(ctx.State, ctx.Content, id);
 
     /// <summary>Checks a card play is allowed at this moment (number answers like stakes are range-checked).</summary>
     public static bool IsLegalOwnTurnPlay(EngineContext ctx, PlayerState player, DecisionKind moment, PlayCard play)
@@ -154,7 +161,7 @@ public static class CardRules
             DecisionKind.JailChoice => effect.WorksInJail,
             _ => false,
         };
-        return fits && effect.IsLegalPlay(ctx, player, card, play);
+        return fits && TargetAllowed(ctx, play) && effect.IsLegalPlay(ctx, player, card, play);
     }
 
     /// <summary>Starts playing a card from a hand: it's discarded now, and its effect runs next.</summary>

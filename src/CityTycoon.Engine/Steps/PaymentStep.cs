@@ -7,7 +7,7 @@ using CityTycoon.Engine.State;
 
 namespace CityTycoon.Engine.Steps;
 
-public enum PaymentReason { Rent, Tax, Bail, Hospital, Card }
+public enum PaymentReason { Rent, Tax, Bail, Hospital, Card, Tile }
 
 /// <summary>
 /// One player pays money to another player or to the bank.
@@ -31,6 +31,9 @@ public sealed class PaymentStep : Step
 
     /// <summary>For card payments: which card made this happen.</summary>
     public string? CardId { get; set; }
+
+    /// <summary>For Government tile fees: which tile (Police Station, Landfill...).</summary>
+    public string? TileId { get; set; }
 
     /// <summary>For rent: the Rent Strike question, once it has been opened.</summary>
     public ReactionWindow? RentStrike { get; set; }
@@ -73,6 +76,7 @@ public sealed class PaymentStep : Step
                 PaymentReason.Tax => new TaxPaid(FromId, SpaceId!, Amount),
                 PaymentReason.Hospital => new HospitalBillPaid(FromId, Amount),
                 PaymentReason.Card => new CardPaymentMade(FromId, ToId, Amount, CardId!),
+                PaymentReason.Tile => new TileFeePaid(FromId, ToId, Amount, TileId!),
                 _ => new BailPaid(FromId, Amount),
             });
             return StepResult.Done;

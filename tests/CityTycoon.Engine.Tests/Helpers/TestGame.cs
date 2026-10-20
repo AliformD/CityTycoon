@@ -46,6 +46,18 @@ public sealed class TestGame
         Player(playerId).Position = (State.IndexOf(spaceId) - spaces + n) % n;
     }
 
+    /// <summary>
+    /// Makes the Old Town Government tile a particular tile. With the test
+    /// seed it sits between Maple Avenue and Birch Avenue (both Light Blue).
+    /// </summary>
+    public BoardSpace SetTile(string tileId, bool revealed = true, string spaceId = "old-town-government")
+    {
+        BoardSpace space = State.Space(spaceId);
+        space.TileId = tileId;
+        space.IsRevealed = revealed;
+        return space;
+    }
+
     /// <summary>Puts Opportunity cards straight into a player's hand.</summary>
     public void GiveCard(int playerId, params string[] cardIds) => Player(playerId).Hand.AddRange(cardIds);
 

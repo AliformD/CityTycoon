@@ -70,7 +70,7 @@ public class MovementTests
     public void ThreeDoublesInARow_SendsYouToJail_InsteadOfMoving()
     {
         var game = new TestGame();
-        game.Player(0).Position = 0;
+        game.Player(0).Position = 1; // lands on Cobble Lane, then an Opportunity space: no questions on the way
         game.Roll(0, 1, 1); game.EveryonePasses(); game.EndTurn(0);
         game.Roll(0, 2, 2); game.EveryonePasses(); game.EndTurn(0);
         int before = game.Player(0).Position;

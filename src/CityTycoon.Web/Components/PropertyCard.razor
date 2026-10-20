@@ -29,8 +29,39 @@
             }
         </p>
     }
+    @{
+        int index = View.Spaces.First(s => s.Id == PropertyId).Index;
+        int n = View.Spaces.Count;
+        var tiles = new[] { View.Spaces[(index - 1 + n) % n], View.Spaces[(index + 1) % n] }
+            .Where(s => s.Kind == SpaceKind.GovernmentTile).ToList();
+    }
+    @foreach (var tile in tiles)
+    {
+        @if (tile.TileId == null)
+        {
+            <p class="tile-note">Next to a hidden Government tile. Nobody knows what it does yet.</p>
+        }
+        else
+        {
+            var info = Content.GovTile(tile.TileId);
+            <p class="tile-note">Next to the <strong>@info.Name</strong>@(tile.IsHiddenTile ? " (only you know: it's still hidden, so it has no effect yet)" : ""): @info.NeighborText</p>
+        }
+    }
+    @if (Breakdown is { } breakdown && owned?.OwnerId != null)
+    {
+        <table class="rents breakdown">
+            <caption>Rent right now@(def.Type == PropertyType.Utility ? " (for a roll of 7)" : "")</caption>
+            <tbody>
+                @foreach (var line in breakdown.Lines)
+                {
+                    <tr><th scope="row">@line.Label</th><td>@line.Change</td></tr>
+                }
+                <tr class="current"><th scope="row">Rent</th><td>@UiHelpers.Money(breakdown.Total)</td></tr>
+            </tbody>
+        </table>
+    }
     <table class="rents">
-        <caption class="visually-hidden">Rent table</caption>
+        <caption>@(Breakdown != null && owned?.OwnerId != null ? "Full rent table" : "Rent table")</caption>
         <tbody>
             @if (def.Type == PropertyType.Color)
             {
@@ -41,6 +72,10 @@
                 }
                 <tr><th scope="row">Whole group, no buildings</th><td>@UiHelpers.Money(def.Rents![0] * 2)</td></tr>
                 <tr><th scope="row">Cost per building level</th><td>@UiHelpers.Money(def.HouseCost)</td></tr>
+                @if (owned != null && owned.OwnerId != null && owned.Level < Content.Rules.SkyscraperLevel && owned.NextLevelCost != CityTycoon.Engine.Rules.BuildingRules.LevelCost(Content, def, owned.Level + 1))
+                {
+                    <tr class="current"><th scope="row">Next level, with discounts</th><td>@UiHelpers.Money(owned.NextLevelCost)</td></tr>
+                }
             }
             else if (def.Type == PropertyType.Railroad)
             {
@@ -64,4 +99,7 @@
     [Parameter, EditorRequired] public string PropertyId { get; set; } = "";
     [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
     [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+
+    /// <summary>How the rent is worked out right now (from the engine), shown when the property is owned.</summary>
+    [Parameter] public CityTycoon.Engine.Rules.RentBreakdown? Breakdown { get; set; }
 }

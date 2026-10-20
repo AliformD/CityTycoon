@@ -80,6 +80,11 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(RecoverySkipped), nameof(RecoverySkipped))]
 [JsonDerivedType(typeof(CardNotReadyYet), nameof(CardNotReadyYet))]
 [JsonDerivedType(typeof(OwnerKeptProperty), nameof(OwnerKeptProperty))]
+[JsonDerivedType(typeof(TileRevealed), nameof(TileRevealed))]
+[JsonDerivedType(typeof(TileFeePaid), nameof(TileFeePaid))]
+[JsonDerivedType(typeof(TileNotReadyYet), nameof(TileNotReadyYet))]
+[JsonDerivedType(typeof(TransitHopped), nameof(TransitHopped))]
+[JsonDerivedType(typeof(TransitRidden), nameof(TransitRidden))]
 public abstract record GameEvent;
 
 public sealed record GameStarted(ulong Seed, IReadOnlyList<int> TurnOrder) : GameEvent;
@@ -239,3 +244,19 @@ public sealed record CardNotReadyYet(string CardId) : GameEvent;
 
 /// <summary>A forced auction got no bids, so the owner keeps the property (Section 8.6).</summary>
 public sealed record OwnerKeptProperty(string PropertyId, int OwnerId) : GameEvent;
+
+/// <summary>Someone landed on a hidden Government tile, so everyone now knows what it is (Section 12.1).</summary>
+public sealed record TileRevealed(int PlayerId, string SpaceId, string TileId) : GameEvent;
+
+/// <summary>A tile's landing fee (Police Station ticket, Landfill cleanup, City Hall, Power Plant).</summary>
+public sealed record TileFeePaid(int FromId, int? ToId, int Amount, string TileId) : GameEvent;
+
+/// <summary>A tile effect that needs a feature from a later phase (City Hall's Emergency Council) did nothing.</summary>
+public sealed record TileNotReadyYet(string TileId) : GameEvent;
+
+/// <summary>Instead of paying rent next to a Transit Hub, a player paid the fee and hopped onto the hub.</summary>
+public sealed record TransitHopped(int PlayerId, string PropertyId, int Cost) : GameEvent;
+
+/// <summary>A player paid the Transit Hub fare to ride to a railroad.</summary>
+public sealed record TransitRidden(int PlayerId, string RailroadId, int Cost) : GameEvent;
+

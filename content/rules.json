@@ -27,6 +27,8 @@
   "skyscraperCostMultiplier": 3,
   "skyscraperRentMultiplier": 1.5,
   "maxBuildDiscountPercent": 75,
+  "minRentPercent": -75,
+  "maxRentPercent": 100,
   "permitsByPlayerCount": [
     { "minPlayers": 2, "maxPlayers": 3, "hotelPermits": 8, "skyscraperPermits": 2 },
     { "minPlayers": 4, "maxPlayers": 4, "hotelPermits": 10, "skyscraperPermits": 3 },

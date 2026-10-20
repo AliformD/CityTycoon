@@ -160,6 +160,17 @@ else if (decision.Kind == DecisionKind.PlayReaction)
                @onchange="e => Session.SetAutoPassReactions(Request.PlayerId, e.Value is true)" /> Always pass on reactions from now on</label>
     </div>
 }
+else if (decision.Kind == DecisionKind.TransitHop)
+{
+    @* Transit Hub next door (Section 12.3): pay the rent, or pay the hop fee and move onto the hub. *@
+    <div class="decision transit">
+        <h2>@view.Me.Name, @AfterName(decision.Prompt)</h2>
+        <div class="buttons">
+            <button class="big" @onclick="() => OnAnswer.InvokeAsync(new NoThanks())">Pay @UiHelpers.Money(decision.AmountOwed) rent</button>
+            <button class="big primary" @onclick="() => OnAnswer.InvokeAsync(new HopToTransitHub())">@UiHelpers.ActionLabel(new HopToTransitHub(), view, Content)</button>
+        </div>
+    </div>
+}
 else if (decision.Kind == DecisionKind.MallVisit)
 {
     @* The Mall (Section 15.3): three face-up cards for sale, cheapest on the left. Or sell one of yours. *@

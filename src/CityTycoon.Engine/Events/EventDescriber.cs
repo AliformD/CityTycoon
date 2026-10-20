@@ -1,16 +1,20 @@
 using CityTycoon.Engine.Content;
-using CityTycoon.Engine.State;
+using CityTycoon.Engine.Views;
 
 namespace CityTycoon.Engine.Events;
 
 /// <summary>Turns events into short sentences for the game log.</summary>
 public static class EventDescriber
 {
-    public static string Describe(GameEvent e, GameState state, GameContent content)
+    /// <summary>
+    /// Describes an event using only what a player can see (their view), so the
+    /// log can never leak anything secret. Returns "" for events not worth a line.
+    /// </summary>
+    public static string Describe(GameEvent e, PlayerView view, GameContent content)
     {
-        string Name(int id) => state.Player(id).Name;
-        string Space(string id) => content.Properties.TryGetValue(id, out var p) ? p.Name : state.Space(id).Name;
-        string SpaceAt(int index) => state.Board[index].Name;
+        string Name(int id) => view.Player(id).Name;
+        string Space(string id) => content.Properties.TryGetValue(id, out var p) ? p.Name : view.Spaces.First(s => s.Id == id).Name;
+        string SpaceAt(int index) => view.Spaces[index].Name;
 
         return e switch
         {

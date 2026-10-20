@@ -1,0 +1,21 @@
+@* What has happened, newest first. *@
+<section class="log" aria-label="Game log" aria-live="polite">
+    <h2 class="visually-hidden">Game log</h2>
+    <ul>
+        @foreach (string line in Lines)
+        {
+            <li>@line</li>
+        }
+    </ul>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+
+    private IEnumerable<string> Lines => View.Log
+        .Select(e => EventDescriber.Describe(e, View, Content))
+        .Where(text => text.Length > 0)
+        .Reverse()
+        .Take(80);
+}

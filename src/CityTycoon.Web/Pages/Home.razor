@@ -1,13 +1,125 @@
 @page "/"
-@using CityTycoon.Engine.Content
+@inject GameSession Session
+@inject NavigationManager Nav
 
 <PageTitle>City Tycoon</PageTitle>
 
-<h1>City Tycoon</h1>
+<main class="menu">
+    <h1>City Tycoon</h1>
 
-<p>The game screen arrives in Phase 2. For now, this page proves the browser can load the rules engine.</p>
-<p>Starting cash: <strong>$@rules.StartingCash</strong>. GO salary: <strong>$@rules.GoSalary</strong>.</p>
+    @if (Session.HasGame && !Session.Engine!.State.IsOver)
+    {
+        <p><button class="big" @onclick='() => Nav.NavigateTo("play")'>Continue current game</button></p>
+    }
+
+    <section class="setup" aria-labelledby="setup-title">
+        <h2 id="setup-title">New game</h2>
+
+        <fieldset>
+            <legend>Players (@seats.Count)</legend>
+            @for (int i = 0; i < seats.Count; i++)
+            {
+                int seat = i; // copy for the lambdas below
+                <div class="seat-row">
+                    <label>
+                        <span class="visually-hidden">Seat @(seat + 1) name</span>
+                        <input @bind="seats[seat].Name" maxlength="16" placeholder="Name" />
+                    </label>
+                    <label>
+                        <span class="visually-hidden">Seat @(seat + 1) is a</span>
+                        <select @bind="seats[seat].Kind">
+                            <option value="@SeatKind.Human">Human</option>
+                            <option value="@SeatKind.EasyBot">Bot (Easy)</option>
+                        </select>
+                    </label>
+                    @if (seats.Count > Rules.MinPlayers)
+                    {
+                        <button class="small" @onclick="() => seats.RemoveAt(seat)" aria-label="Remove seat @(seat + 1)">Remove</button>
+                    }
+                </div>
+            }
+            @if (seats.Count < Rules.MaxPlayers)
+            {
+                <button class="small" @onclick="AddSeat">+ Add player</button>
+            }
+        </fieldset>
+
+        <fieldset>
+            <legend>Game mode</legend>
+            <label><input type="radio" name="mode" checked="@(mode == GameMode.Timed)" @onchange="() => mode = GameMode.Timed" /> Timed (recommended)</label>
+            @if (mode == GameMode.Timed)
+            {
+                <label class="inline">Rounds: <input type="number" min="1" max="200" @bind="rounds" /></label>
+            }
+            <label><input type="radio" name="mode" checked="@(mode == GameMode.Classic)" @onchange="() => mode = GameMode.Classic" /> Classic (play until one player is left)</label>
+        </fieldset>
+
+        <fieldset>
+            <legend>Privacy</legend>
+            <label><input type="radio" name="privacy" checked="@(privacy == PrivacyMode.Hidden)" @onchange="() => privacy = PrivacyMode.Hidden" /> Hidden: hide bids behind a "pass the device" screen</label>
+            <label><input type="radio" name="privacy" checked="@(privacy == PrivacyMode.Open)" @onchange="() => privacy = PrivacyMode.Open" /> Open: no hiding (good for one person against bots)</label>
+        </fieldset>
+
+        <details>
+            <summary>Advanced</summary>
+            <label>Game seed (optional, replays the same game): <input @bind="seedText" inputmode="numeric" /></label>
+        </details>
+
+        @if (error != null)
+        {
+            <p class="error" role="alert">@error</p>
+        }
+        <p><button class="big primary" @onclick="StartGame">Start game</button></p>
+    </section>
+</main>
 
 @code {
-    private readonly RulesConfig rules = ContentLoader.LoadRules();
+    private static RulesConfig Rules => GameContent.Default.Rules;
+    private static readonly string[] BotNames = ["Ana", "Ben", "Cal", "Dee", "Eli", "Fay"];
+
+    private readonly List<SeatSetup> seats =
+    [
+        new() { Name = "Angel", Kind = SeatKind.Human },
+        new() { Name = "Ben", Kind = SeatKind.EasyBot },
+        new() { Name = "Cal", Kind = SeatKind.EasyBot },
+        new() { Name = "Dee", Kind = SeatKind.EasyBot },
+    ];
+    private GameMode mode = GameMode.Timed;
+    private int rounds = Rules.TimedModeDefaultRounds;
+    private PrivacyMode privacy = PrivacyMode.Hidden;
+    private string seedText = "";
+    private string? error;
+
+    private void AddSeat() =>
+        seats.Add(new SeatSetup { Name = BotNames.First(n => seats.All(s => s.Name != n)), Kind = SeatKind.EasyBot });
+
+    private void StartGame()
+    {
+        error = null;
+        if (seats.Any(s => string.IsNullOrWhiteSpace(s.Name)))
+        {
+            error = "Every player needs a name.";
+            return;
+        }
+        if (seats.Select(s => s.Name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != seats.Count)
+        {
+            error = "Every player needs a different name.";
+            return;
+        }
+        ulong? seed = null;
+        if (!string.IsNullOrWhiteSpace(seedText))
+        {
+            if (!ulong.TryParse(seedText.Trim(), out ulong parsed))
+            {
+                error = "The seed must be a whole number.";
+                return;
+            }
+            seed = parsed;
+        }
+        foreach (var s in seats)
+            s.Name = s.Name.Trim();
+
+        Session.Start(seats, mode, Math.Clamp(rounds, 1, 200), privacy, seed);
+        Nav.NavigateTo("play");
+    }
 }

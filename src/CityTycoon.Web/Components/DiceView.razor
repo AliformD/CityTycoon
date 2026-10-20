@@ -1,0 +1,15 @@
+@* The last roll, drawn as two dice with their number as text too. *@
+@if (Roll != null)
+{
+    <div class="dice" aria-label="Last roll: @Roll.Die1 and @Roll.Die2">
+        <span class="die">@Faces[Roll.Die1 - 1]<span class="num">@Roll.Die1</span></span>
+        <span class="die">@Faces[Roll.Die2 - 1]<span class="num">@Roll.Die2</span></span>
+        <span class="dice-caption">@View.Player(Roll.PlayerId).Name rolled @Roll.Total@(Roll.IsDoubles ? ", doubles!" : "")</span>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
+    private static readonly string[] Faces = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+    private DiceRolled? Roll => View.Log.OfType<DiceRolled>().LastOrDefault();
+}

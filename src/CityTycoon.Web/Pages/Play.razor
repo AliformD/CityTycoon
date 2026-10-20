@@ -1,0 +1,99 @@
+@page "/play"
+@implements IDisposable
+@inject GameSession Session
+@inject NavigationManager Nav
+
+<PageTitle>City Tycoon</PageTitle>
+
+@if (!Session.HasGame)
+{
+    <main class="menu">
+        <p>No game is running.</p>
+        <button class="big primary" @onclick='() => Nav.NavigateTo("")'>Back to the menu</button>
+    </main>
+}
+else
+{
+    var view = Session.PublicView;
+    var request = Session.Request;
+    <div class="game">
+        <BoardView View="view" Content="Session.Content" HighlightSpaceId="selectedSpaceId" OnSelect="Select">
+            <DiceView View="view" />
+            @if (Session.Error != null)
+            {
+                <p class="error" role="alert">Something went wrong: @Session.Error</p>
+            }
+            else if (view.IsOver)
+            {
+                <EndScreen View="view" Content="Session.Content" OnNewGame='() => { Session.Quit(); Nav.NavigateTo(""); }' />
+            }
+            else if (request != null && !Session.ShowPassScreen)
+            {
+                <DecisionPanel Request="request" Content="Session.Content" OnAnswer="Session.Answer" />
+            }
+            else if (request == null)
+            {
+                <p class="waiting">Waiting for @string.Join(", ", view.WaitingOn.Select(id => view.Player(id).Name))…</p>
+            }
+            <GameLog View="view" Content="Session.Content" />
+        </BoardView>
+
+        <aside class="sidebar">
+            <section class="city" aria-label="City">
+                <strong>Round @view.Round@(view.Mode == GameMode.Timed ? $" of {view.MaxRounds}" : "")</strong>
+                <span>@(view.Mode == GameMode.Timed ? "Timed game" : "Classic game")</span>
+            </section>
+            <PlayerPanels View="view" Session="Session" />
+            @if (selectedSpaceId != null && Session.Content.Properties.ContainsKey(selectedSpaceId))
+            {
+                <section class="detail" aria-label="Property details">
+                    <PropertyCard PropertyId="@selectedSpaceId" View="view" Content="Session.Content" />
+                    <button class="small" @onclick="() => selectedSpaceId = null">Close</button>
+                </section>
+            }
+            else if (selectedSpaceId != null)
+            {
+                <section class="detail"><p>@SpaceHelp(view)</p><button class="small" @onclick="() => selectedSpaceId = null">Close</button></section>
+            }
+            else
+            {
+                <p class="hint">Tip: click any space on the board to see its details.</p>
+            }
+            <label class="toggle"><input type="checkbox" @bind="Session.FastBots" /> Fast bots</label>
+            <button class="small" @onclick='() => Nav.NavigateTo("")'>Menu</button>
+        </aside>
+    </div>
+
+    @if (Session.ShowPassScreen && request != null)
+    {
+        <PassScreen Name="@request.View.Me.Name" OnReady="Session.DismissPassScreen" />
+    }
+}
+
+@code {
+    private string? selectedSpaceId;
+
+    protected override void OnInitialized() => Session.Changed += Redraw;
+
+    // The game runs in the background, so redraw through InvokeAsync, Blazor's safe way to update the page from outside a click.
+    private void Redraw() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Session.Changed -= Redraw;
+
+    private void Select(SpaceInfo space) => selectedSpaceId = selectedSpaceId == space.Id ? null : space.Id;
+
+    private string SpaceHelp(PlayerView view)
+    {
+        var space = view.Spaces.First(s => s.Id == selectedSpaceId);
+        return space.Kind switch
+        {
+            SpaceKind.Go => $"GO: collect {UiHelpers.Money(Session.Content.Rules.GoSalary)} each time you pass or land here.",
+            SpaceKind.Jail => "Jail. Landing here by a normal move is just visiting.",
+            SpaceKind.GoToJail => "Go straight to Jail. You don't pass GO.",
+            SpaceKind.Tax => $"{space.Name}: pay {UiHelpers.Money(space.Id == "income-tax" ? Session.Content.Rules.IncomeTax : Session.Content.Rules.LuxuryTax)} to the bank.",
+            SpaceKind.GovernmentTile when space.IsHiddenTile => "A hidden Government tile. Nobody knows what it is yet. (Tile effects arrive in a later phase.)",
+            SpaceKind.GovernmentTile => $"{UiHelpers.DisplayName(space, Session.Content)}: {Session.Content.GovTile(space.TileId!).NeighborText}",
+            _ => $"{space.Name}. (This space's effect arrives in a later phase.)",
+        };
+    }
+}

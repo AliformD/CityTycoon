@@ -100,3 +100,30 @@ Tests swap the real dice for `ScriptedDice`, so a test can say "the next roll is
 ## Controllers and the game host
 
 Each seat at the table has an `IPlayerController`: a bot today, a person clicking in the browser from Phase 2, a person on another device later. `GameHost` asks the engine what it's waiting for and passes each question to the right controller. For sealed bids it collects every answer before handing any of them in, so nobody's bid can influence anyone else's.
+
+## The browser app (Phase 2)
+
+The Web project draws the game and passes clicks to the engine. It never changes the game state itself.
+
+| Piece | Job |
+| --- | --- |
+| `Pages/Home.razor` | The menu and new-game setup screen. |
+| `Pages/Play.razor` | The game screen: board, player panels, decision panel, log. |
+| `Components/*.razor` | Small reusable pieces of screen (a board space, a property card, the auction panel...). A **component** is a C# class with its own HTML, and Blazor calls these `.razor` files. |
+| `Services/GameSession.cs` | Starts a game, gives each seat a controller, runs the `GameHost` in the background, and tells the pages to redraw when something changes. |
+| `Services/HumanUiController.cs` | The controller for a person. |
+
+### How a click reaches the engine
+
+A bot answers a question instantly. A person can't: they have to read the screen and click. `HumanUiController` handles this with a `TaskCompletionSource`, which is like an IOU for an answer:
+
+1. The game host asks the human controller a question.
+2. The controller hands the question to the page (so the buttons appear) and gives the host an IOU: a `Task` that isn't finished yet. The host `await`s it, which means "pause here until it's ready" without freezing the browser.
+3. The person clicks a button. The page calls `Answer(...)`, which fills in the IOU.
+4. The host wakes up with the answer and submits it to the engine.
+
+Because the engine only ever sees "a controller answered", bots, people on this screen, and (later) people online all work the same way.
+
+### Keeping the shared screen fair
+
+On one shared screen, the board and log are drawn from a **spectator view**: the same `PlayerView` a player gets, but for nobody in particular, so it holds no secrets. The auction panel uses the bidding player's own view. In Hidden mode with two or more humans, the pass-the-device screen covers everything until the right person taps "show me".

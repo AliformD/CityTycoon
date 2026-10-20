@@ -1,4 +1,5 @@
 using CityTycoon.Engine.Events;
+using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.State;
 using CityTycoon.Engine.Steps;
 
@@ -42,14 +43,43 @@ public static class Movement
         ctx.Emit(new PlayerMoved(player.Id, from, player.Position));
     }
 
-    /// <summary>GO effects (Section 15.1). So far: the salary, a Momentum token, then any down-payment balances due.</summary>
+    /// <summary>
+    /// GO effects, in the order of Section 15.1: the salary, Utility Bill, Community Roots,
+    /// Momentum tokens, down-payment balances due, the City Planner's peek, and last of all
+    /// the Red perk's Hostile Takeover becoming available again. (The catch-up bonus joins in Phase 9.)
+    /// </summary>
     public static void CollectGo(EngineContext ctx, PlayerState player)
     {
+        // Step 1: the salary.
         player.Cash += ctx.Rules.GoSalary;
         ctx.Emit(new PassedGo(player.Id, ctx.Rules.GoSalary));
 
-        // Step 5: gain a Momentum token.
+        // Step 2: Utility Bill. An opponent who owns both utilities takes $20 out of the salary.
+        foreach (var (payeeId, amount, source) in RuleModifiers.GoTolls(ctx.State, ctx.Content, player.Id))
+        {
+            player.Cash -= amount;
+            ctx.Player(payeeId).Cash += amount;
+            ctx.Emit(new PerkPaid(player.Id, payeeId, amount, source));
+        }
+
+        // Step 3: Community Roots and any other cash perk.
+        foreach (var (amount, source) in RuleModifiers.GoCashes(ctx.State, ctx.Content, player.Id))
+        {
+            player.Cash += amount;
+            ctx.Emit(new PerkIncome(player.Id, amount, source));
+        }
+
+        // Step 5: gain a Momentum token (and the extra one from Commuter Belt).
         MomentumRules.Gain(ctx, player, ctx.Rules.GoMomentumGain, "GO");
+        foreach (var (amount, source) in RuleModifiers.GoMomentums(ctx.State, ctx.Content, player.Id))
+            MomentumRules.Gain(ctx, player, amount, source);
+
+        // Step 7: the City Planner peeks. It is pushed before the down payments, so it runs after them (step 6 comes first).
+        for (int i = 0; i < RuleModifiers.GoPeeks(ctx.State, ctx.Content, player.Id); i++)
+            ctx.Push(new PeekTileStep { PlayerId = player.Id });
+
+        // Step 8: the Red perk's Hostile Takeover is available again.
+        player.TakeoverUsed = false;
 
         // Step 6: pending balances are due, paid right after the salary (Section 8.5).
         // Pushed in reverse board order so the first one on the board is handled first.
@@ -70,6 +100,12 @@ public static class Movement
     {
         player.Position = ctx.State.IndexOf("hospital");
         ctx.Emit(new SentToHospital(player.Id, reason));
+        // The Medic pays nothing and rolls normally. Their Insured marker (if any) is kept.
+        if (RuleModifiers.ShrugsOffHospital(ctx.State, ctx.Content, player.Id))
+        {
+            ctx.Emit(new HospitalShrugged(player.Id));
+            return;
+        }
         if (player.IsInsured)
         {
             player.IsInsured = false;

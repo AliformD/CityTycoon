@@ -1,5 +1,6 @@
 using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Events;
+using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.State;
 using CityTycoon.Engine.Steps;
 
@@ -66,9 +67,11 @@ public static class MoneyRules
         return group != null && ctx.Content.GroupMembers(group).Any(id => ctx.State.Properties[id].Level > 0);
     }
 
-    public static int MaxLoans(EngineContext ctx, int playerId) => ctx.Rules.MaxLoans;
+    /// <summary>How many loans this player may hold (3 with the Yellow perk, otherwise 2).</summary>
+    public static int MaxLoans(EngineContext ctx, int playerId) => RuleModifiers.MaxLoans(ctx.State, ctx.Content, playerId);
 
-    public static int LoanRepayCost(EngineContext ctx, int playerId) => ctx.Rules.LoanRepay;
+    /// <summary>What repaying one loan costs this player ($210 with the Yellow perk, otherwise $250).</summary>
+    public static int LoanRepayCost(EngineContext ctx, int playerId) => RuleModifiers.LoanRepayCost(ctx.State, ctx.Content, playerId);
 
     public static bool CanTakeLoan(EngineContext ctx, int playerId) =>
         ctx.Player(playerId).Loans < MaxLoans(ctx, playerId);

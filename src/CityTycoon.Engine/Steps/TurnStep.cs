@@ -3,6 +3,7 @@ using CityTycoon.Engine.Actions;
 using CityTycoon.Engine.Cards;
 using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Events;
+using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.State;
 
@@ -17,6 +18,7 @@ public enum TurnStage
     Roll,
     PrecisionRoll,
     PrecisionChosen,
+    ExpressRoll,
     Nudge,
     Detour,
     Move,
@@ -106,6 +108,7 @@ public sealed class TurnStep : Step
                 if (player.InJail)
                     player.JailTurns++;
                 Stage = player.InJail ? TurnStage.JailChoice : TurnStage.ChooseMove;
+                StartOfTurnPerks(ctx, player);
                 return StepResult.Continue;
 
             case TurnStage.JailChoice:
@@ -134,6 +137,10 @@ public sealed class TurnStep : Step
                 PrecisionDice = [];
                 return AfterDice(ctx, player, first, second);
             }
+
+            case TurnStage.ExpressRoll:
+                // Express Line: after the jump, roll 1 die (Section 13.3). One die can't be doubles, so no extra turn.
+                return AfterDice(ctx, player, ctx.Dice.RollDie(), 0);
 
             case TurnStage.Nudge:
                 return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.ChooseNudge,
@@ -197,9 +204,9 @@ public sealed class TurnStep : Step
             DecisionKind.ChooseMoveMethod => MoveChoices(ctx, player),
             DecisionKind.ChoosePrecisionDice => [new ChooseDice(0, 1), new ChooseDice(0, 2), new ChooseDice(1, 2)],
             DecisionKind.ChooseNudge => MomentumRules.NudgeOptions(ctx, player, Die1 + Die2).Select(n => (GameAction)new Nudge(n)).ToList(),
-            DecisionKind.PostMoveActions => [new EndTurn()],
-            // Bail is paid with cash on hand. Short? Take a loan or mortgage something first.
-            DecisionKind.JailChoice => player.Cash >= ctx.Rules.JailBail
+            DecisionKind.PostMoveActions => [new EndTurn(), .. HostileTakeovers(ctx, player)],
+            // Bail is paid with cash on hand. Short? Take a loan or mortgage something first. (The Lawyer pays $0.)
+            DecisionKind.JailChoice => player.Cash >= RuleModifiers.Bail(ctx.State, ctx.Content, PlayerId)
                 ? [new PayBail(), new RollForDoubles()]
                 : [new RollForDoubles()],
             _ => [],
@@ -215,7 +222,49 @@ public sealed class TurnStep : Step
             choices.Add(new PrecisionRoll());
         if (RoadWorkCost > 0 && !RecoveringThisTurn && MomentumRules.CanSpend(player, RoadWorkCost))
             choices.Add(new ClearRoadWork());
+        choices.AddRange(ExpressLines(ctx, player));
+        choices.AddRange(HostileTakeovers(ctx, player));
         return choices;
+    }
+
+    /// <summary>
+    /// Start-of-turn perks (Section 7.2, step 1): Dividends first, then the Neighborhood Watch
+    /// charge if you're in Jail or recovering from the Hospital. The charge is a payment pushed
+    /// on top, so it is settled (raising money if needed) before the turn goes on.
+    /// </summary>
+    private void StartOfTurnPerks(EngineContext ctx, PlayerState player)
+    {
+        foreach (var (amount, source) in RuleModifiers.TurnStartIncomes(ctx.State, ctx.Content, PlayerId))
+        {
+            player.Cash += amount;
+            ctx.Emit(new PerkIncome(PlayerId, amount, source));
+        }
+        bool jailedOrRecovering = player.InJail || RecoveringThisTurn;
+        foreach (var (payeeId, amount, source) in RuleModifiers.TurnStartCharges(ctx.State, ctx.Content, PlayerId, jailedOrRecovering))
+            ctx.Push(new PaymentStep { FromId = PlayerId, ToId = payeeId, Amount = amount, Reason = PaymentReason.Perk, PerkName = source });
+    }
+
+    /// <summary>Express Line (Section 13.3): every railroad this player could jump to, if they can pay for it.</summary>
+    private static IEnumerable<GameAction> ExpressLines(EngineContext ctx, PlayerState player)
+    {
+        int cost = RuleModifiers.ExpressLineCost(ctx.State, ctx.Content, player.Id);
+        if (cost == 0 || player.Cash < cost)
+            return [];
+        return ctx.State.Properties.Values
+            .Where(p => p.IsOwnedOutright(player.Id) && !p.IsMortgaged && ctx.Content.Property(p.PropertyId).Type == PropertyType.Railroad)
+            .OrderBy(p => ctx.State.IndexOf(p.PropertyId))
+            .Select(p => new ExpressLine(p.PropertyId));
+    }
+
+    /// <summary>The Red perk (Section 8.6): every opponent property this player could force to auction, once per lap.</summary>
+    private static IEnumerable<GameAction> HostileTakeovers(EngineContext ctx, PlayerState player)
+    {
+        if (player.TakeoverUsed || !RuleModifiers.CanHostileTakeover(ctx.State, ctx.Content, player.Id))
+            return [];
+        return ctx.State.Board
+            .Where(s => ctx.State.Properties.TryGetValue(s.Id, out var p) && p.OwnerId is int owner && owner != player.Id
+                && AuctionStep.CanForceAuction(ctx, s.Id))
+            .Select(s => new HostileTakeover(s.Id));
     }
 
     public override bool IsLegal(EngineContext ctx, PendingDecision decision, GameAction action)
@@ -255,6 +304,27 @@ public sealed class TurnStep : Step
                 Stage = TurnStage.PrecisionRoll;
                 break;
 
+            case ExpressLine express:
+                int fare = RuleModifiers.ExpressLineCost(ctx.State, ctx.Content, PlayerId);
+                player.Cash -= fare;
+                player.Position = ctx.State.IndexOf(express.RailroadId);
+                ctx.Emit(new ExpressLineUsed(PlayerId, express.RailroadId, fare));
+                Stage = TurnStage.ExpressRoll;
+                break;
+
+            case HostileTakeover takeover:
+                player.TakeoverUsed = true;
+                ctx.Emit(new HostileTakeoverUsed(PlayerId, takeover.PropertyId));
+                // The auction runs on top of this turn; afterwards the same question comes back.
+                ctx.Push(new AuctionStep
+                {
+                    PropertyId = takeover.PropertyId,
+                    Kind = AuctionKind.Forced,
+                    TieBreakStartId = PlayerId,
+                    OwnerId = ctx.State.Properties[takeover.PropertyId].OwnerId,
+                });
+                break;
+
             case ChooseDice keep:
                 KeptFirst = keep.First;
                 KeptSecond = keep.Second;
@@ -272,10 +342,11 @@ public sealed class TurnStep : Step
                 break;
 
             case PayBail:
-                player.Cash -= ctx.Rules.JailBail;
+                int bail = RuleModifiers.Bail(ctx.State, ctx.Content, PlayerId);
+                player.Cash -= bail;
                 player.InJail = false;
                 LeftJailThisTurn = true;
-                ctx.Emit(new BailPaid(PlayerId, ctx.Rules.JailBail));
+                ctx.Emit(new BailPaid(PlayerId, bail));
                 ctx.Emit(new LeftJail(PlayerId, "paid bail"));
                 // Out of Jail: now choose how to move, like a normal turn.
                 Stage = TurnStage.ChooseMove;
@@ -419,7 +490,7 @@ public sealed class TurnStep : Step
         {
             // Failed on the last allowed turn: must pay bail and move by this roll.
             Stage = TurnStage.ForcedBailMove;
-            ctx.Push(new PaymentStep { FromId = PlayerId, ToId = null, Amount = ctx.Rules.JailBail, Reason = PaymentReason.Bail });
+            ctx.Push(new PaymentStep { FromId = PlayerId, ToId = null, Amount = RuleModifiers.Bail(ctx.State, ctx.Content, PlayerId), Reason = PaymentReason.Bail });
             return StepResult.Continue;
         }
 

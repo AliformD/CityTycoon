@@ -2,6 +2,7 @@ using CityTycoon.Engine.Actions;
 using CityTycoon.Engine.Cards;
 using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Events;
+using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.State;
 
@@ -174,7 +175,8 @@ public sealed class ArrangeEventsStep : Step
 /// <summary>
 /// A Dice Duel (Section 15.3): both players roll 2 dice and the higher total
 /// takes the stake from the other. Ties roll again. The challenged player may say no.
-/// Started from the Casino or from the Dice Duel card.
+/// Started from the Casino or from the Dice Duel card. A Hustler who is losing the roll
+/// may reroll their own dice once (Section 5).
 /// </summary>
 public sealed class DiceDuelStep : Step
 {
@@ -185,6 +187,13 @@ public sealed class DiceDuelStep : Step
 
     /// <summary>The challenged player's answer, null while waiting.</summary>
     public bool? Accepted { get; set; }
+
+    /// <summary>The current roll's totals (0 means not rolled yet), kept while a Hustler decides on a reroll.</summary>
+    public int ChallengerTotal { get; set; }
+    public int OpponentTotal { get; set; }
+
+    /// <summary>Players who have been asked about a reroll already (each is asked once per duel).</summary>
+    public List<int> RerollOffered { get; set; } = [];
 
     public override StepResult Run(EngineContext ctx)
     {
@@ -207,30 +216,65 @@ public sealed class DiceDuelStep : Step
             return StepResult.Done;
         }
 
-        // The stake may not be affordable any more (a payment in between); then it shrinks to what both have.
-        int stake = Math.Min(Stake, Math.Min(ctx.Player(ChallengerId).Cash, ctx.Player(OpponentId).Cash));
         while (true)
         {
-            int mine = ctx.Dice.RollDie() + ctx.Dice.RollDie();
-            int theirs = ctx.Dice.RollDie() + ctx.Dice.RollDie();
-            ctx.Emit(new DuelRolled(ChallengerId, mine, OpponentId, theirs));
-            if (mine == theirs)
+            if (ChallengerTotal == 0)
+            {
+                ChallengerTotal = ctx.Dice.RollDie() + ctx.Dice.RollDie();
+                OpponentTotal = ctx.Dice.RollDie() + ctx.Dice.RollDie();
+                ctx.Emit(new DuelRolled(ChallengerId, ChallengerTotal, OpponentId, OpponentTotal));
+            }
+            if (ChallengerTotal == OpponentTotal)
+            {
+                ChallengerTotal = OpponentTotal = 0;   // a tie: roll again
                 continue;
+            }
 
-            int winnerId = mine > theirs ? ChallengerId : OpponentId;
-            int loserId = winnerId == ChallengerId ? OpponentId : ChallengerId;
+            // The player who is losing may be a Hustler with a reroll to use.
+            int loserId = ChallengerTotal < OpponentTotal ? ChallengerId : OpponentId;
+            if (!RerollOffered.Contains(loserId) && RuleModifiers.CasinoReroll(ctx.State, ctx.Content, loserId))
+            {
+                RerollOffered.Add(loserId);
+                int mine = loserId == ChallengerId ? ChallengerTotal : OpponentTotal;
+                int theirs = loserId == ChallengerId ? OpponentTotal : ChallengerTotal;
+                return StepResult.WaitFor(new PendingDecision(loserId, DecisionKind.ChooseReroll,
+                    $"In the ${Stake} duel you rolled {mine} and {ctx.Player(loserId == ChallengerId ? OpponentId : ChallengerId).Name} rolled {theirs}. Use your Hustler reroll on your dice?",
+                    Duel: new DuelChallenge(ChallengerId, OpponentId, Stake)));
+            }
+
+            // The stake may not be affordable any more (a payment in between); then it shrinks to what both have.
+            int stake = Math.Min(Stake, Math.Min(ctx.Player(ChallengerId).Cash, ctx.Player(OpponentId).Cash));
+            int winnerId = ChallengerTotal > OpponentTotal ? ChallengerId : OpponentId;
+            int lostId = winnerId == ChallengerId ? OpponentId : ChallengerId;
             ctx.Player(winnerId).Cash += stake;
-            ctx.Player(loserId).Cash -= stake;
-            ctx.Emit(new DuelWon(winnerId, loserId, stake));
+            ctx.Player(lostId).Cash -= stake;
+            ctx.Emit(new DuelWon(winnerId, lostId, stake));
             return StepResult.Done;
         }
     }
 
     public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision) =>
-        [new AcceptDuel(), new DeclineDuel()];
+        decision.Kind == DecisionKind.ChooseReroll ? [new RerollDice(), new NoThanks()] : [new AcceptDuel(), new DeclineDuel()];
 
-    public override void Receive(EngineContext ctx, PendingDecision decision, GameAction action) =>
-        Accepted = action is AcceptDuel;
+    public override void Receive(EngineContext ctx, PendingDecision decision, GameAction action)
+    {
+        if (decision.Kind != DecisionKind.ChooseReroll)
+        {
+            Accepted = action is AcceptDuel;
+            return;
+        }
+        if (action is not RerollDice)
+            return;
+
+        // Only the Hustler's own dice are rolled again.
+        ctx.Emit(new CasinoRerolled(decision.PlayerId, "duel roll"));
+        int again = ctx.Dice.RollDie() + ctx.Dice.RollDie();
+        if (decision.PlayerId == ChallengerId)
+            ChallengerTotal = again;
+        else
+            OpponentTotal = again;
+        ctx.Emit(new DuelRolled(ChallengerId, ChallengerTotal, OpponentId, OpponentTotal));
+    }
 }
 
 /// <summary>End of turn (Section 7.2, step 10): discard down to the hand limit.</summary>
@@ -241,7 +285,7 @@ public sealed class HandLimitStep : Step
     public override StepResult Run(EngineContext ctx)
     {
         PlayerState player = ctx.Player(PlayerId);
-        int limit = ctx.Rules.HandLimit;
+        int limit = RuleModifiers.HandLimit(ctx.State, ctx.Content, PlayerId);
         if (player.IsBankrupt || player.Hand.Count <= limit)
             return StepResult.Done;
         int extra = player.Hand.Count - limit;
@@ -258,5 +302,42 @@ public sealed class HandLimitStep : Step
         ctx.Player(PlayerId).Hand.Remove(card);
         CardRules.Discard(ctx, card);
         ctx.Emit(new CardDiscarded(PlayerId, card));
+    }
+}
+
+/// <summary>
+/// The Pink perk, Arts District (Section 13.2): you drew two Opportunity cards. Keep one;
+/// the other goes to the discard pile. Only the player drawing sees the two cards.
+/// </summary>
+public sealed class KeepOneCardStep : Step
+{
+    public int PlayerId { get; set; }
+
+    /// <summary>The two cards drawn, as card IDs.</summary>
+    public List<string> Cards { get; set; } = [];
+
+    /// <summary>Where the cards came from, for the log ("Opportunity space", "City Park"...).</summary>
+    public string Source { get; set; } = "";
+
+    public bool Answered { get; set; }
+
+    public override StepResult Run(EngineContext ctx) => Answered
+        ? StepResult.Done
+        : StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.KeepCard,
+            "Arts District: you drew two Opportunity cards. Keep one. The other is discarded.", Cards: Cards.ToList()));
+
+    public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision) =>
+        Cards.Distinct().Select(id => (GameAction)new KeepCard(id)).ToList();
+
+    public override void Receive(EngineContext ctx, PendingDecision decision, GameAction action)
+    {
+        Answered = true;
+        string kept = ((KeepCard)action).CardId;
+        Cards.Remove(kept);
+        ctx.Player(PlayerId).Hand.Add(kept);
+        foreach (string other in Cards)
+            CardRules.Discard(ctx, other);
+        ctx.Emit(new OpportunityDrawn(PlayerId, Source));
+        ctx.Emit(new CardKept(PlayerId));
     }
 }

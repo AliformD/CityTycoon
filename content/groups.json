@@ -1,5 +1,8 @@
 {
   "contentVersion": 1,
+  // Color groups (Section 13.2). Owning a whole group, with none of it mortgaged or pending, turns on its perk.
+  // A perk's "modifiers" are the rule changes it makes. Each "type" names a small class in
+  // src/CityTycoon.Engine/Modifiers (listed in ModifierTypes.cs); "value" is its number.
   "groups": [
     {
       "id": "brown",
@@ -9,7 +12,8 @@
       "perk": {
         "id": "community-roots",
         "name": "Community Roots",
-        "text": "Collect an extra $50 every time you pass GO."
+        "text": "Collect an extra $50 every time you pass GO.",
+        "modifiers": [ { "type": "GoCash", "value": 50 } ]
       }
     },
     {
@@ -20,7 +24,8 @@
       "perk": {
         "id": "commuter-belt",
         "name": "Commuter Belt",
-        "text": "Gain 1 extra Momentum token when you pass GO. Your token limit goes up by 2."
+        "text": "Gain 1 extra Momentum token when you pass GO. Your token limit goes up by 2.",
+        "modifiers": [ { "type": "GoMomentum", "value": 1 }, { "type": "MomentumCap", "value": 2 } ]
       }
     },
     {
@@ -31,7 +36,8 @@
       "perk": {
         "id": "arts-district",
         "name": "Arts District",
-        "text": "When you draw an Opportunity card, draw 2 and keep 1. Your hand limit becomes 4."
+        "text": "When you draw an Opportunity card, draw 2 and keep 1. Your hand limit becomes 4.",
+        "modifiers": [ { "type": "DrawTwoKeepOne" }, { "type": "HandLimit", "value": 1 } ]
       }
     },
     {
@@ -42,7 +48,8 @@
       "perk": {
         "id": "neighborhood-watch",
         "name": "Neighborhood Watch",
-        "text": "Any opponent in Jail or recovering from the Hospital pays you $25 at the start of each of their turns there."
+        "text": "Any opponent in Jail or recovering from the Hospital pays you $25 at the start of each of their turns there.",
+        "modifiers": [ { "type": "JailToll", "value": 25 } ]
       }
     },
     {
@@ -53,7 +60,8 @@
       "perk": {
         "id": "hostile-takeover",
         "name": "Hostile Takeover",
-        "text": "Once per lap, force an auction on one eligible opponent property."
+        "text": "Once per lap, force an auction on one eligible opponent property.",
+        "modifiers": [ { "type": "HostileTakeover" } ]
       }
     },
     {
@@ -64,7 +72,8 @@
       "perk": {
         "id": "bank-partner",
         "name": "Bank Partner",
-        "text": "Your loans cost $210 to repay instead of $250, and you can hold 3 instead of 2."
+        "text": "Your loans cost $210 to repay instead of $250, and you can hold 3 instead of 2.",
+        "modifiers": [ { "type": "LoanRepayCost", "value": 210 }, { "type": "MaxLoans", "value": 3 } ]
       }
     },
     {
@@ -75,7 +84,8 @@
       "perk": {
         "id": "dividends",
         "name": "Dividends",
-        "text": "At the start of each of your turns, collect $20 for every hotel or skyscraper you own."
+        "text": "At the start of each of your turns, collect $20 for every hotel or skyscraper you own.",
+        "modifiers": [ { "type": "DividendPerTower", "value": 20 } ]
       }
     },
     {
@@ -86,7 +96,8 @@
       "perk": {
         "id": "prime-real-estate",
         "name": "Prime Real Estate",
-        "text": "Immune to negative rent modifiers. Skyscraper levels cost 1 x house cost."
+        "text": "Immune to negative rent modifiers. Skyscraper levels cost 1 x house cost.",
+        "modifiers": [ { "type": "IgnoreNegativeRent" }, { "type": "SkyscraperCostMultiplier", "value": 1 } ]
       }
     }
   ]

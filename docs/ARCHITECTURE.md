@@ -165,6 +165,26 @@ A modifier answers a few fixed questions, called **hook points**: "how much does
 
 `RentCalculator.Explain` works out rent one step at a time and keeps a line for each step ("Base rent $10", "City Hall next door +25%", "Stadium boost ×2"). The game uses the total; the screen shows the lines, so players can see *why* rent is what it is.
 
+## Perks, bonuses and characters (Phase 7)
+
+Phase 6 built the rule-modifier idea for Government tiles. Phase 7 reuses it for three more sources of rule changes, with no new engine code per rule:
+
+| Source | File | Who gets it |
+| --- | --- | --- |
+| Color perks | `content/groups.json` (each group's `perk`) | A player who owns the whole group outright. |
+| Railroad and utility bonuses | `content/bonuses.json` | A player who owns enough railroads or utilities. |
+| Characters | `content/characters.json` | The player who picked or was dealt it. |
+
+Each entry has a list of `modifiers`, such as `{ "type": "GoCash", "value": 50 }`. The `type` is the name of a small class in `src/CityTycoon.Engine/Modifiers/` (`PerkModifiers.cs`, `BonusModifiers.cs`, `CharacterModifiers.cs`), and `value` is its number. `ModifierTypes.cs` is a hand-written list that connects the names to the classes, so the game still works after Blazor trims unused code. To add a new perk you edit the JSON; a new *kind* of rule change is one new class plus one line in that list.
+
+A modifier class only overrides the hooks it cares about (the "no change" answers are the defaults in `IRuleModifier`). One C# detail worth knowing: because each class sits on top of the shared `OwnedModifier` base class, it has to say `, IRuleModifier` again in its own declaration. Without that, C# quietly keeps using the interface's "do nothing" default and the perk never switches on. The tests catch this, because every perk has a test that checks its effect.
+
+`RuleModifiers` is still the only place the rest of the engine asks questions ("how many loans may this player hold?"). Because it is asked all the time, it keeps its answer until something changes: who owns what, which tiles are revealed, or who is bankrupt (`ModifierCache`).
+
+New things the player is asked, each a step on the resolution stack: `CharacterPickStep` (reverse turn order), `PeekTileStep` (City Planner), `KeepOneCardStep` (Pink), plus the Hustler's reroll question inside the Casino and Dice Duel steps. Express Line and Hostile Takeover are extra choices at the start of a turn (`TurnStep.MoveChoices`).
+
+The Sim (`--characters none|random`) prints a win rate for each character and flags any that wins more than 5 points above fair share.
+
 ## The browser app (Phase 2)
 
 The Web project draws the game and passes clicks to the engine. It never changes the game state itself.

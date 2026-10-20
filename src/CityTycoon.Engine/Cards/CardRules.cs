@@ -73,9 +73,21 @@ public static class CardRules
     public static bool CanDraw(GameState state, CardDeck deck) =>
         DrawPile(state, deck).Count > 0 || DiscardPile(state, deck).Count > 0;
 
-    /// <summary>Draws an Opportunity card into a player's hand. Nobody else learns which card it was.</summary>
+    /// <summary>
+    /// Draws an Opportunity card into a player's hand. Nobody else learns which card it was.
+    /// With the Pink perk (Arts District) the player draws two and keeps one: that is a
+    /// question, so it is pushed as a step and answered next.
+    /// </summary>
     public static void DrawOpportunity(EngineContext ctx, PlayerState player, string source)
     {
+        if (RuleModifiers.DrawsTwoKeepsOne(ctx.State, ctx.Content, player.Id)
+            && DrawPile(ctx.State, CardDeck.Opportunity).Count + DiscardPile(ctx.State, CardDeck.Opportunity).Count >= 2)
+        {
+            EnsureCards(ctx, CardDeck.Opportunity, wanted: 2);
+            string first = Draw(ctx, CardDeck.Opportunity)!, second = Draw(ctx, CardDeck.Opportunity)!;
+            ctx.Push(new KeepOneCardStep { PlayerId = player.Id, Cards = [first, second], Source = source });
+            return;
+        }
         if (Draw(ctx, CardDeck.Opportunity) is not string card)
         {
             ctx.Emit(new NoCardToDraw(player.Id, CardDeck.Opportunity));

@@ -37,7 +37,6 @@
 
   "councilEveryNRounds": 4,
   "voteInfluence": 100,
-  "politicianVoteInfluence": 200,
   "publicOpinionInfluence": 100,
 
   "loanAmount": 200,

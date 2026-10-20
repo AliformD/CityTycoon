@@ -43,15 +43,21 @@ public static class RentCalculator
             return new RentBreakdown(0, [new RentLine("No rent", "$0")]);
         lines.Add(new RentLine(BaseRentLabel(state, content, def, owned, ownerId, diceTotal), $"${rent}"));
 
-        // Step 2: percentage changes (Government tiles now; more modifiers later) add up, within limits.
+        // Step 2: percentage changes (Government tiles so far) add up, within limits.
+        // Dark Blue's Prime Real Estate ignores the negative ones (Section 13.1).
         double total = rent;
-        var percents = RuleModifiers.RentPercents(state, content, propertyId);
+        var active = RuleModifiers.Active(state, content);
+        var percents = RuleModifiers.RentPercents(state, content, propertyId, active);
         if (percents.Count > 0)
         {
+            string? shield = active.FirstOrDefault(m => m.IgnoresNegativeRent(state, propertyId))?.Source;
             foreach (var (source, percent) in percents)
-                lines.Add(new RentLine(source, $"{percent:+0;-0}%"));
-            int clamped = Math.Clamp(percents.Sum(p => p.Percent), content.Rules.MinRentPercent, content.Rules.MaxRentPercent);
-            total = total * (100 + clamped) / 100;
+            {
+                lines.Add(shield != null && percent < 0
+                    ? new RentLine($"{source} (ignored: {shield})", "0%")
+                    : new RentLine(source, $"{percent:+0;-0}%"));
+            }
+            total = total * (100 + RuleModifiers.NetRentPercent(state, content, propertyId, active)) / 100;
         }
 
         // Step 3: multipliers. A Stadium boost doubles a color group's rent.

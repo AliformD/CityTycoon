@@ -1,0 +1,56 @@
+{
+  "contentVersion": 1,
+  // The 8 characters (Section 5). Each player picks a different one, and each has one small ability.
+  // "modifiers" are the rule changes the ability makes. Each "type" names a small class in
+  // src/CityTycoon.Engine/Modifiers (listed in ModifierTypes.cs); "value" and "card" are its settings.
+  "characters": [
+    {
+      "id": "mogul",
+      "name": "The Mogul",
+      "text": "When auction bids are compared, your bid counts as $10 higher than it is. You still pay your real bid. You win ties and any auction where you're within $10 of the top bid.",
+      "modifiers": [ { "type": "BidBonus", "value": 10 } ]
+    },
+    {
+      "id": "hustler",
+      "name": "The Hustler",
+      "text": "Once per Casino visit, you may reroll your dice (High/Low) or your duel roll (Dice Duel).",
+      "modifiers": [ { "type": "CasinoReroll" } ]
+    },
+    {
+      "id": "commuter",
+      "name": "The Commuter",
+      "text": "Start the game with 3 Momentum tokens instead of 1. Your token limit is 6 instead of 5.",
+      "modifiers": [ { "type": "StartingMomentum", "value": 3 }, { "type": "MomentumCap", "value": 1 } ]
+    },
+    {
+      "id": "lawyer",
+      "name": "The Lawyer",
+      "text": "You never pay Jail bail (leaving early is free). You can't be targeted by Audit.",
+      "modifiers": [ { "type": "FreeBail" }, { "type": "ImmuneToCard", "card": "audit" } ]
+    },
+    {
+      "id": "contractor",
+      "name": "The Contractor",
+      "text": "Your building costs are 10% lower.",
+      "modifiers": [ { "type": "BuildDiscount", "value": 10 } ]
+    },
+    {
+      "id": "politician",
+      "name": "The Politician",
+      "text": "Your City Council vote is worth 200 influence instead of 100.",
+      "modifiers": [ { "type": "VoteInfluence", "value": 200 } ]
+    },
+    {
+      "id": "city-planner",
+      "name": "The City Planner",
+      "text": "At game start, secretly look at 1 hidden Government tile of your choice. Each time you pass GO, secretly look at 1 more that is still hidden.",
+      "modifiers": [ { "type": "PeekAtStart", "value": 1 }, { "type": "PeekOnGo", "value": 1 } ]
+    },
+    {
+      "id": "medic",
+      "name": "The Medic",
+      "text": "If you're sent to the Hospital, you pay no bill and roll normally on your next turn. Insured markers cost you $25 instead of $50.",
+      "modifiers": [ { "type": "HospitalImmunity" }, { "type": "InsuredMarkerCost", "value": 25 } ]
+    }
+  ]
+}

@@ -12,9 +12,12 @@ namespace CityTycoon.Engine.Rules;
 /// </summary>
 public static class BuildingRules
 {
-    /// <summary>The full price of one building level, before discounts (Section 9.1).</summary>
+    /// <summary>
+    /// The full price of one building level, before discounts (Section 9.1). A skyscraper is 3 times
+    /// the house cost, except in Dark Blue where Prime Real Estate makes it 1 times.
+    /// </summary>
     public static int LevelCost(GameContent content, PropertyDefinition def, int level) =>
-        level == content.Rules.SkyscraperLevel ? def.HouseCost * content.Rules.SkyscraperCostMultiplier : def.HouseCost;
+        level == content.Rules.SkyscraperLevel ? def.HouseCost * content.SkyscraperCostMultiplier(def) : def.HouseCost;
 
     /// <summary>
     /// Applies a building discount (Section 9.4): discounts add up to at most
@@ -104,11 +107,16 @@ public static class BuildingRules
         if (newLevel == ctx.Rules.SkyscraperLevel && group.Any(p => p.Level < ctx.Rules.HotelLevel))
             return "Every property in the group needs a hotel before you can build a skyscraper.";
 
-        if (player.Cash < NextLevelCost(ctx, propertyId))
-            return "You don't have enough cash.";
+        int fees = BuildFees(ctx, playerId).Sum(f => f.Amount);
+        if (player.Cash < NextLevelCost(ctx, propertyId) + fees)
+            return fees > 0 ? $"You don't have enough cash (the building plus a ${fees} Power Grid fee)." : "You don't have enough cash.";
 
         return null;
     }
+
+    /// <summary>What a player owes other players for building a level, on top of its price (Power Grid).</summary>
+    public static List<(int PayeeId, int Amount, string Source)> BuildFees(EngineContext ctx, int playerId) =>
+        RuleModifiers.BuildFees(ctx.State, ctx.Content, playerId);
 
     public static void Build(EngineContext ctx, int playerId, string propertyId)
     {
@@ -119,6 +127,14 @@ public static class BuildingRules
         player.Cash -= cost;
         player.BuildsThisTurn++;
         owned.Level++;
+
+        // Power Grid: an opponent who owns both utilities collects a fee for each level built.
+        var fees = BuildFees(ctx, playerId);
+        foreach (var (payeeId, amount, source) in fees)
+        {
+            player.Cash -= amount;
+            ctx.Player(payeeId).Cash += amount;
+        }
 
         // A hotel takes a hotel permit. A skyscraper takes a skyscraper permit
         // and gives the hotel permit back, because the hotel is replaced.
@@ -133,6 +149,8 @@ public static class BuildingRules
         }
 
         ctx.Emit(new BuildingBuilt(playerId, propertyId, owned.Level, cost));
+        foreach (var (payeeId, amount, source) in fees)
+            ctx.Emit(new PerkPaid(playerId, payeeId, amount, source));
     }
 
     /// <summary>

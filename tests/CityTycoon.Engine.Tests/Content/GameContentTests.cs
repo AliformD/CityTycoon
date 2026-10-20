@@ -64,4 +64,45 @@ public class GameContentTests
             new GroupsFile(1, content.Groups.Values.ToList()),
             new GovTilesFile(1, content.GovTilesPerGame, content.GovTiles)));
     }
+
+    // ----- Perks, bonuses and characters (Phase 7) -----
+
+    [Fact]
+    public void EveryPerkAndBonusAndCharacter_ChangesAtLeastOneRule()
+    {
+        Assert.All(content.Groups.Values, g => Assert.NotEmpty(g.Perk.Modifiers!));
+        Assert.All(content.Bonuses, b => Assert.NotEmpty(b.Modifiers!));
+        Assert.All(content.Characters, c => Assert.NotEmpty(c.Modifiers!));
+    }
+
+    [Fact]
+    public void Characters_AreEightWithDifferentIds()
+    {
+        Assert.Equal(8, content.Characters.Count);
+        Assert.Equal(8, content.Characters.Select(c => c.Id).Distinct().Count());
+    }
+
+    [Fact]
+    public void Bonuses_AreFive_ForRailroadsAndUtilities()
+    {
+        Assert.Equal(5, content.Bonuses.Count);
+        Assert.Equal(3, content.Bonuses.Count(b => b.PropertyType == PropertyType.Railroad));
+        Assert.Equal(2, content.Bonuses.Count(b => b.PropertyType == PropertyType.Utility));
+    }
+
+    [Fact]
+    public void EveryModifierTypeInTheContent_IsRegistered()
+    {
+        var specs = content.Groups.Values.SelectMany(g => g.Perk.Modifiers!)
+            .Concat(content.Bonuses.SelectMany(b => b.Modifiers!))
+            .Concat(content.Characters.SelectMany(c => c.Modifiers!));
+        Assert.All(specs, s => Assert.Contains(s.Type, Modifiers.ModifierTypes.Types));
+    }
+
+    [Fact]
+    public void AModifierWithAMadeUpType_IsRejected()
+    {
+        var spec = new ModifierSpec("FlyingCars", 1);
+        Assert.Throws<ContentException>(() => Modifiers.ModifierTypes.Validate(spec, "a test", content));
+    }
 }

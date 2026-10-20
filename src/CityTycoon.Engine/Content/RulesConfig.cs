@@ -52,7 +52,6 @@ public sealed class RulesConfig
     // Section 11: City Council.
     public required int CouncilEveryNRounds { get; init; }
     public required int VoteInfluence { get; init; }
-    public required int PoliticianVoteInfluence { get; init; }
     public required int PublicOpinionInfluence { get; init; }
 
     // Section 15.7: loans.

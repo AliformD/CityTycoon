@@ -5,6 +5,7 @@ using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.State;
 using CityTycoon.Engine.Steps;
+using CityTycoon.Engine.Tiles;
 
 namespace CityTycoon.Engine.Cards;
 
@@ -132,7 +133,9 @@ public sealed class PayPercentOfCashEffect : ICardEffect
 
     public IEnumerable<PlayCard> Plays(EngineContext ctx, PlayerState player, CardDefinition card) =>
         card.Setting("who") == "target"
-            ? CardEffects.OthersInTurnOrder(ctx.State, player.Id).Select(p => new PlayCard(card.Id, TargetPlayerId: p.Id))
+            ? CardEffects.OthersInTurnOrder(ctx.State, player.Id)
+                .Where(p => RuleModifiers.CanPlayerBeTargeted(ctx.State, ctx.Content, p.Id, card))
+                .Select(p => new PlayCard(card.Id, TargetPlayerId: p.Id))
             : [new PlayCard(card.Id)];
 
     public int? Victim(CardEffectContext c) => c.Card.Setting("who") == "target" ? c.Play.TargetPlayerId : null;
@@ -595,10 +598,7 @@ public sealed class PeekTileEffect : ICardEffect
 
     public void Apply(CardEffectContext c)
     {
-        string spaceId = c.Play.TargetSpaceId!;
-        if (!c.Player.KnownTiles.Contains(spaceId))
-            c.Player.KnownTiles.Add(spaceId);
-        c.Ctx.Emit(new TilePeeked(c.Player.Id, spaceId));
+        TileRules.Peek(c.Ctx, c.Player, c.Play.TargetSpaceId!);
     }
 }
 

@@ -6,7 +6,7 @@
 @if (view.MyHand.Count > 0)
 {
     <section class="hand" aria-label="Your Opportunity cards">
-        <h3>Your cards (@view.MyHand.Count of @Content.Rules.HandLimit)</h3>
+        <h3>Your cards (@view.MyHand.Count of @view.Me.HandLimit)</h3>
         <div class="cards">
             @foreach (var cardId in view.MyHand.Distinct())
             {

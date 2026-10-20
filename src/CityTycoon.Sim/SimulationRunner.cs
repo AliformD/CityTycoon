@@ -2,11 +2,15 @@ using CityTycoon.AI;
 using CityTycoon.Engine;
 using CityTycoon.Engine.Events;
 using CityTycoon.Engine.Hosting;
+using CityTycoon.Engine.Content;
+using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.State;
 
 namespace CityTycoon.Sim;
 
-public sealed record SimOptions(int Games, int Players, ulong Seed, GameMode Mode, int Rounds, string OutputFolder, BotKind Bots = BotKind.Mixed);
+/// <param name="Characters">None plays the plain rules; Random deals every bot a different character.</param>
+public sealed record SimOptions(int Games, int Players, ulong Seed, GameMode Mode, int Rounds, string OutputFolder,
+    BotKind Bots = BotKind.Mixed, CharacterMode Characters = CharacterMode.Random);
 
 /// <summary>Which bots play in the Sim: all random, all Easy, or half and half (alternating seats).</summary>
 public enum BotKind { Random, Easy, Mixed }
@@ -52,6 +56,20 @@ public sealed record GameStats(
     public int OpportunitiesDrawn { get; init; }
     public int MallBuys { get; init; }
     public int Reshuffles { get; init; }
+
+    // Phase 7 numbers: characters and perks.
+    /// <summary>The character each player had, by seat (empty when the game had no characters).</summary>
+    public IReadOnlyList<string> Characters { get; init; } = [];
+    public IReadOnlyList<string> WinnerCharacters { get; init; } = [];
+
+    /// <summary>For each color group: how many players held the whole group when the game ended, and how many winners did.</summary>
+    public IReadOnlyDictionary<string, int> GroupHolders { get; init; } = new Dictionary<string, int>();
+    public IReadOnlyDictionary<string, int> GroupWinners { get; init; } = new Dictionary<string, int>();
+
+    /// <summary>How often each railroad or utility bonus came into play (the log says so: Express Line jumps, Toll Collector tokens...).</summary>
+    public int ExpressLines { get; init; }
+    public int HostileTakeovers { get; init; }
+    public int PerkPayments { get; init; }
 }
 
 /// <summary>Plays many bot-vs-bot games and gathers statistics (Section 26.3).</summary>
@@ -77,6 +95,7 @@ public static class SimulationRunner
             Mode = options.Mode,
             MaxRounds = options.Rounds,
             Seed = seed,
+            Characters = options.Characters,
         };
 
         GameEngine? engine = null;
@@ -101,6 +120,15 @@ public static class SimulationRunner
                 ? new GameStats(game, seed, 0, false, ex.Message, [], [], 0, 0, 0, 0)
                 : Summarize(game, seed, engine, ex.GetType().Name + ": " + ex.Message);
         }
+    }
+
+    /// <summary>For each color group, how many of these players own the whole group (none of it mortgaged or pending).</summary>
+    private static Dictionary<string, int> GroupHoldings(GameState state, GameContent content, IEnumerable<int> playerIds)
+    {
+        var ids = playerIds.Where(id => !state.Player(id).IsBankrupt).ToList();
+        return content.Groups.Keys.ToDictionary(
+            group => group,
+            group => ids.Count(id => RentCalculator.OwnsFullGroup(state, content, id, group)));
     }
 
     private static IPlayerController CreateBot(BotKind kind, int playerId, ulong botSeed) => kind switch
@@ -147,6 +175,13 @@ public static class SimulationRunner
             OpportunitiesDrawn = log.OfType<OpportunityDrawn>().Count(),
             MallBuys = log.OfType<MallCardBought>().Count(),
             Reshuffles = log.OfType<DeckReshuffled>().Count(),
+            Characters = state.Players.Select(p => p.CharacterId).OfType<string>().ToList(),
+            WinnerCharacters = winners.Select(id => state.Player(id).CharacterId).OfType<string>().ToList(),
+            GroupHolders = GroupHoldings(state, engine.Content, state.Players.Select(p => p.Id)),
+            GroupWinners = GroupHoldings(state, engine.Content, winners),
+            ExpressLines = log.OfType<ExpressLineUsed>().Count(),
+            HostileTakeovers = log.OfType<HostileTakeoverUsed>().Count(),
+            PerkPayments = log.OfType<PerkPaid>().Count() + log.OfType<PerkIncome>().Count(),
         };
     }
 }

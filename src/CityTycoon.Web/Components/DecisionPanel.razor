@@ -233,6 +233,64 @@ else if (decision.Kind == DecisionKind.ArrangeEvents && decision.Cards is { } to
         </div>
     </div>
 }
+else if (decision.Kind == DecisionKind.ChooseCharacter)
+{
+    @* Character pick (Section 5): each card is one character and what it does. *@
+    <div class="decision characters">
+        <h2>@view.Me.Name, @AfterName(decision.Prompt)</h2>
+        <div class="buttons groups">
+            @foreach (var action in main.OfType<PickCharacter>())
+            {
+                var character = Content.Character(action.CharacterId);
+                <button class="group-choice" @onclick="() => OnAnswer.InvokeAsync(action)">
+                    <strong>@character.Name</strong>
+                    <small>@character.Text</small>
+                </button>
+            }
+        </div>
+    </div>
+}
+else if (decision.Kind == DecisionKind.ChooseReroll)
+{
+    <div class="decision reroll">
+        <h2>@view.Me.Name, @AfterName(decision.Prompt)</h2>
+        <div class="buttons">
+            @foreach (var action in main)
+            {
+                <button class="big @(action is RerollDice ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)">@(action is RerollDice ? UiHelpers.ActionLabel(action, view, Content) : "Keep it")</button>
+            }
+        </div>
+    </div>
+}
+else if (decision.Kind == DecisionKind.KeepCard && decision.Cards is { } drawn)
+{
+    @* Pink perk: two cards were drawn, keep one. *@
+    <div class="decision keep-card">
+        <h2>@view.Me.Name, @AfterName(decision.Prompt)</h2>
+        <div class="cards">
+            @foreach (var cardId in drawn.Distinct())
+            {
+                var keep = new KeepCard(cardId);
+                <CardView CardId="@cardId" Content="Content">
+                    <button class="small primary" @onclick="() => OnAnswer.InvokeAsync(keep)">Keep this one</button>
+                </CardView>
+            }
+        </div>
+    </div>
+}
+else if (decision.Kind == DecisionKind.PeekTile)
+{
+    @* City Planner: look at one hidden government tile. *@
+    <div class="decision peek">
+        <h2>@view.Me.Name, @AfterName(decision.Prompt)</h2>
+        <div class="buttons stacked">
+            @foreach (var action in main)
+            {
+                <button class="big" @onclick="() => OnAnswer.InvokeAsync(action)">@UiHelpers.ActionLabel(action, view, Content)</button>
+            }
+        </div>
+    </div>
+}
 else
 {
     <div class="decision">

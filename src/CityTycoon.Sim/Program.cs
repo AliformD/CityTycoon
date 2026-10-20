@@ -3,6 +3,7 @@
 // Example:  dotnet run --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots easy
 using System.Diagnostics;
 using System.Globalization;
+using CityTycoon.Engine;
 using CityTycoon.Engine.State;
 using CityTycoon.Sim;
 
@@ -31,6 +32,7 @@ static SimOptions ParseArgs(string[] args)
     GameMode mode = GameMode.Timed;
     string output = "sim-results";
     BotKind bots = BotKind.Mixed;
+    CharacterMode characters = CharacterMode.Random;
     for (int i = 0; i < args.Length - 1; i += 2)
     {
         string value = args[i + 1];
@@ -43,23 +45,61 @@ static SimOptions ParseArgs(string[] args)
             case "--mode": mode = Enum.Parse<GameMode>(value, ignoreCase: true); break;
             case "--out": output = value; break;
             case "--bots": bots = Enum.Parse<BotKind>(value, ignoreCase: true); break;
-            default: throw new ArgumentException($"Unknown option {args[i]}. Options: --games --players --rounds --seed --mode --bots --out");
+            case "--characters": characters = Enum.Parse<CharacterMode>(value, ignoreCase: true); break;
+            default: throw new ArgumentException($"Unknown option {args[i]}. Options: --games --players --rounds --seed --mode --bots --characters (none or random) --out");
         }
     }
-    return new SimOptions(games, players, seed, mode, rounds, output, bots);
+    return new SimOptions(games, players, seed, mode, rounds, output, bots, characters);
 }
 
 static IEnumerable<string> ToCsv(List<GameStats> results)
 {
-    yield return "game,seed,rounds,finished,winner_seats,winner_turn_positions,bankruptcies,auctions_won,avg_price_to_value,jail_visits,error";
+    yield return "game,seed,rounds,finished,winner_seats,winner_turn_positions,winner_characters,bankruptcies,auctions_won,avg_price_to_value,jail_visits,error";
     foreach (var r in results)
     {
         yield return string.Join(",",
             r.Game, r.Seed, r.Rounds, r.Finished,
-            string.Join(" ", r.WinnerSeats), string.Join(" ", r.WinnerTurnPositions),
+            string.Join(" ", r.WinnerSeats), string.Join(" ", r.WinnerTurnPositions), string.Join(" ", r.WinnerCharacters),
             r.Bankruptcies, r.AuctionsWon, r.AveragePriceToValue.ToString("0.000", CultureInfo.InvariantCulture),
             r.JailVisits, "\"" + (r.Error ?? "").Replace("\"", "'") + "\"");
     }
+}
+
+// Win rate by character (Section 26.3). A character's win rate is its wins divided by the games it played in
+// (a shared win counts as a fraction). The balance target: no more than 5 points above an even share.
+static void AddCharacterReport(List<string> lines, List<GameStats> finished, SimOptions options)
+{
+    var withCharacters = finished.Where(r => r.Characters.Count > 0).ToList();
+    if (withCharacters.Count == 0)
+        return;
+    double even = 1.0 / options.Players;
+    lines.Add($"Win rate by character. Even share would be {even:P1}; the target is no more than 5 points above it:");
+    var content = CityTycoon.Engine.Content.GameContent.Default;
+    foreach (var character in content.Characters)
+    {
+        int played = withCharacters.Count(r => r.Characters.Contains(character.Id));
+        if (played == 0)
+            continue;
+        double wins = withCharacters.Sum(r => r.WinnerCharacters.Contains(character.Id) ? 1.0 / r.WinnerCharacters.Count : 0);
+        double rate = wins / played;
+        string flag = rate > even + 0.05 ? "  <-- over the target" : "";
+        lines.Add($"  {character.Name,-18} {rate,6:P1}  ({wins:0.#} wins in {played} games){flag}");
+    }
+}
+
+// Which color perks the winners owned at the end, compared with everyone who owned them.
+static void AddPerkReport(List<string> lines, List<GameStats> finished, SimOptions options)
+{
+    var content = CityTycoon.Engine.Content.GameContent.Default;
+    lines.Add("Color groups owned whole at the end of the game (holders, and how often a holder was a winner):");
+    foreach (var group in content.Groups.Values)
+    {
+        int holders = finished.Sum(r => r.GroupHolders.GetValueOrDefault(group.Id));
+        int winners = finished.Sum(r => r.GroupWinners.GetValueOrDefault(group.Id));
+        lines.Add($"  {group.Name,-10} {group.Perk.Name,-20} held by {holders,5} players, {(holders == 0 ? 0 : (double)winners / holders):P1} of them won");
+    }
+    lines.Add($"Perks and bonuses per game: {finished.Average(r => r.PerkPayments):0.0} perk payments, "
+        + $"{finished.Average(r => r.ExpressLines):0.00} Express Line jumps, {finished.Average(r => r.HostileTakeovers):0.00} Hostile Takeovers");
 }
 
 static string Summarize(List<GameStats> results, SimOptions options, TimeSpan elapsed)
@@ -96,6 +136,8 @@ static string Summarize(List<GameStats> results, SimOptions options, TimeSpan el
             double wins = finished.Sum(r => r.WinnerTurnPositions.Contains(pos) ? 1.0 / r.WinnerTurnPositions.Count : 0);
             lines.Add($"  Position {pos + 1}: {wins / finished.Count:P1}");
         }
+        AddCharacterReport(lines, finished, options);
+        AddPerkReport(lines, finished, options);
     }
     foreach (var e in errors.Take(10))
         lines.Add($"ERROR in game {e.Game} (seed {e.Seed}): {e.Error}");

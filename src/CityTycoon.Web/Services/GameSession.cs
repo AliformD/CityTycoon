@@ -73,7 +73,7 @@ public sealed class GameSession
 
     public bool IsHuman(int playerId) => Seats.TryGetValue(playerId, out var kind) && kind == SeatKind.Human;
 
-    public void Start(IReadOnlyList<SeatSetup> seats, GameMode mode, int rounds, PrivacyMode privacy, ulong? seed)
+    public void Start(IReadOnlyList<SeatSetup> seats, GameMode mode, int rounds, PrivacyMode privacy, ulong? seed, CharacterMode characters = CharacterMode.None)
     {
         var setup = new GameSetup
         {
@@ -82,6 +82,7 @@ public sealed class GameSession
             MaxRounds = rounds,
             Privacy = privacy,
             Seed = seed,
+            Characters = characters,
         };
         Engine = GameEngine.NewGame(setup, Content);
         Seats = Enumerable.Range(0, seats.Count).ToDictionary(i => i, i => seats[i].Kind);

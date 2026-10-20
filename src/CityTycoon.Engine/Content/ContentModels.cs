@@ -53,7 +53,28 @@ public sealed record GroupsFile(int ContentVersion, IReadOnlyList<GroupDefinitio
 /// <param name="Code">A short text code (like "BR") so the group can be told apart without color.</param>
 public sealed record GroupDefinition(string Id, string Name, string Color, string Code, PerkDefinition Perk);
 
-public sealed record PerkDefinition(string Id, string Name, string Text);
+/// <param name="Modifiers">The rule changes the perk makes (see ModifierTypes.cs). A perk needs at least one.</param>
+public sealed record PerkDefinition(string Id, string Name, string Text, IReadOnlyList<ModifierSpec>? Modifiers = null);
+
+/// <summary>
+/// One rule change, as written in a content file: the "type" names a modifier
+/// class (listed in ModifierTypes.cs), and "value" or "card" are its settings.
+/// For example <c>{ "type": "GoCash", "value": 50 }</c> adds $50 when passing GO.
+/// </summary>
+public sealed record ModifierSpec(string Type, int Value = 0, string? Card = null);
+
+/// <summary>characters.json: the 8 characters (Section 5).</summary>
+public sealed record CharactersFile(int ContentVersion, IReadOnlyList<CharacterDefinition> Characters);
+
+public sealed record CharacterDefinition(string Id, string Name, string Text, IReadOnlyList<ModifierSpec>? Modifiers = null);
+
+/// <summary>bonuses.json: the railroad and utility bonuses (Sections 13.3 and 13.4).</summary>
+public sealed record BonusesFile(int ContentVersion, IReadOnlyList<BonusDefinition> Bonuses);
+
+/// <param name="PropertyType">Which kind of property counts: railroad or utility.</param>
+/// <param name="Count">How many of that kind you need to own (outright and not mortgaged) to switch the bonus on.</param>
+public sealed record BonusDefinition(string Id, string Name, string Text, PropertyType PropertyType, int Count,
+    IReadOnlyList<ModifierSpec>? Modifiers = null);
 
 /// <summary>govtiles.json: the 7 Government tiles (Section 12).</summary>
 public sealed record GovTilesFile(int ContentVersion, int TilesPerGame, IReadOnlyList<GovTileDefinition> Tiles);

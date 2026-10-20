@@ -101,6 +101,25 @@ Tests swap the real dice for `ScriptedDice`, so a test can say "the next roll is
 
 Each seat at the table has an `IPlayerController`: a bot today, a person clicking in the browser from Phase 2, a person on another device later. `GameHost` asks the engine what it's waiting for and passes each question to the right controller. For sealed bids it collects every answer before handing any of them in, so nobody's bid can influence anyone else's.
 
+## Managing money between decisions (Phase 3)
+
+Building, selling, mortgages, loans and trades aren't answers to a question like "roll or pay bail?". They're extra things you may do **while** a question is waiting, and then the same question is asked again. For example, before rolling you might build two houses and take a loan, then roll.
+
+Several different moments allow some of these, so instead of every step repeating the code, each `PendingDecision` carries a `ManagementOptions` value that says which extras are allowed right now:
+
+| Moment | Allowed |
+| --- | --- |
+| Your turn (before rolling, or after moving) | Everything (`OwnTurn`) |
+| In Jail | Everything except building (`InJail`) |
+| Owing more than you have | Sell, mortgage, take loans (`RaiseMoney`) |
+| Bidding in an auction | Take a loan |
+
+`ManagementOptions` is a **flags enum**: each option is one bit, so several can be combined with `|`, like `Mortgage | TakeLoan`, and checked with `HasFlag`.
+
+All the "manage money" actions inherit from one base class, `ManagementAction`. When one arrives, `GameEngine.Submit` hands it to `Rules/ManagementRules.cs` instead of the step on top of the stack. That class checks it against the decision's options and the rules (`BuildingRules`, `MoneyRules`, `TradeRules`), applies it, and then the engine simply asks the same question again with fresh numbers. A trade offer is the one exception: it pushes a `TradeResponseStep` on top of the stack, so the other player answers first and then the proposer's question comes back.
+
+Every rule that can say "no" has a `WhyCant...` method that returns a plain-English reason (or `null` for "yes"). The screen uses the same methods to grey out buttons and explain why, so the screen and the engine can never disagree.
+
 ## The browser app (Phase 2)
 
 The Web project draws the game and passes clicks to the engine. It never changes the game state itself.
@@ -112,6 +131,8 @@ The Web project draws the game and passes clicks to the engine. It never changes
 | `Components/*.razor` | Small reusable pieces of screen (a board space, a property card, the auction panel...). A **component** is a C# class with its own HTML, and Blazor calls these `.razor` files. |
 | `Services/GameSession.cs` | Starts a game, gives each seat a controller, runs the `GameHost` in the background, and tells the pages to redraw when something changes. |
 | `Services/HumanUiController.cs` | The controller for a person. |
+| `Components/PropertyActions.razor` | Build, sell, mortgage and unmortgage buttons for one of your properties (Phase 3). |
+| `Components/TradeBuilder.razor` | The "offer a trade" form (Phase 3). |
 
 ### How a click reaches the engine
 

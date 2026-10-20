@@ -1,13 +1,13 @@
 // CityTycoon.Sim: plays many bot-vs-bot games and writes a balance report.
 //
-// Example:  dotnet run --project src/CityTycoon.Sim -- --games 1000 --players 4
+// Example:  dotnet run --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots easy
 using System.Diagnostics;
 using System.Globalization;
 using CityTycoon.Engine.State;
 using CityTycoon.Sim;
 
 var options = ParseArgs(args);
-Console.WriteLine($"Playing {options.Games} {options.Mode} games with {options.Players} random bots (first seed {options.Seed})...");
+Console.WriteLine($"Playing {options.Games} {options.Mode} games with {options.Players} {options.Bots.ToString().ToLowerInvariant()} bots (first seed {options.Seed})...");
 
 var timer = Stopwatch.StartNew();
 List<GameStats> results = await SimulationRunner.RunAsync(options);
@@ -30,6 +30,7 @@ static SimOptions ParseArgs(string[] args)
     ulong seed = 1;
     GameMode mode = GameMode.Timed;
     string output = "sim-results";
+    BotKind bots = BotKind.Mixed;
     for (int i = 0; i < args.Length - 1; i += 2)
     {
         string value = args[i + 1];
@@ -41,10 +42,11 @@ static SimOptions ParseArgs(string[] args)
             case "--seed": seed = ulong.Parse(value); break;
             case "--mode": mode = Enum.Parse<GameMode>(value, ignoreCase: true); break;
             case "--out": output = value; break;
-            default: throw new ArgumentException($"Unknown option {args[i]}. Options: --games --players --rounds --seed --mode --out");
+            case "--bots": bots = Enum.Parse<BotKind>(value, ignoreCase: true); break;
+            default: throw new ArgumentException($"Unknown option {args[i]}. Options: --games --players --rounds --seed --mode --bots --out");
         }
     }
-    return new SimOptions(games, players, seed, mode, rounds, output);
+    return new SimOptions(games, players, seed, mode, rounds, output, bots);
 }
 
 static IEnumerable<string> ToCsv(List<GameStats> results)
@@ -78,6 +80,9 @@ static string Summarize(List<GameStats> results, SimOptions options, TimeSpan el
         lines.Add($"Bankruptcies per game: {finished.Average(r => r.Bankruptcies):0.00}");
         lines.Add($"Auction price as a share of assessed value: {finished.Where(r => r.AuctionsWon > 0).Average(r => r.AveragePriceToValue):P0}");
         lines.Add($"Jail visits per game: {finished.Average(r => r.JailVisits):0.0}");
+        lines.Add($"Per game: {finished.Average(r => r.BuildingsBuilt):0.0} buildings built, {finished.Average(r => r.Mortgages):0.0} mortgages, "
+            + $"{finished.Average(r => r.LoansTaken):0.0} loans, {finished.Average(r => r.TradesCompleted):0.0} trades, "
+            + $"{finished.Average(r => r.DownPaymentWins):0.0} down-payment wins, {finished.Average(r => r.Forfeits):0.00} forfeits");
         lines.Add("Win rate by turn position (1 = goes first). Even share would be " + (1.0 / options.Players).ToString("P0") + ":");
         for (int pos = 0; pos < options.Players; pos++)
         {

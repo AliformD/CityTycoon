@@ -209,7 +209,8 @@ input, select {
 /* ---------- Side panels ---------- */
 
 .city, .detail, .player-card { background: var(--panel); border: 2px solid var(--line); border-radius: 8px; padding: 0.5rem 0.75rem; }
-.city { display: flex; justify-content: space-between; }
+.city { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 0.5rem; }
+.city .permits, .city details { flex-basis: 100%; }
 .players { display: flex; flex-direction: column; gap: 0.5rem; }
 .player-card { border-width: 3px; }
 .player-card.active { box-shadow: 0 0 0 3px var(--highlight); }
@@ -269,3 +270,41 @@ input, select {
 }
 .loading-progress-text { position: absolute; text-align: center; font-weight: bold; inset: calc(20vh + 3.25rem) 0 auto 0.2rem; }
 .loading-progress-text:after { content: var(--blazor-load-percentage-text, "Loading"); }
+
+/* Phase 3: buildings, money tools, trades. */
+.space .level {
+    position: absolute;
+    right: 1px;
+    top: 1px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0 3px;
+    border-radius: 3px;
+    background: #2a9d47;
+    color: #fff;
+}
+.space .level.level-5 { background: #b00020; }
+.space .level.level-6 { background: #222; }
+
+button.danger { border-color: var(--error); color: var(--error); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.buttons.stacked { flex-direction: column; align-items: stretch; }
+
+.money-tools { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.8rem; }
+.why { display: block; color: var(--muted); font-size: 0.85rem; }
+
+.property-actions { display: grid; gap: 0.4rem; margin: 0.6rem 0; }
+.property-actions .action-row button { width: 100%; text-align: left; }
+
+.pay-choice { border: 1px solid var(--line); border-radius: 6px; margin: 0.5rem 0; }
+.pay-choice label { display: block; margin: 0.2rem 0; }
+
+.trade-builder { border-top: 1px solid var(--line); margin-top: 0.8rem; padding-top: 0.5rem; }
+.trade-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+.trade-sides fieldset { border: 1px solid var(--line); border-radius: 6px; }
+.trade-sides label { display: block; margin: 0.2rem 0; }
+.trade-sides input[type=number] { width: 6rem; }
+.trade-sides h3 { margin: 0.2rem 0; font-size: 1rem; }
+
+.city details { margin-top: 0.3rem; }
+.zoning { margin: 0.3rem 0 0; padding-left: 1.1rem; font-size: 0.9rem; }

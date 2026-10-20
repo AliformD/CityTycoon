@@ -79,11 +79,37 @@ public sealed class RulesConfig
     public required IReadOnlyList<int> UtilityRentMultipliers { get; init; }
     public required int MaxDoublesBeforeJail { get; init; }
 
+    // Section 9 and 10: building levels, zoning and selling.
+    /// <summary>The zoning levels from lowest to highest, with the tallest building each allows.</summary>
+    public required IReadOnlyList<ZoningRule> ZoningLevels { get; init; }
+    public required ZoningLevel StartingZoning { get; init; }
+    /// <summary>How many random districts start one level higher (Commercial) (Section 6, step 8).</summary>
+    public required int StartingCommercialDistricts { get; init; }
+    /// <summary>Building level 5 is a hotel, level 6 a skyscraper (Section 9.1).</summary>
+    public required int HotelLevel { get; init; }
+    public required int SkyscraperLevel { get; init; }
+    /// <summary>Selling a building level gives back this percent of what it cost (Section 9.3).</summary>
+    public required int BuildingSellPercent { get; init; }
+    /// <summary>Discounted building costs are rounded down to a multiple of this (Section 9.4).</summary>
+    public required int BuildDiscountRoundTo { get; init; }
+
+    /// <summary>A limit so a player (or a bot) can't flood others with trade offers in one turn.</summary>
+    public required int MaxTradeProposalsPerTurn { get; init; }
+
+    /// <summary>The tallest building level allowed under a zoning level (Section 10.1).</summary>
+    public int MaxBuildingLevel(ZoningLevel level) =>
+        ZoningLevels.First(z => z.Level == level).MaxBuildingLevel;
+
     /// <summary>Finds the hotel and skyscraper permit supply for a player count (Section 10.3).</summary>
     public PermitSupply PermitsFor(int playerCount) =>
         PermitsByPlayerCount.FirstOrDefault(p => playerCount >= p.MinPlayers && playerCount <= p.MaxPlayers)
         ?? throw new ArgumentOutOfRangeException(nameof(playerCount), $"No permit supply is set for {playerCount} players.");
 }
+
+/// <summary>Zoning levels, lowest first (Section 10.1).</summary>
+public enum ZoningLevel { Restricted, Residential, Commercial, HighRise }
+
+public sealed record ZoningRule(ZoningLevel Level, int MaxBuildingLevel);
 
 /// <summary>One row of the permit table in Section 10.3.</summary>
 public sealed record PermitSupply(int MinPlayers, int MaxPlayers, int HotelPermits, int SkyscraperPermits);

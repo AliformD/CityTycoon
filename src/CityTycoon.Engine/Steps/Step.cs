@@ -21,6 +21,8 @@ namespace CityTycoon.Engine.Steps;
 [JsonDerivedType(typeof(ResolveSpaceStep), nameof(ResolveSpaceStep))]
 [JsonDerivedType(typeof(AuctionStep), nameof(AuctionStep))]
 [JsonDerivedType(typeof(PaymentStep), nameof(PaymentStep))]
+[JsonDerivedType(typeof(TradeResponseStep), nameof(TradeResponseStep))]
+[JsonDerivedType(typeof(DownPaymentDueStep), nameof(DownPaymentDueStep))]
 public abstract class Step
 {
     /// <summary>Called whenever this step is on top of the stack. Do some work, then say what's next.</summary>

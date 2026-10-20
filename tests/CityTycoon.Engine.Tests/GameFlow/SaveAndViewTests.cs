@@ -47,3 +47,29 @@ public class SaveAndViewTests
         Assert.Equal(tile.TileId, game.Engine.GetView(0).Spaces[tile.Index].TileId);
     }
 }
+
+public class Phase3SaveTests
+{
+    [Fact]
+    public void GameState_SurvivesARoundTrip_InTheMiddleOfATrade_WithPendingAndBuiltProperties()
+    {
+        var game = new TestGame();
+        game.Give(0, "mill-street", "cobble-lane");
+        game.Property("mill-street").Level = 1;
+        game.Give(1, "market-street");
+        game.Property("market-street").IsPending = true;
+        game.Property("market-street").PendingBalance = 70;
+        game.Give(1, "baker-street");
+        game.Do(0, new ProposeTrade(new TradeOffer(0, 1, 50, 0, [], ["baker-street"])));
+
+        GameState loaded = GameStateSerializer.FromJson(GameStateSerializer.ToJson(game.State));
+        var resumed = new GameEngine(loaded, GameContent.Default, game.Dice);
+
+        Assert.Equal(DecisionKind.RespondToTrade, resumed.GetPendingDecisions().Single().Kind);
+        Assert.True(resumed.Submit(1, new AcceptTrade()).Accepted);
+        Assert.Equal(0, loaded.Properties["baker-street"].OwnerId);
+        Assert.True(loaded.Properties["market-street"].IsPending);
+        Assert.Equal(1, loaded.Properties["mill-street"].Level);
+        Assert.Equal(loaded.Zoning.Count, game.State.Zoning.Count);
+    }
+}

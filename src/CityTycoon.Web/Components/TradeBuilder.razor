@@ -1,0 +1,79 @@
+@* Build a trade offer (Section 15.9): pick a player, then what you give and what you get.
+   The engine checks the offer before it's sent, and the reason shows if it can't be made. *@
+@{
+    var view = Request.View;
+    int me = Request.PlayerId;
+    var others = view.Players.Where(p => p.Id != me && !p.IsBankrupt).ToList();
+    if (partnerId == null || others.All(p => p.Id != partnerId))
+        partnerId = others.FirstOrDefault()?.Id;
+    var offer = BuildOffer();
+    string? problem = offer == null ? "Choose a player to trade with." : Session.Engine!.WhyIllegal(me, new ProposeTrade(offer));
+}
+<div class="trade-builder">
+    <h3>Offer a trade</h3>
+    <label>
+        Trade with
+        <select @bind="partnerId">
+            @foreach (var p in others) { <option value="@p.Id">@p.Name</option> }
+        </select>
+    </label>
+    @if (partnerId is int them)
+    {
+        <div class="trade-sides">
+            <fieldset>
+                <legend>You give</legend>
+                <label>Cash $<input type="number" min="0" step="10" @bind="giveCash" @bind:event="oninput" /></label>
+                @foreach (var id in Owned(me)) { <label class="check"><input type="checkbox" checked="@give.Contains(id)" @onchange="() => Toggle(give, id)" /> @Label(id)</label> }
+            </fieldset>
+            <fieldset>
+                <legend>You get from @view.Player(them).Name</legend>
+                <label>Cash $<input type="number" min="0" step="10" @bind="getCash" @bind:event="oninput" /></label>
+                @foreach (var id in Owned(them)) { <label class="check"><input type="checkbox" checked="@get.Contains(id)" @onchange="() => Toggle(get, id)" /> @Label(id)</label> }
+            </fieldset>
+        </div>
+    }
+    @if (problem != null) { <p class="why" role="status">@problem</p> }
+    <div class="buttons">
+        <button class="big primary" disabled="@(problem != null)" @onclick="() => OnPropose.InvokeAsync(offer!)">Send offer</button>
+    </div>
+    <p class="hint">Properties with buildings in their group, and pending properties, can't be traded. Whoever receives a mortgaged property pays the bank 10% of its mortgage value.</p>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public HumanRequest Request { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+    [Parameter, EditorRequired] public GameSession Session { get; set; } = default!;
+    [Parameter] public EventCallback<TradeOffer> OnPropose { get; set; }
+
+    private int? partnerId;
+    private int giveCash;
+    private int getCash;
+    private readonly HashSet<string> give = [];
+    private readonly HashSet<string> get = [];
+
+    /// <summary>A player's properties in board order.</summary>
+    private IEnumerable<string> Owned(int playerId) =>
+        Request.View.Spaces.Select(s => s.Id).Where(id => Request.View.Properties.TryGetValue(id, out var p) && p.OwnerId == playerId);
+
+    private string Label(string id)
+    {
+        var p = Request.View.Properties[id];
+        return Content.Property(id).Name + (p.IsMortgaged ? " (mortgaged)" : "") + (p.IsPending ? " (pending)" : "");
+    }
+
+    private static void Toggle(HashSet<string> set, string id)
+    {
+        if (!set.Remove(id))
+            set.Add(id);
+    }
+
+    private TradeOffer? BuildOffer()
+    {
+        if (partnerId is not int them)
+            return null;
+        // Drop ticked properties that no longer belong to the right player (for example after switching partner).
+        var giveList = give.Where(id => Request.View.Properties[id].OwnerId == Request.PlayerId).ToList();
+        var getList = get.Where(id => Request.View.Properties[id].OwnerId == them).ToList();
+        return new TradeOffer(Request.PlayerId, them, Math.Max(0, giveCash), Math.Max(0, getCash), giveList, getList);
+    }
+}

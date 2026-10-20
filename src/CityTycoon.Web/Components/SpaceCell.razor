@@ -9,6 +9,12 @@
     string label = Space.IsHiddenTile ? "Hidden Government tile" : name;
     if (owned?.OwnerId is int ownerForLabel)
         label += $", owned by {View.Player(ownerForLabel).Name}";
+    if (owned is { Level: > 0 })
+        label += $", {EventDescriber.LevelName(owned.Level)}";
+    if (owned?.IsMortgaged == true)
+        label += ", mortgaged";
+    if (owned?.IsPending == true)
+        label += ", pending";
 }
 <button class="space side-@UiHelpers.Side(Space.Index) kind-@Space.Kind.ToString().ToLowerInvariant() @(Highlight ? "highlight" : "")"
         style="grid-column:@col; grid-row:@row;"
@@ -36,8 +42,12 @@
     @if (owned?.OwnerId is int ownerId)
     {
         <span class="owner" style="background:@UiHelpers.PlayerColor(ownerId)">
-            @UiHelpers.Initial(View.Player(ownerId).Name)@(owned.IsMortgaged ? " (M)" : "")
+            @UiHelpers.Initial(View.Player(ownerId).Name)@(owned.IsMortgaged ? " (M)" : "")@(owned.IsPending ? " (P)" : "")
         </span>
+        @if (owned.Level > 0)
+        {
+            <span class="level level-@owned.Level">@UiHelpers.LevelMarker(owned.Level)</span>
+        }
     }
     @if (tokens.Count > 0)
     {

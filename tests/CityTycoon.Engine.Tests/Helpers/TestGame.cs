@@ -84,6 +84,10 @@ public sealed class TestGame
 
     public PendingDecision? DecisionFor(int playerId) =>
         Engine.GetPendingDecisions().FirstOrDefault(d => d.PlayerId == playerId);
+
+    /// <summary>The legal actions that answer the decision itself, without the "manage your money" extras.</summary>
+    public List<GameAction> MainActions(int playerId) =>
+        Engine.GetLegalActions(playerId).Where(a => a is not ManagementAction).ToList();
 }
 
 public static class TestGameExtensions

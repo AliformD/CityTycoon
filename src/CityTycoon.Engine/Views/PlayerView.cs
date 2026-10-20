@@ -21,6 +21,9 @@ public sealed record PlayerView(
     IReadOnlyList<PlayerInfo> Players,
     IReadOnlyList<SpaceInfo> Spaces,
     IReadOnlyDictionary<string, PropertyInfo> Properties,
+    IReadOnlyDictionary<string, ZoningLevel> Zoning,
+    int HotelPermitsLeft,
+    int SkyscraperPermitsLeft,
     PendingDecision? MyDecision,
     IReadOnlyList<int> WaitingOn,
     IReadOnlyList<GameEvent> Log,
@@ -37,7 +40,7 @@ public sealed record PlayerView(
         var players = state.Players.Select(p => new PlayerInfo(
             p.Id, p.Name, p.Cash, p.Position, p.InJail, p.JailTurns, p.IsBankrupt,
             NetWorth.Calculate(state, content, p.Id),
-            p.Id == state.ActivePlayer.Id)).ToList();
+            p.Id == state.ActivePlayer.Id, p.Loans)).ToList();
 
         var spaces = state.Board.Select(s => new SpaceInfo(
             s.Index, s.Id, s.Name, s.Kind, s.DistrictId,
@@ -47,11 +50,12 @@ public sealed record PlayerView(
 
         var properties = state.Properties.Values.ToDictionary(
             p => p.PropertyId,
-            p => new PropertyInfo(p.PropertyId, p.OwnerId, p.Level, p.IsMortgaged));
+            p => new PropertyInfo(p.PropertyId, p.OwnerId, p.Level, p.IsMortgaged, p.IsPending, p.PendingBalance));
 
         return new PlayerView(
             viewerId, state.Round, state.Settings.Mode, state.Settings.MaxRounds, state.ActivePlayer.Id,
             players, spaces, properties,
+            new Dictionary<string, ZoningLevel>(state.Zoning), state.HotelPermits, state.SkyscraperPermits,
             MyDecision: state.Pending.FirstOrDefault(d => d.PlayerId == viewerId),
             WaitingOn: state.Pending.Select(d => d.PlayerId).Distinct().ToList(),
             // Events never contain secrets before they're revealed (sealed bids only appear in BidsRevealed).
@@ -61,10 +65,11 @@ public sealed record PlayerView(
 }
 
 public sealed record PlayerInfo(
-    int Id, string Name, int Cash, int Position, bool InJail, int JailTurns, bool IsBankrupt, int NetWorth, bool IsActive);
+    int Id, string Name, int Cash, int Position, bool InJail, int JailTurns, bool IsBankrupt, int NetWorth, bool IsActive, int Loans);
 
 /// <param name="TileId">For a Government tile, which tile it is, or null while it's hidden from this viewer.</param>
 public sealed record SpaceInfo(
     int Index, string Id, string Name, SpaceKind Kind, string? DistrictId, string? TileId, bool IsHiddenTile);
 
-public sealed record PropertyInfo(string Id, int? OwnerId, int Level, bool IsMortgaged);
+/// <param name="IsPending">Won with a down payment and not fully paid yet (Section 8.5).</param>
+public sealed record PropertyInfo(string Id, int? OwnerId, int Level, bool IsMortgaged, bool IsPending, int PendingBalance);

@@ -30,11 +30,19 @@ public static class Movement
             CollectGo(ctx, player);
     }
 
-    /// <summary>GO effects (Section 15.1). Phase 1 only has the salary.</summary>
+    /// <summary>GO effects (Section 15.1). So far: the salary, then any down-payment balances due.</summary>
     public static void CollectGo(EngineContext ctx, PlayerState player)
     {
         player.Cash += ctx.Rules.GoSalary;
         ctx.Emit(new PassedGo(player.Id, ctx.Rules.GoSalary));
+
+        // Step 6: pending balances are due, paid right after the salary (Section 8.5).
+        // Pushed in reverse board order so the first one on the board is handled first.
+        var pending = ctx.State.Properties.Values
+            .Where(p => p.OwnerId == player.Id && p.IsPending)
+            .OrderByDescending(p => ctx.State.IndexOf(p.PropertyId));
+        foreach (PropertyState p in pending)
+            ctx.Push(new DownPaymentDueStep { PlayerId = player.Id, PropertyId = p.PropertyId });
     }
 
     /// <summary>Sends a player straight to Jail without passing GO (Section 14.1).</summary>

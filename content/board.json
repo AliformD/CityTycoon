@@ -1,0 +1,229 @@
+{
+  "contentVersion": 1,
+  "corners": [
+    {
+      "id": "go",
+      "name": "GO",
+      "kind": "go"
+    },
+    {
+      "id": "jail",
+      "name": "Jail / Just Visiting",
+      "kind": "jail"
+    },
+    {
+      "id": "city-park",
+      "name": "City Park",
+      "kind": "cityPark"
+    },
+    {
+      "id": "go-to-jail",
+      "name": "Go To Jail",
+      "kind": "goToJail"
+    }
+  ],
+  "districts": [
+    {
+      "id": "old-town",
+      "name": "Old Town",
+      "spaces": [
+        {
+          "id": "mill-street",
+          "kind": "property"
+        },
+        {
+          "id": "old-town-event",
+          "name": "Event",
+          "kind": "event"
+        },
+        {
+          "id": "cobble-lane",
+          "kind": "property"
+        },
+        {
+          "id": "income-tax",
+          "name": "Income Tax",
+          "kind": "tax",
+          "tax": "income"
+        },
+        {
+          "id": "old-town-station",
+          "kind": "property"
+        },
+        {
+          "id": "elm-avenue",
+          "kind": "property"
+        },
+        {
+          "id": "old-town-opportunity",
+          "name": "Opportunity",
+          "kind": "opportunity"
+        },
+        {
+          "id": "maple-avenue",
+          "kind": "property"
+        },
+        {
+          "id": "birch-avenue",
+          "kind": "property"
+        },
+        {
+          "id": "hospital",
+          "name": "Hospital",
+          "kind": "landmark",
+          "landmark": "hospital"
+        }
+      ]
+    },
+    {
+      "id": "midtown",
+      "name": "Midtown",
+      "spaces": [
+        {
+          "id": "gallery-row",
+          "kind": "property"
+        },
+        {
+          "id": "city-power-light",
+          "kind": "property"
+        },
+        {
+          "id": "theater-way",
+          "kind": "property"
+        },
+        {
+          "id": "studio-street",
+          "kind": "property"
+        },
+        {
+          "id": "midtown-station",
+          "kind": "property"
+        },
+        {
+          "id": "market-street",
+          "kind": "property"
+        },
+        {
+          "id": "midtown-event",
+          "name": "Event",
+          "kind": "event"
+        },
+        {
+          "id": "baker-street",
+          "kind": "property"
+        },
+        {
+          "id": "fountain-square",
+          "kind": "property"
+        },
+        {
+          "id": "casino",
+          "name": "Casino",
+          "kind": "landmark",
+          "landmark": "casino"
+        }
+      ]
+    },
+    {
+      "id": "harbor",
+      "name": "Harbor",
+      "spaces": [
+        {
+          "id": "pier-road",
+          "kind": "property"
+        },
+        {
+          "id": "harbor-opportunity",
+          "name": "Opportunity",
+          "kind": "opportunity"
+        },
+        {
+          "id": "anchor-street",
+          "kind": "property"
+        },
+        {
+          "id": "lighthouse-lane",
+          "kind": "property"
+        },
+        {
+          "id": "harbor-station",
+          "kind": "property"
+        },
+        {
+          "id": "harbor-boulevard",
+          "kind": "property"
+        },
+        {
+          "id": "wharf-street",
+          "kind": "property"
+        },
+        {
+          "id": "city-water-works",
+          "kind": "property"
+        },
+        {
+          "id": "marina-drive",
+          "kind": "property"
+        },
+        {
+          "id": "mall",
+          "name": "Mall",
+          "kind": "landmark",
+          "landmark": "mall"
+        }
+      ]
+    },
+    {
+      "id": "uptown",
+      "name": "Uptown",
+      "spaces": [
+        {
+          "id": "summit-avenue",
+          "kind": "property"
+        },
+        {
+          "id": "grand-plaza",
+          "kind": "property"
+        },
+        {
+          "id": "uptown-event",
+          "name": "Event",
+          "kind": "event"
+        },
+        {
+          "id": "crown-street",
+          "kind": "property"
+        },
+        {
+          "id": "uptown-station",
+          "kind": "property"
+        },
+        {
+          "id": "uptown-opportunity",
+          "name": "Opportunity",
+          "kind": "opportunity"
+        },
+        {
+          "id": "skyline-drive",
+          "kind": "property"
+        },
+        {
+          "id": "luxury-tax",
+          "name": "Luxury Tax",
+          "kind": "tax",
+          "tax": "luxury"
+        },
+        {
+          "id": "platinum-row",
+          "kind": "property"
+        },
+        {
+          "id": "stadium",
+          "name": "Stadium",
+          "kind": "landmark",
+          "landmark": "stadium"
+        }
+      ]
+    }
+  ]
+}

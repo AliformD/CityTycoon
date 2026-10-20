@@ -22,7 +22,8 @@ public sealed class TileModifier(GameState state, BoardSpace tile, GovTileDefini
 
     public int BuildDiscountPercent(GameState s, string propertyId) => IsNeighbor(propertyId) ? effect.BuildDiscountPercent : 0;
 
-    public bool CanBeTargetedByCards(GameState s, string propertyId) => !(IsNeighbor(propertyId) && effect.ProtectFromCards);
+    public bool CanBeTargetedByCards(GameState s, string propertyId, CardPolarity polarity) =>
+        !(IsNeighbor(propertyId) && effect.ProtectFromCards && polarity == CardPolarity.Negative);
 
     public bool ProtectsFromFire(GameState s, string propertyId) => IsNeighbor(propertyId) && effect.ProtectFromFire;
 }

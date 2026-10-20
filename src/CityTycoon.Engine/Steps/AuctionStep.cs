@@ -144,7 +144,8 @@ public sealed class AuctionStep : Step
         if (owned.OwnerId is not int ownerId || owned.IsPending || owned.IsMortgaged || owned.Level > 0)
             return false;
         // A Police Station next door protects it (Section 12.3).
-        if (!RuleModifiers.CanBeTargetedByCards(ctx.State, ctx.Content, propertyId))
+        // Hostile Bid and Hostile Takeover are both negative: a Police Station blocks them.
+        if (!RuleModifiers.CanBeTargetedByCards(ctx.State, ctx.Content, propertyId, CardPolarity.Negative))
             return false;
         PropertyDefinition def = ctx.Content.Property(propertyId);
         return def.Group == null || !ctx.Content.GroupMembers(def.Group).All(id => ctx.State.Properties[id].IsOwnedOutright(ownerId));

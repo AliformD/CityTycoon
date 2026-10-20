@@ -138,7 +138,7 @@ public class GovernmentTileTests
     }
 
     [Fact]
-    public void PoliceStation_NeighborsCantBeTargetedByCards()
+    public void PoliceStation_BlocksNegativeCards_ButNotHelpfulOnes()
     {
         var game = new TestGame();
         game.Give(1, "maple-avenue", "elm-avenue");
@@ -151,9 +151,21 @@ public class GovernmentTileTests
         game.SetTile("police-station");
         var after = game.Engine.GetLegalActions(0).OfType<PlayCard>().ToList();
         Assert.DoesNotContain(new PlayCard("hostile-bid", TargetSpaceId: "maple-avenue"), after);
-        Assert.DoesNotContain(new PlayCard("grand-opening", TargetSpaceId: "birch-avenue"), after);
+        Assert.Contains(new PlayCard("grand-opening", TargetSpaceId: "birch-avenue"), after); // helpful: allowed
         Assert.Contains(new PlayCard("hostile-bid", TargetSpaceId: "elm-avenue"), after); // not a neighbor
         Assert.False(game.Engine.Submit(0, new PlayCard("hostile-bid", TargetSpaceId: "maple-avenue")).Accepted);
+    }
+
+    [Fact]
+    public void PoliceStation_DoesntStopAHelpfulCardOnAProtectedProperty()
+    {
+        var game = new TestGame();
+        game.SetTile("police-station");
+        game.Give(0, "maple-avenue");
+        game.GiveCard(0, "grand-opening");
+        Assert.Contains(new PlayCard("grand-opening", TargetSpaceId: "maple-avenue"), game.Engine.GetLegalActions(0));
+        game.Do(0, new PlayCard("grand-opening", TargetSpaceId: "maple-avenue"));
+        Assert.Contains(game.State.PropertyBoosts, b => b.PropertyId == "maple-avenue");
     }
 
     [Fact]

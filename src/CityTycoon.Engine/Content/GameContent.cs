@@ -179,6 +179,8 @@ public sealed class GameContent
             if ((card.Timing == CardTiming.Reaction) != (card.Trigger != CardTrigger.None))
                 throw new ContentException($"Card '{card.Id}': reaction cards need a \"trigger\", and only reaction cards have one.");
             effect.Validate(card);
+            if (card.Deck == CardDeck.Opportunity && card.Polarity == null)
+                throw new ContentException($"Opportunity card '{card.Id}' needs a \"polarity\": \"helpful\" or \"negative\".");
         }
         if (Rules.MallPrices.Count == 0)
             throw new ContentException("rules.json mallPrices needs at least one slot.");    }

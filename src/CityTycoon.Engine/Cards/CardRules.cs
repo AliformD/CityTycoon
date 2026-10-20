@@ -136,16 +136,19 @@ public static class CardRules
                 _ => false,
             };
             if (fits)
-                plays.AddRange(effect.Plays(ctx, player, card).Where(p => TargetAllowed(ctx, p)));
+                plays.AddRange(effect.Plays(ctx, player, card).Where(p => TargetAllowed(ctx, card, p)));
         }
         return plays;
     }
 
-    /// <summary>A property next to a revealed Police Station can't be the target of an Opportunity card (Section 12.3).</summary>
-    public static bool TargetAllowed(EngineContext ctx, PlayCard play) =>
+    /// <summary>
+    /// A negative card can't target a property next to a revealed Police Station (Section 12.3).
+    /// Helpful cards, like Grand Opening on your own property, can.
+    /// </summary>
+    public static bool TargetAllowed(EngineContext ctx, CardDefinition card, PlayCard play) =>
         play.TargetSpaceId is not string id
         || !ctx.State.Properties.ContainsKey(id)
-        || RuleModifiers.CanBeTargetedByCards(ctx.State, ctx.Content, id);
+        || RuleModifiers.CanBeTargetedByCards(ctx.State, ctx.Content, id, card.Polarity ?? CardPolarity.Helpful);
 
     /// <summary>Checks a card play is allowed at this moment (number answers like stakes are range-checked).</summary>
     public static bool IsLegalOwnTurnPlay(EngineContext ctx, PlayerState player, DecisionKind moment, PlayCard play)
@@ -161,7 +164,7 @@ public static class CardRules
             DecisionKind.JailChoice => effect.WorksInJail,
             _ => false,
         };
-        return fits && TargetAllowed(ctx, play) && effect.IsLegalPlay(ctx, player, card, play);
+        return fits && TargetAllowed(ctx, card, play) && effect.IsLegalPlay(ctx, player, card, play);
     }
 
     /// <summary>Starts playing a card from a hand: it's discarded now, and its effect runs next.</summary>

@@ -39,6 +39,12 @@ public enum CardTrigger
 /// <summary>What the player picks when playing a card.</summary>
 public enum CardTarget { None, Opponent, OwnProperty, OpponentProperty, HiddenTile, Space }
 
+/// <summary>
+/// Whether an Opportunity card helps the player who plays it, or is played
+/// against someone else. Police Stations only block the negative kind.
+/// </summary>
+public enum CardPolarity { Helpful, Negative }
+
 /// <summary>An opportunity.json or events.json file (Section 21.2). Extra files (like opportunity.expansion1.json) load alongside.</summary>
 public sealed record CardsFile(int ContentVersion, IReadOnlyList<CardDefinition> Cards);
 
@@ -47,6 +53,7 @@ public sealed record CardsFile(int ContentVersion, IReadOnlyList<CardDefinition>
 /// plus its settings, so a new card that reuses an effect type is just a JSON edit.
 /// </summary>
 /// <param name="Copies">How many of this card are in the deck.</param>
+/// <param name="Polarity">Opportunity cards must say whether they're helpful or negative. Event cards leave it out.</param>
 public sealed record CardDefinition(
     string Id,
     CardDeck Deck,
@@ -56,7 +63,8 @@ public sealed record CardDefinition(
     int Copies = 1,
     CardTiming Timing = CardTiming.Immediate,
     CardTrigger Trigger = CardTrigger.None,
-    CardTarget Target = CardTarget.None)
+    CardTarget Target = CardTarget.None,
+    CardPolarity? Polarity = null)
 {
     /// <summary>The effect type's name, like "CollectFromBank".</summary>
     public string EffectType => Effect.TryGetProperty("type", out JsonElement t) ? t.GetString() ?? "" : "";

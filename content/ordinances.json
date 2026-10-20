@@ -1,0 +1,65 @@
+{
+  "contentVersion": 1,
+  // The Ordinance deck for the City Council (Section 11.4). 17 cards in all (see "copies").
+  // "target": "district" means the agenda setter also picks a district.
+  // "duration" is how many rounds a passed ordinance lasts (leave it out for one that happens once).
+  // "lasting": true keeps the ordinance on the table forever (only Historic Preservation).
+  // The "effect" names a small class in src/CityTycoon.Engine/Ordinances (see OrdinanceEffects.cs) plus its settings.
+  "ordinances": [
+    { "id": "rezone-up", "name": "Rezone Up", "copies": 3, "target": "district",
+      "text": "The chosen district goes up one zoning level.",
+      "effect": { "type": "Rezone", "direction": 1 } },
+
+    { "id": "downzone", "name": "Downzone", "copies": 2, "target": "district",
+      "text": "The chosen district goes down one zoning level. Buildings already there stay (grandfathering).",
+      "effect": { "type": "Rezone", "direction": -1 } },
+
+    { "id": "hotel-permit-expansion", "name": "Hotel Permit Expansion", "copies": 1,
+      "text": "Add 4 hotel permits to the supply.",
+      "effect": { "type": "AddPermits", "hotel": 4, "skyscraper": 0 } },
+
+    { "id": "skyscraper-permit-expansion", "name": "Skyscraper Permit Expansion", "copies": 1,
+      "text": "Add 2 skyscraper permits to the supply.",
+      "effect": { "type": "AddPermits", "hotel": 0, "skyscraper": 2 } },
+
+    { "id": "building-moratorium", "name": "Building Moratorium", "copies": 1, "duration": 2,
+      "text": "Nobody can build anywhere for 2 rounds.",
+      "effect": { "type": "BuildingMoratorium" } },
+
+    { "id": "rent-control", "name": "Rent Control", "copies": 1, "target": "district", "duration": 3,
+      "text": "Rents in the chosen district are 25% lower for 3 rounds.",
+      "effect": { "type": "DistrictRent", "percent": -25 } },
+
+    { "id": "tourism-boost", "name": "Tourism Boost", "copies": 1, "target": "district", "duration": 3,
+      "text": "Rents in the chosen district are 25% higher for 3 rounds.",
+      "effect": { "type": "DistrictRent", "percent": 25 } },
+
+    { "id": "transit-investment", "name": "Transit Investment", "copies": 1, "duration": 3,
+      "text": "Railroad rents are 50% higher for 3 rounds.",
+      "effect": { "type": "RailroadRent", "percent": 50 } },
+
+    { "id": "property-tax-hike", "name": "Property Tax Hike", "copies": 1,
+      "text": "Every player pays $10 for each building level they own, right away.",
+      "effect": { "type": "TaxPerLevel", "perLevel": 10 } },
+
+    { "id": "infrastructure-bond", "name": "Infrastructure Bond", "copies": 1,
+      "text": "Every player pays $50. The lowest-zoned district goes up one level (the agenda setter breaks ties).",
+      "effect": { "type": "InfrastructureBond", "amount": 50 } },
+
+    { "id": "stimulus-check", "name": "Stimulus Check", "copies": 1,
+      "text": "Every player collects $100.",
+      "effect": { "type": "CollectFromBank", "amount": 100 } },
+
+    { "id": "historic-preservation", "name": "Historic Preservation", "copies": 1, "target": "district", "lasting": true,
+      "text": "The chosen district's zoning can never change again.",
+      "effect": { "type": "Preserve" } },
+
+    { "id": "casino-regulation", "name": "Casino Regulation", "copies": 1, "duration": 4,
+      "text": "Casino bets and Dice Duel stakes are capped at $200 for 4 rounds.",
+      "effect": { "type": "CasinoCap", "amount": 200 } },
+
+    { "id": "public-works", "name": "Public Works", "copies": 1,
+      "text": "Every hidden Government tile is revealed.",
+      "effect": { "type": "RevealAllTiles" } }
+  ]
+}

@@ -81,11 +81,19 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(TilePeeked), nameof(TilePeeked))]
 [JsonDerivedType(typeof(EventsArranged), nameof(EventsArranged))]
 [JsonDerivedType(typeof(RecoverySkipped), nameof(RecoverySkipped))]
-[JsonDerivedType(typeof(CardNotReadyYet), nameof(CardNotReadyYet))]
 [JsonDerivedType(typeof(OwnerKeptProperty), nameof(OwnerKeptProperty))]
 [JsonDerivedType(typeof(TileRevealed), nameof(TileRevealed))]
 [JsonDerivedType(typeof(TileFeePaid), nameof(TileFeePaid))]
-[JsonDerivedType(typeof(TileNotReadyYet), nameof(TileNotReadyYet))]
+[JsonDerivedType(typeof(CouncilStarted), nameof(CouncilStarted))]
+[JsonDerivedType(typeof(CouncilCancelled), nameof(CouncilCancelled))]
+[JsonDerivedType(typeof(OrdinanceProposed), nameof(OrdinanceProposed))]
+[JsonDerivedType(typeof(CouncilResolved), nameof(CouncilResolved))]
+[JsonDerivedType(typeof(OrdinanceEnded), nameof(OrdinanceEnded))]
+[JsonDerivedType(typeof(ZoningChanged), nameof(ZoningChanged))]
+[JsonDerivedType(typeof(PermitsAdded), nameof(PermitsAdded))]
+[JsonDerivedType(typeof(CouncilPayout), nameof(CouncilPayout))]
+[JsonDerivedType(typeof(CouncilPaymentMade), nameof(CouncilPaymentMade))]
+[JsonDerivedType(typeof(TileRevealedByCouncil), nameof(TileRevealedByCouncil))]
 [JsonDerivedType(typeof(TransitHopped), nameof(TransitHopped))]
 [JsonDerivedType(typeof(TransitRidden), nameof(TransitRidden))]
 [JsonDerivedType(typeof(CharacterChosen), nameof(CharacterChosen))]
@@ -260,9 +268,6 @@ public sealed record EventsArranged(int PlayerId, int Count) : GameEvent;
 /// <summary>Get Out of Jail Free used to skip the 1-die Hospital recovery turn.</summary>
 public sealed record RecoverySkipped(int PlayerId) : GameEvent;
 
-/// <summary>A card whose effect needs a feature from a later phase (like the City Council) did nothing.</summary>
-public sealed record CardNotReadyYet(string CardId) : GameEvent;
-
 /// <summary>A forced auction got no bids, so the owner keeps the property (Section 8.6).</summary>
 public sealed record OwnerKeptProperty(string PropertyId, int OwnerId) : GameEvent;
 
@@ -271,9 +276,6 @@ public sealed record TileRevealed(int PlayerId, string SpaceId, string TileId) :
 
 /// <summary>A tile's landing fee (Police Station ticket, Landfill cleanup, City Hall, Power Plant).</summary>
 public sealed record TileFeePaid(int FromId, int? ToId, int Amount, string TileId) : GameEvent;
-
-/// <summary>A tile effect that needs a feature from a later phase (City Hall's Emergency Council) did nothing.</summary>
-public sealed record TileNotReadyYet(string TileId) : GameEvent;
 
 /// <summary>Instead of paying rent next to a Transit Hub, a player paid the fee and hopped onto the hub.</summary>
 public sealed record TransitHopped(int PlayerId, string PropertyId, int Cost) : GameEvent;
@@ -308,3 +310,41 @@ public sealed record HospitalShrugged(int PlayerId) : GameEvent;
 
 /// <summary>The Mogul's edge won an auction their real bid did not top.</summary>
 public sealed record BidEdgeWon(int PlayerId, string PropertyId, int Bid, int TopBid) : GameEvent;
+
+// ----- City Council (Section 11) -----
+
+/// <summary>A City Council session begins. A Regular one is at the end of every 4th round; an Emergency one comes from City Hall or a card.</summary>
+public sealed record CouncilStarted(bool Emergency, int SetterId) : GameEvent;
+
+/// <summary>A session was called off, for example because no ordinance in the deck could do anything.</summary>
+public sealed record CouncilCancelled(string Reason) : GameEvent;
+
+/// <summary>The agenda setter chose this ordinance (and district, if it needs one) to put to a vote.</summary>
+public sealed record OrdinanceProposed(int SetterId, string OrdinanceId, string? DistrictId) : GameEvent;
+
+/// <summary>One player's revealed vote. <paramref name="Influence"/> is everything they added to their side.</summary>
+public sealed record VoteReveal(int PlayerId, Actions.VoteChoice Choice, int Lobby, bool UsedLobbyist, int Influence);
+
+/// <summary>
+/// The votes are in and the roll is made (Section 11.3). <paramref name="Roll"/> is a number from 0
+/// up to (but not including) Yes + No; the ordinance passes when the roll is below the Yes total.
+/// </summary>
+public sealed record CouncilResolved(string OrdinanceId, string? DistrictId, IReadOnlyList<VoteReveal> Votes,
+    int YesInfluence, int NoInfluence, int Roll, bool Passed) : GameEvent;
+
+/// <summary>A timed ordinance ran out.</summary>
+public sealed record OrdinanceEnded(string OrdinanceId, string? DistrictId) : GameEvent;
+
+/// <summary>A district's zoning level changed.</summary>
+public sealed record ZoningChanged(string DistrictId, Content.ZoningLevel From, Content.ZoningLevel To, string OrdinanceId) : GameEvent;
+
+public sealed record PermitsAdded(int Hotels, int Skyscrapers) : GameEvent;
+
+/// <summary>An ordinance paid a player (Stimulus Check).</summary>
+public sealed record CouncilPayout(int PlayerId, int Amount, string OrdinanceId) : GameEvent;
+
+/// <summary>A player paid the bank because of an ordinance (Property Tax Hike, Infrastructure Bond).</summary>
+public sealed record CouncilPaymentMade(int PlayerId, int Amount, string OrdinanceId) : GameEvent;
+
+/// <summary>Public Works revealed a hidden Government tile.</summary>
+public sealed record TileRevealedByCouncil(string SpaceId, string TileId) : GameEvent;

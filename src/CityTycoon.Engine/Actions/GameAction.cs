@@ -53,6 +53,9 @@ namespace CityTycoon.Engine.Actions;
 [JsonDerivedType(typeof(RerollDice), nameof(RerollDice))]
 [JsonDerivedType(typeof(KeepCard), nameof(KeepCard))]
 [JsonDerivedType(typeof(PeekAtTile), nameof(PeekAtTile))]
+[JsonDerivedType(typeof(ChooseOrdinance), nameof(ChooseOrdinance))]
+[JsonDerivedType(typeof(ChooseDistrict), nameof(ChooseDistrict))]
+[JsonDerivedType(typeof(CastVote), nameof(CastVote))]
 public abstract record GameAction;
 
 /// <summary>Roll the normal 2 dice.</summary>
@@ -164,6 +167,21 @@ public sealed record KeepCard(string CardId) : GameAction;
 /// <summary>Secretly peek at the hidden Government tile on this space (the City Planner).</summary>
 public sealed record PeekAtTile(string SpaceId) : GameAction;
 
+/// <summary>City Council: the agenda setter picks which of the drawn ordinances to put to a vote (Section 11.2).</summary>
+public sealed record ChooseOrdinance(string OrdinanceId) : GameAction;
+
+/// <summary>City Council: pick a district for an ordinance that needs one.</summary>
+public sealed record ChooseDistrict(string DistrictId) : GameAction;
+
+public enum VoteChoice { Yes, No, Abstain }
+
+/// <summary>
+/// City Council: a secret vote (Section 11.3). <paramref name="Lobby"/> is cash you give the bank to add that much
+/// influence to your side. <paramref name="PlayLobbyist"/> plays a Lobbyist card from your hand for 200 more.
+/// Abstaining means no lobbying at all.
+/// </summary>
+public sealed record CastVote(VoteChoice Choice, int Lobby = 0, bool PlayLobbyist = false) : GameAction;
+
 /// <summary>Pick one property (for example which building the Fire! card hits when there's a tie).</summary>
 public sealed record ChooseProperty(string PropertyId) : GameAction;
 
@@ -258,6 +276,9 @@ public enum DecisionKind
     ChooseReroll,
     KeepCard,
     PeekTile,
+    ChooseOrdinance,
+    ChooseDistrict,
+    CouncilVote,
 }
 
 /// <summary>
@@ -282,6 +303,12 @@ public enum DecisionKind
 /// <param name="OpenAuction">True when this is a turn in an open (ascending) auction rather than a secret bid.</param>
 /// <param name="HighBidderId">In an open auction: who holds the highest bid so far (null before the first bid).</param>
 /// <param name="HighBid">In an open auction: the highest bid so far.</param>
+/// <param name="Ordinances">City Council: the ordinance IDs the agenda setter can pick from.</param>
+/// <param name="OrdinanceId">City Council: the ordinance being voted on.</param>
+/// <param name="DistrictId">City Council: the district the ordinance is about, if it has one.</param>
+/// <param name="Districts">City Council: the districts that can be picked.</param>
+/// <param name="MaxLobby">City Council: the most this player can lobby (their cash).</param>
+/// <param name="HasLobbyist">City Council: true if this player holds a Lobbyist card.</param>
 public sealed record PendingDecision(
     int PlayerId,
     DecisionKind Kind,
@@ -302,4 +329,10 @@ public sealed record PendingDecision(
     int Spaces = 0,
     bool OpenAuction = false,
     int? HighBidderId = null,
-    int HighBid = 0);
+    int HighBid = 0,
+    IReadOnlyList<string>? Ordinances = null,
+    string? OrdinanceId = null,
+    string? DistrictId = null,
+    IReadOnlyList<string>? Districts = null,
+    int MaxLobby = 0,
+    bool HasLobbyist = false);

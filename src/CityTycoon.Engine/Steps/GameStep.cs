@@ -1,4 +1,5 @@
 using CityTycoon.Engine.Events;
+using CityTycoon.Engine.Ordinances;
 using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.State;
 
@@ -13,6 +14,9 @@ public sealed class GameStep : Step
 {
     /// <summary>False until the very first turn has been started.</summary>
     public bool Started { get; set; }
+
+    /// <summary>True once this round's end-of-round work (timers, City Council) has been started, so coming back after a Council session doesn't repeat it.</summary>
+    public bool RoundEndHandled { get; set; }
 
     public override StepResult Run(EngineContext ctx)
     {
@@ -39,9 +43,22 @@ public sealed class GameStep : Step
         // Going back to an earlier seat means everyone has had a turn: the round is over.
         if (next <= current)
         {
-            ctx.Emit(new RoundEnded(state.Round));
-            // End-of-round checks (Section 7.2, step 10). Ordinances and the
-            // City Council arrive in Phase 8; the Timed-mode limit is checked now.
+            if (!RoundEndHandled)
+            {
+                RoundEndHandled = true;
+                ctx.Emit(new RoundEnded(state.Round));
+                OrdinanceRules.EndOfRound(ctx);
+
+                // A Regular City Council session at the end of every Nth round (Section 11.1), unless
+                // this is the last round of a Timed game, where nothing would be left for it to change.
+                bool lastRound = state.Settings.Mode == GameMode.Timed && state.Round >= state.Settings.MaxRounds;
+                if (!lastRound && state.Round % ctx.Rules.CouncilEveryNRounds == 0)
+                {
+                    ctx.Push(new CouncilStep());
+                    return StepResult.Continue;
+                }
+            }
+            RoundEndHandled = false;
             if (state.Settings.Mode == GameMode.Timed && state.Round >= state.Settings.MaxRounds)
             {
                 EndGame(ctx, $"The {state.Settings.MaxRounds}-round limit was reached.");

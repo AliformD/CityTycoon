@@ -138,4 +138,12 @@ public interface IRuleModifier
 
     /// <summary>How many hidden Government tiles this player may secretly peek at when the game starts (the City Planner).</summary>
     int StartPeeks(GameState state, int playerId) => 0;
+
+    // ----- City Council ordinances (Section 11.4) -----
+
+    /// <summary>A reason nobody can build on this property right now (Building Moratorium), or null.</summary>
+    string? BuildingBlockedReason(GameState state, string propertyId) => null;
+
+    /// <summary>The most a Casino bet or Dice Duel stake may be (Casino Regulation), or null for no limit.</summary>
+    int? MaxCasinoStake(GameState state) => null;
 }

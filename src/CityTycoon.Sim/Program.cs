@@ -104,6 +104,13 @@ static void AddPerkReport(List<string> lines, List<GameStats> finished, SimOptio
     lines.Add($"Auctions per game: {finished.Average(r => r.SealedAuctions):0.0} sealed, {finished.Average(r => r.OpenAuctions):0.0} open. "
         + $"Sealed auctions with a tied top bid: {(sealedAuctions == 0 ? 0 : (double)finished.Sum(r => r.TiedSealedAuctions) / sealedAuctions):P1}. "
         + $"Sealed auctions the Mogul won on their edge or a tie: {finished.Average(r => r.MogulEdgeWins):0.00} per game.");
+    int sessions = finished.Sum(r => r.CouncilSessions);
+    lines.Add($"City Council per game: {finished.Average(r => r.CouncilSessions):0.0} votes, "
+        + $"{(sessions == 0 ? 0 : (double)finished.Sum(r => r.OrdinancesPassed) / sessions):P0} passed, "
+        + $"${finished.Average(r => r.LobbyingSpent):0} spent lobbying, {finished.Average(r => r.CouncilCancelled):0.00} sessions cancelled.");
+    var passedByOrdinance = finished.SelectMany(r => r.OrdinanceCounts).GroupBy(kv => kv.Key).ToDictionary(g => g.Key, g => g.Sum(kv => kv.Value));
+    foreach (var ordinance in content.Ordinances)
+        lines.Add($"  {ordinance.Name,-28} passed {(double)passedByOrdinance.GetValueOrDefault(ordinance.Id) / finished.Count:0.00} times per game");
     lines.Add($"Dice Duels in all {finished.Count} games: {finished.Sum(r => r.Duels)}.");
 }
 

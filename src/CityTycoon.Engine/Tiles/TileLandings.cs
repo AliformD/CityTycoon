@@ -76,7 +76,7 @@ public sealed class DrawOpportunityLanding : ITileLanding
 
 /// <summary>
 /// City Hall: pay for every building level you own (a hotel is 5 levels),
-/// then an Emergency Council session. The Council arrives in Phase 8.
+/// then an Emergency Council session.
 /// </summary>
 public sealed class PayPerLevelLanding : ITileLanding
 {
@@ -86,8 +86,9 @@ public sealed class PayPerLevelLanding : ITileLanding
     public void Apply(TileLandingContext c)
     {
         int levels = c.State.Properties.Values.Where(p => p.OwnerId == c.Player.Id).Sum(p => p.Level);
+        // The session is pushed first, so the payment (pushed second, on top) is settled before the Council meets.
         if (c.Tile.Flag("emergencySession"))
-            c.Ctx.Emit(new TileNotReadyYet(c.Tile.Id));
+            c.Ctx.Push(new CouncilStep { Emergency = true, TriggeredById = c.Player.Id });
         TileLandings.Charge(c, levels * c.Tile.Int("perLevel"));
     }
 }

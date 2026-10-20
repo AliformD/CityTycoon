@@ -1,0 +1,49 @@
+@* The big moment: all the votes are shown at once, then the roll decides (Section 11.3). *@
+@{
+    int total = Result.YesInfluence + Result.NoInfluence;
+    double yesPercent = total == 0 ? 0 : 100.0 * Result.YesInfluence / total;
+    double rollPercent = total == 0 ? 0 : 100.0 * (Result.Roll + 0.5) / total;
+    var ordinance = Content.Ordinance(Result.OrdinanceId);
+}
+<div class="council-reveal" role="dialog" aria-modal="true" aria-labelledby="reveal-title">
+    <div class="reveal-box">
+        <h2 id="reveal-title">City Council: @ordinance.Name@(Result.DistrictId is string d ? " in " + Content.Board.Districts.First(x => x.Id == d).Name : "")</h2>
+        <p>@ordinance.Text</p>
+
+        <table class="scoreboard votes">
+            <thead><tr><th>Player</th><th>Vote</th><th>Lobbying</th><th>Influence</th></tr></thead>
+            <tbody>
+                @foreach (var vote in Result.Votes)
+                {
+                    <tr>
+                        <td>@View.Player(vote.PlayerId).Name</td>
+                        <td>@(vote.Choice == VoteChoice.Abstain ? "Abstained" : vote.Choice.ToString())@(vote.UsedLobbyist ? " + Lobbyist" : "")</td>
+                        <td>@(vote.Lobby > 0 ? UiHelpers.Money(vote.Lobby) : "")</td>
+                        <td>@(vote.Influence > 0 ? vote.Influence : "")</td>
+                    </tr>
+                }
+                <tr><td colspan="3">Public opinion</td><td>@Content.Rules.PublicOpinionInfluence each side</td></tr>
+            </tbody>
+        </table>
+
+        <p><strong>Yes @Result.YesInfluence</strong> against <strong>No @Result.NoInfluence</strong>: a <strong>@yesPercent.ToString("0.#")%</strong> chance of passing.</p>
+
+        <div class="odds-meter" aria-hidden="true" style="--yes:@(yesPercent.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%; --roll:@(rollPercent.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%">
+            <div class="yes-part">Yes</div>
+            <div class="no-part">No</div>
+            <div class="roll-marker"></div>
+        </div>
+
+        <p class="verdict @(Result.Passed ? "passed" : "failed")" role="status">
+            The roll was @(Result.Roll + 1) out of @total. @(Result.Passed ? "PASSED!" : "FAILED.")
+        </p>
+        <button class="big primary" autofocus @onclick="() => OnClose.InvokeAsync()">Continue</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CouncilResolved Result { get; set; } = default!;
+    [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+    [Parameter] public EventCallback OnClose { get; set; }
+}

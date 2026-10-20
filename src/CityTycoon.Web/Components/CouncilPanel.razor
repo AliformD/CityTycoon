@@ -1,0 +1,167 @@
+@* The City Council questions (Section 11): the agenda setter picks an ordinance and a district, then everyone votes in secret. *@
+@{
+    var decision = Request.Decision;
+    var view = Request.View;
+}
+@if (decision.Kind == DecisionKind.ChooseOrdinance)
+{
+    <div class="decision council">
+        <h2>@view.Me.Name, you set the agenda</h2>
+        <p>@decision.Prompt</p>
+        <div class="cards">
+            @foreach (var id in decision.Ordinances ?? [])
+            {
+                var ordinance = Content.Ordinance(id);
+                <div class="card-view ordinance">
+                    <strong>@ordinance.Name</strong>
+                    <span class="timing">@LastsText(ordinance)</span>
+                    <p>@ordinance.Text</p>
+                    <button class="small primary" @onclick="() => OnAnswer.InvokeAsync(new ChooseOrdinance(id))">Put this to a vote</button>
+                </div>
+            }
+        </div>
+    </div>
+}
+else if (decision.Kind == DecisionKind.ChooseDistrict)
+{
+    <div class="decision council">
+        <h2>@view.Me.Name, pick a district</h2>
+        <p>@decision.Prompt</p>
+        <div class="buttons groups">
+            @foreach (var districtId in decision.Districts ?? [])
+            {
+                var district = Content.Board.Districts.First(d => d.Id == districtId);
+                <button class="group-choice" @onclick="() => OnAnswer.InvokeAsync(new ChooseDistrict(districtId))">
+                    <strong>@district.Name</strong>
+                    <small>Zoned @UiHelpers.ZoningName(view.Zoning[districtId])</small>
+                    <small>@DistrictOwners(districtId)</small>
+                </button>
+            }
+        </div>
+    </div>
+}
+else
+{
+    var ordinance = Content.Ordinance(decision.OrdinanceId!);
+    <div class="decision council vote">
+        <h2>@view.Me.Name, cast your vote</h2>
+        <div class="card-view ordinance">
+            <strong>@ordinance.Name@(decision.DistrictId is string d ? " in " + Content.Board.Districts.First(x => x.Id == d).Name : "")</strong>
+            <span class="timing">@LastsText(ordinance)</span>
+            <p>@ordinance.Text</p>
+        </div>
+        <p class="hint">Your vote and your lobbying money are secret until everyone has voted. Lobbying money goes to the bank, win or lose.</p>
+
+        <fieldset class="vote-choice">
+            <legend>Your vote</legend>
+            @foreach (var option in new[] { VoteChoice.Yes, VoteChoice.No, VoteChoice.Abstain })
+            {
+                var chosen = option;
+                <label class="vote-option @(choice == chosen ? "picked" : "")">
+                    <input type="radio" name="vote" checked="@(choice == chosen)" @onchange="() => Pick(chosen)" />
+                    @(chosen == VoteChoice.Abstain ? "Abstain" : chosen.ToString())
+                </label>
+            }
+        </fieldset>
+
+        @if (choice != VoteChoice.Abstain)
+        {
+            <div class="bid-entry">
+                <label>
+                    Lobby $<input type="number" min="0" max="@decision.MaxLobby" step="1" @bind="lobby" @bind:event="oninput" />
+                </label>
+                <button class="small" @onclick="() => lobby = 0">None</button>
+                <button class="small" @onclick="() => lobby = decision.MaxLobby / 10">10%</button>
+                <button class="small" @onclick="() => lobby = decision.MaxLobby / 2">Half</button>
+            </div>
+            @if (decision.HasLobbyist)
+            {
+                <label class="toggle"><input type="checkbox" @bind="lobbyist" /> Play your Lobbyist card (+@LobbyistAmount influence)</label>
+            }
+        }
+        @if (Problem is string problem)
+        {
+            <p class="error" role="alert">@problem</p>
+        }
+        <p class="hint" aria-live="polite">@Summary</p>
+        <div class="buttons">
+            <button class="big primary" disabled="@(Problem != null)" @onclick="Submit">Lock in my vote</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public HumanRequest Request { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+    [Parameter] public EventCallback<GameAction> OnAnswer { get; set; }
+
+    private VoteChoice choice = VoteChoice.Yes;
+    private int lobby;
+    private bool lobbyist;
+    private HumanRequest? shownFor;
+
+    protected override void OnParametersSet()
+    {
+        // A new question starts fresh.
+        if (!ReferenceEquals(shownFor, Request))
+        {
+            shownFor = Request;
+            choice = VoteChoice.Yes;
+            lobby = 0;
+            lobbyist = false;
+        }
+    }
+
+    private void Pick(VoteChoice option)
+    {
+        choice = option;
+        if (option == VoteChoice.Abstain)
+        {
+            lobby = 0;
+            lobbyist = false;
+        }
+    }
+
+    private int LobbyistAmount => Content.Cards.Values.FirstOrDefault(c => c.EffectType == "AddInfluence")?.Int("amount") ?? 200;
+
+    /// <summary>What one vote is worth to this player (the Politician's is bigger).</summary>
+    private int VoteWorth
+    {
+        get
+        {
+            string? characterId = Request.View.Me.CharacterId;
+            var spec = characterId == null ? null : Content.Character(characterId).Modifiers?.FirstOrDefault(m => m.Type == "VoteInfluence");
+            return Math.Max(Content.Rules.VoteInfluence, spec?.Value ?? 0);
+        }
+    }
+
+    private string? Problem =>
+        lobby < 0 ? "Lobbying can't be negative."
+        : lobby > Request.Decision.MaxLobby ? $"You only have {UiHelpers.Money(Request.Decision.MaxLobby)}."
+        : null;
+
+    private string Summary => choice == VoteChoice.Abstain
+        ? "You sit this one out. You add no influence and can't lobby."
+        : $"You add {VoteWorth + lobby + (lobbyist ? LobbyistAmount : 0)} influence to {choice.ToString().ToUpperInvariant()} " +
+          $"({VoteWorth} vote{(lobby > 0 ? $" + {lobby} lobbying" : "")}{(lobbyist ? $" + {LobbyistAmount} Lobbyist" : "")}). " +
+          $"Public opinion adds {Content.Rules.PublicOpinionInfluence} to each side.";
+
+    private Task Submit() => OnAnswer.InvokeAsync(new CastVote(choice, choice == VoteChoice.Abstain ? 0 : lobby, choice != VoteChoice.Abstain && lobbyist));
+
+    private static string LastsText(OrdinanceDefinition o) =>
+        o.Lasting ? "Lasts forever"
+        : o.Duration is int rounds ? $"Lasts {rounds} rounds"
+        : "Happens once";
+
+    /// <summary>Who owns what in a district, e.g. "You 2, Bo 1, 2 unsold".</summary>
+    private string DistrictOwners(string districtId)
+    {
+        var owners = Request.View.Spaces.Where(s => s.DistrictId == districtId && s.Kind == SpaceKind.Property)
+            .Select(s => Request.View.Properties[s.Id].OwnerId).ToList();
+        var parts = owners.Where(o => o != null).GroupBy(o => o!.Value)
+            .Select(g => $"{(g.Key == Request.PlayerId ? "You" : Request.View.Player(g.Key).Name)} {g.Count()}").ToList();
+        int unsold = owners.Count(o => o == null);
+        if (unsold > 0) parts.Add($"{unsold} unsold");
+        return string.Join(", ", parts);
+    }
+}

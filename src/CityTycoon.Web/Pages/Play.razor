@@ -43,6 +43,13 @@ else
             <section class="city" aria-label="City">
                 <strong>Round @view.Round@(view.Mode == GameMode.Timed ? $" of {view.MaxRounds}" : "")</strong>
                 <span>@(view.Mode == GameMode.Timed ? "Timed game" : "Classic game")</span>
+                <span class="council-next">City Council: next session at the end of round @view.NextCouncilRound</span>
+                @foreach (var active in view.ActiveOrdinances)
+                {
+                    var ordinance = Session.Content.Ordinance(active.OrdinanceId);
+                    <span class="boost">🏛️ @ordinance.Name@(active.DistrictId is string districtId ? $" ({Session.Content.Board.Districts.First(x => x.Id == districtId).Name})" : ""):
+                        @(active.RoundsLeft is int left ? $"{left} round{(left == 1 ? "" : "s")} left" : "permanent")</span>
+                }
                 <span class="permits">Permits left: @view.HotelPermitsLeft hotel, @view.SkyscraperPermitsLeft skyscraper</span>
                 @foreach (var boost in view.StadiumBoosts)
                 {
@@ -69,7 +76,7 @@ else
                         @foreach (var district in Session.Content.Board.Districts)
                         {
                             var zoning = view.Zoning[district.Id];
-                            <li>@district.Name: <strong>@UiHelpers.ZoningName(zoning)</strong> (up to @EventDescriber.LevelName(Session.Content.Rules.MaxBuildingLevel(zoning)))</li>
+                            <li>@district.Name: <strong>@UiHelpers.ZoningName(zoning)</strong> (up to @EventDescriber.LevelName(Session.Content.Rules.MaxBuildingLevel(zoning)))@(view.ActiveOrdinances.Any(a => a.DistrictId == district.Id && Session.Content.Ordinance(a.OrdinanceId).EffectType == "Preserve") ? " 🔒 frozen" : "")</li>
                         }
                     </ul>
                 </details>
@@ -99,6 +106,11 @@ else
             <button class="small" @onclick='() => Nav.NavigateTo("")'>Menu</button>
         </aside>
     </div>
+
+    @if (Session.Reveal is { } reveal)
+    {
+        <CouncilReveal Result="reveal" View="view" Content="Session.Content" OnClose="Session.DismissReveal" />
+    }
 
     @if (Session.ShowPassScreen && request != null)
     {
@@ -160,7 +172,7 @@ else
             SpaceKind.Landmark when space.Id == "hospital" => $"Hospital: visitors may buy an Insured marker for {UiHelpers.Money(Session.Content.Rules.InsuredMarkerCost)}. It cancels your next hospital bill.",
             SpaceKind.Landmark when space.Id == "casino" => "Casino: make one bet. High/Low against the bank, or a Dice Duel against another player.",
             SpaceKind.Landmark when space.Id == "stadium" => "Stadium: pick a color group. Its rent doubles until your next turn.",
-            _ => $"{space.Name}. (This space's effect arrives in a later phase.)",
+            _ => $"{space.Name}. ",
         };
     }
 }

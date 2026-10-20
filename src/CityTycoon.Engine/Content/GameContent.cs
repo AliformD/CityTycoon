@@ -1,5 +1,6 @@
 using CityTycoon.Engine.Cards;
 using CityTycoon.Engine.Modifiers;
+using CityTycoon.Engine.Ordinances;
 using CityTycoon.Engine.Tiles;
 
 namespace CityTycoon.Engine.Content;
@@ -32,13 +33,18 @@ public sealed class GameContent
     /// <summary>Every Opportunity and Event card, keyed by card ID (Section 21.2).</summary>
     public IReadOnlyDictionary<string, CardDefinition> Cards { get; }
 
+    /// <summary>The City Council's Ordinance deck (Section 11.4), in file order.</summary>
+    public IReadOnlyList<OrdinanceDefinition> Ordinances { get; }
+
     private readonly IReadOnlyList<CardsFile> cardFiles;
+    private readonly Dictionary<string, OrdinanceDefinition> ordinancesById;
     private readonly Dictionary<string, GovTileDefinition> govTilesById;
     private readonly Dictionary<string, CharacterDefinition> charactersById;
     private readonly Dictionary<string, int> groupSizes;
 
     public GameContent(RulesConfig rules, BoardDefinition board, PropertiesFile properties, GroupsFile groups, GovTilesFile govTiles,
-        IReadOnlyList<CardsFile>? cards = null, CharactersFile? characters = null, BonusesFile? bonuses = null)
+        IReadOnlyList<CardsFile>? cards = null, CharactersFile? characters = null, BonusesFile? bonuses = null,
+        OrdinancesFile? ordinances = null)
     {
         cardFiles = cards ?? [];
         Cards = ToDictionary(cardFiles.SelectMany(f => f.Cards), c => c.Id, "card");
@@ -53,6 +59,8 @@ public sealed class GameContent
         charactersById = ToDictionary(Characters, c => c.Id, "character");
         Bonuses = bonuses?.Bonuses ?? [];
         ToDictionary(Bonuses, b => b.Id, "bonus");
+        Ordinances = ordinances?.Ordinances ?? [];
+        ordinancesById = ToDictionary(Ordinances, o => o.Id, "ordinance");
         groupSizes = Properties.Values.Where(p => p.Group != null).GroupBy(p => p.Group!).ToDictionary(g => g.Key, g => g.Count());
         Validate();
     }
@@ -65,7 +73,8 @@ public sealed class GameContent
         ContentLoader.Load<GovTilesFile>("govtiles.json"),
         ContentLoader.LoadCardFiles(),
         ContentLoader.Load<CharactersFile>("characters.json"),
-        ContentLoader.Load<BonusesFile>("bonuses.json"));
+        ContentLoader.Load<BonusesFile>("bonuses.json"),
+        ContentLoader.Load<OrdinancesFile>("ordinances.json"));
 
     /// <summary>
     /// A copy of this content with extra card files added, the way an expansion
@@ -78,10 +87,14 @@ public sealed class GameContent
         new GovTilesFile(1, GovTilesPerGame, GovTiles),
         [.. cardFiles, .. extra],
         new CharactersFile(1, Characters),
-        new BonusesFile(1, Bonuses));
+        new BonusesFile(1, Bonuses),
+        new OrdinancesFile(1, Ordinances));
 
     public CardDefinition Card(string id) =>
         Cards.TryGetValue(id, out var c) ? c : throw new KeyNotFoundException($"Unknown card '{id}'.");
+
+    public OrdinanceDefinition Ordinance(string id) =>
+        ordinancesById.TryGetValue(id, out var o) ? o : throw new KeyNotFoundException($"Unknown ordinance '{id}'.");
 
     public PropertyDefinition Property(string id) =>
         Properties.TryGetValue(id, out var p) ? p : throw new KeyNotFoundException($"Unknown property '{id}'.");
@@ -246,6 +259,14 @@ public sealed class GameContent
                 throw new ContentException($"Character '{character.Id}' needs at least one modifier.");
             foreach (ModifierSpec spec in character.Modifiers)
                 ModifierTypes.Validate(spec, $"Character '{character.Id}'", this);
+        }
+        foreach (OrdinanceDefinition ordinance in Ordinances)
+        {
+            if (ordinance.Copies < 1)
+                throw new ContentException($"Ordinance '{ordinance.Id}' needs at least 1 copy.");
+            if (OrdinanceEffects.Find(ordinance.EffectType) is not { } effect)
+                throw new ContentException($"Ordinance '{ordinance.Id}' uses the unknown effect type '{ordinance.EffectType}'.");
+            effect.Validate(ordinance);
         }
         if (Characters.Count > 0 && Characters.Count < Rules.MaxPlayers)
             throw new ContentException($"characters.json needs at least {Rules.MaxPlayers} characters, so every player can have a different one.");

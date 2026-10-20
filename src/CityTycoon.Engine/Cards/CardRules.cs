@@ -20,6 +20,8 @@ public static class CardRules
         state.EventDeck = BuildDeck(content, CardDeck.Event);
         state.Rng.Shuffle(state.OpportunityDeck);
         state.Rng.Shuffle(state.EventDeck);
+        state.OrdinanceDeck = content.Ordinances.SelectMany(o => Enumerable.Repeat(o.Id, o.Copies)).ToList();
+        state.Rng.Shuffle(state.OrdinanceDeck);
         for (int slot = 0; slot < content.Rules.MallPrices.Count && state.OpportunityDeck.Count > 0; slot++)
         {
             state.MallShop.Add(state.OpportunityDeck[0]);

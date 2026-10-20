@@ -57,6 +57,13 @@ public sealed class GameState
     public List<string> EventDeck { get; set; } = [];
     public List<string> EventDiscard { get; set; } = [];
 
+    /// <summary>The Ordinance draw pile for the City Council (Section 11.4). Index 0 is the top card.</summary>
+    public List<string> OrdinanceDeck { get; set; } = [];
+    public List<string> OrdinanceDiscard { get; set; } = [];
+
+    /// <summary>Ordinances that passed and are still in force (Section 11.3, step 7).</summary>
+    public List<ActiveOrdinance> ActiveOrdinances { get; set; } = [];
+
     /// <summary>The Mall shop: face-up Opportunity cards, cheapest slot first (Section 15.3).</summary>
     public List<string> MallShop { get; set; } = [];
 
@@ -177,6 +184,12 @@ public sealed class PlayerState
     /// </summary>
     public int RoadWorkCost { get; set; }
 }
+
+/// <summary>
+/// A passed ordinance that is still in force. <paramref name="RoundsLeft"/> counts down at the end of
+/// each round; null means it never runs out (Historic Preservation).
+/// </summary>
+public sealed record ActiveOrdinance(string OrdinanceId, string? DistrictId, int? RoundsLeft);
 
 /// <summary>A color group with doubled rent until the start of the chooser's next turn (Section 15.3).</summary>
 public sealed record StadiumBoost(string GroupId, int ChosenById);

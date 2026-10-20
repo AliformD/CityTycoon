@@ -69,9 +69,97 @@ public sealed class EasyBot : IPlayerController
             DecisionKind.ChooseReroll => new RerollDice(),
             DecisionKind.KeepCard => new KeepCard(decision.Cards!.MaxBy(CardValue)!),
             DecisionKind.PeekTile => legalActions[rng.NextInt(legalActions.Count)],
+            DecisionKind.ChooseOrdinance => ChooseOrdinance(view, decision),
+            DecisionKind.ChooseDistrict => ChooseDistrict(view, decision),
+            DecisionKind.CouncilVote => Vote(view, decision),
             _ => PlayACard(view, decision, legalActions) ?? ManageMoney(view, decision, legalActions) ?? MainChoice(view, decision, legalActions),
         };
         return Task.FromResult(choice);
+    }
+
+    // ---------------------------------------------------------- City Council
+
+    /// <summary>The agenda setter picks the ordinance that looks best for them. Ties are broken at random.</summary>
+    private GameAction ChooseOrdinance(PlayerView view, PendingDecision decision)
+    {
+        var best = decision.Ordinances!
+            .GroupBy(id => BestBenefit(view, id))
+            .OrderByDescending(g => g.Key).First().ToList();
+        return new ChooseOrdinance(best[rng.NextInt(best.Count)]);
+    }
+
+    private GameAction ChooseDistrict(PlayerView view, PendingDecision decision)
+    {
+        string ordinanceId = decision.OrdinanceId!;
+        var best = decision.Districts!
+            .GroupBy(d => Benefit(view, ordinanceId, d))
+            .OrderByDescending(g => g.Key).First().ToList();
+        return new ChooseDistrict(best[rng.NextInt(best.Count)]);
+    }
+
+    /// <summary>
+    /// Votes for what helps it and against what hurts it, and lobbies a little when it feels strongly and
+    /// has cash to spare. It plays a Lobbyist card whenever it takes a side.
+    /// </summary>
+    private GameAction Vote(PlayerView view, PendingDecision decision)
+    {
+        int benefit = Benefit(view, decision.OrdinanceId!, decision.DistrictId);
+        if (benefit == 0)
+            return new CastVote(VoteChoice.Abstain);
+        int spare = Math.Max(0, view.Me.Cash - SafetyReserve * 2);
+        int lobby = Math.Min(decision.MaxLobby, Math.Min(spare / 6, 40 * Math.Abs(benefit)));
+        return new CastVote(benefit > 0 ? VoteChoice.Yes : VoteChoice.No, lobby, PlayLobbyist: decision.HasLobbyist);
+    }
+
+    private int MyRailroads(PlayerView view) =>
+        view.Properties.Values.Count(p => p.OwnerId == view.ViewerId && content.Property(p.Id).Type == PropertyType.Railroad);
+
+    private int BestBenefit(PlayerView view, string ordinanceId)
+    {
+        OrdinanceDefinition def = content.Ordinance(ordinanceId);
+        if (def.Target != OrdinanceTarget.District)
+            return Benefit(view, ordinanceId, null);
+        return content.Board.Districts.Max(d => Benefit(view, ordinanceId, d.Id));
+    }
+
+    /// <summary>How much an ordinance helps this bot: above 0 helps, below 0 hurts, 0 doesn't matter much.</summary>
+    private int Benefit(PlayerView view, string ordinanceId, string? districtId)
+    {
+        OrdinanceDefinition def = content.Ordinance(ordinanceId);
+        int mineHere = 0, theirsHere = 0;
+        if (districtId != null)
+        {
+            foreach (SpaceInfo space in view.Spaces.Where(s => s.DistrictId == districtId && s.Kind == SpaceKind.Property))
+            {
+                PropertyInfo property = view.Properties[space.Id];
+                int weight = 1 + property.Level;
+                if (property.OwnerId == view.ViewerId)
+                    mineHere += weight;
+                else if (property.OwnerId != null)
+                    theirsHere += weight;
+            }
+        }
+        int mineLevels = view.Properties.Values.Where(p => p.OwnerId == view.ViewerId).Sum(p => p.Level);
+        int othersLevels = view.Properties.Values.Where(p => p.OwnerId != null && p.OwnerId != view.ViewerId).Sum(p => p.Level);
+        int others = Math.Max(1, view.Players.Count(p => !p.IsBankrupt) - 1);
+        int Sign(int mine, int theirs) => mine > theirs ? 1 : mine < theirs ? -1 : 0;
+
+        return def.EffectType switch
+        {
+            "CollectFromBank" => 1,
+            "RevealAllTiles" => 1,
+            "AddPermits" => 1,
+            "Rezone" => def.Int("direction") * Sign(mineHere, theirsHere),
+            "DistrictRent" => Math.Sign(def.Int("percent")) * Sign(mineHere, theirsHere),
+            "Preserve" => Sign(mineHere, theirsHere),
+            "RailroadRent" => Sign(MyRailroads(view) * others, view.Properties.Values.Count(p => p.OwnerId != null && p.OwnerId != view.ViewerId && content.Property(p.Id).Type == PropertyType.Railroad)),
+            // A tax on buildings hurts whoever has built the most.
+            "TaxPerLevel" => Sign(othersLevels, mineLevels * others),
+            "InfrastructureBond" => -1,
+            // A building ban helps whoever hasn't got a full set to build on yet, and hurts builders.
+            "BuildingMoratorium" => mineLevels > 0 || view.Properties.Values.Count(p => p.OwnerId == view.ViewerId) >= 3 ? -1 : 1,
+            _ => 0,
+        };
     }
 
     private GameAction MainChoice(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions) => decision.Kind switch

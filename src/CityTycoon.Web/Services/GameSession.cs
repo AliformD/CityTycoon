@@ -2,6 +2,7 @@ using CityTycoon.AI;
 using CityTycoon.Engine;
 using CityTycoon.Engine.Actions;
 using CityTycoon.Engine.Content;
+using CityTycoon.Engine.Events;
 using CityTycoon.Engine.Hosting;
 using CityTycoon.Engine.State;
 using CityTycoon.Engine.Views;
@@ -39,6 +40,12 @@ public sealed class GameSession
 
     /// <summary>True while the pass-the-device screen should cover everything.</summary>
     public bool ShowPassScreen { get; private set; }
+
+    /// <summary>A City Council result waiting to be shown with the big reveal. The game pauses until someone dismisses it.</summary>
+    public CouncilResolved? Reveal { get; private set; }
+
+    private TaskCompletionSource? revealDismissed;
+    private int logScanned;
 
     /// <summary>Skip the short pause between bot moves.</summary>
     public bool FastBots { get; set; }
@@ -89,6 +96,8 @@ public sealed class GameSession
         humans.Clear();
         autoPassReactions.Clear();
         lastHumanId = -1;
+        logScanned = 0;
+        Reveal = null;
         Request = null;
         ShowPassScreen = false;
         Error = null;
@@ -132,6 +141,7 @@ public sealed class GameSession
                 if (stop.IsCancellationRequested)
                     return;
                 Changed?.Invoke();
+                await ShowCouncilResults(host, stop);
             }
         }
         catch (Exception ex)
@@ -139,6 +149,37 @@ public sealed class GameSession
             Error = ex.Message;
         }
         Request = null;
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// The City Council reveal (Section 11.3): when a vote has just been counted, the game waits until someone
+    /// clicks Continue, so nobody misses the votes or the roll. Games with no humans, or Fast bots, skip the wait.
+    /// </summary>
+    private async Task ShowCouncilResults(GameHost host, CancellationToken stop)
+    {
+        var log = host.Engine.State.Log;
+        for (; logScanned < log.Count; logScanned++)
+        {
+            if (log[logScanned] is not CouncilResolved result)
+                continue;
+            if (FastBots || !Seats.Values.Any(k => k == SeatKind.Human))
+                continue;
+            Reveal = result;
+            revealDismissed = new TaskCompletionSource();
+            Changed?.Invoke();
+            using (stop.Register(() => revealDismissed.TrySetCanceled()))
+            {
+                try { await revealDismissed.Task; }
+                catch (TaskCanceledException) { return; }
+            }
+        }
+    }
+
+    public void DismissReveal()
+    {
+        Reveal = null;
+        revealDismissed?.TrySetResult();
         Changed?.Invoke();
     }
 
@@ -154,9 +195,9 @@ public sealed class GameSession
         Request = request;
         // Hidden mode (Section 25): every question can show the player's secret
         // hand, so cover the screen whenever the device passes to a different
-        // person, and before every sealed bid (open auctions are public, so they need no cover). Not needed with only one human.
+        // person, and before every sealed bid or Council vote (open auctions are public, so they need no cover). Not needed with only one human.
         bool hidden = Engine!.State.Settings.Privacy == PrivacyMode.Hidden;
-        bool isBid = request.Decision.Kind == DecisionKind.SubmitBid && !request.Decision.OpenAuction;
+        bool isBid = (request.Decision.Kind == DecisionKind.SubmitBid && !request.Decision.OpenAuction) || request.Decision.Kind == DecisionKind.CouncilVote;
         bool newPerson = request.PlayerId != lastHumanId;
         bool severalHumans = Seats.Count(s => s.Value == SeatKind.Human) > 1;
         // A trade offer from one person to another means handing the device over too.

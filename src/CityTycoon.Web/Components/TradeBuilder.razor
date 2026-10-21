@@ -36,11 +36,25 @@
                 <legend>You give</legend>
                 <label>Cash $<input type="number" min="0" step="10" @bind="giveCash" @bind:event="oninput" /></label>
                 @foreach (var id in Owned(me)) { <label class="check"><input type="checkbox" checked="@give.Contains(id)" @onchange="() => Toggle(give, id)" /> @Label(id)</label> }
+                @for (int i = 0; i < view.MyHand.Count; i++)
+                {
+                    int card = i; // copy for the lambda below
+                    <label class="check"><input type="checkbox" checked="@giveCards.Contains(card)" @onchange="() => ToggleCard(giveCards, card)" /> @CardLabel(view.MyHand[card])</label>
+                }
             </fieldset>
             <fieldset>
                 <legend>You get from @view.Player(them).Name</legend>
                 <label>Cash $<input type="number" min="0" step="10" @bind="getCash" @bind:event="oninput" /></label>
                 @foreach (var id in Owned(them)) { <label class="check"><input type="checkbox" checked="@get.Contains(id)" @onchange="() => Toggle(get, id)" /> @Label(id)</label> }
+                @for (int i = 0; i < OfferedCards.Count; i++)
+                {
+                    int card = i; // copy for the lambda below
+                    <label class="check"><input type="checkbox" checked="@getCards.Contains(card)" @onchange="() => ToggleCard(getCards, card)" /> @CardLabel(OfferedCards[card])</label>
+                }
+                @if (CounterTo == null && view.Player(them).HandCount > 0)
+                {
+                    <p class="hint">@view.Player(them).Name's cards are secret, so you can't ask for them. They can add cards in a counter-offer.</p>
+                }
             </fieldset>
         </div>
     }
@@ -79,6 +93,13 @@
     private readonly HashSet<string> give = [];
     private readonly HashSet<string> get = [];
 
+    // Cards are picked by their place in the list, because a hand can hold two copies of a card.
+    private readonly HashSet<int> giveCards = [];
+    private readonly HashSet<int> getCards = [];
+
+    /// <summary>The other player's cards you may ask for: only the ones they offered in the trade you're answering.</summary>
+    private IReadOnlyList<string> OfferedCards => CounterTo?.GiveCards ?? [];
+
     protected override void OnParametersSet()
     {
         if (CounterTo == null || ReferenceEquals(CounterTo, filledFrom))
@@ -92,6 +113,17 @@
         give.UnionWith(CounterTo.GetProperties);
         get.Clear();
         get.UnionWith(CounterTo.GiveProperties);
+        // Tick the cards they asked for in your hand (one copy each), and every card they offered.
+        giveCards.Clear();
+        var hand = Request.View.MyHand;
+        foreach (string wanted in CounterTo.GetCards)
+        {
+            int index = Enumerable.Range(0, hand.Count).FirstOrDefault(i => hand[i] == wanted && !giveCards.Contains(i), -1);
+            if (index >= 0)
+                giveCards.Add(index);
+        }
+        getCards.Clear();
+        getCards.UnionWith(Enumerable.Range(0, CounterTo.GiveCards.Count));
     }
 
     /// <summary>A player's properties in board order.</summary>
@@ -102,6 +134,14 @@
     {
         var p = Request.View.Properties[id];
         return Content.Property(id).Name + (p.IsMortgaged ? " (mortgaged)" : "") + (p.IsPending ? " (pending)" : "");
+    }
+
+    private string CardLabel(string cardId) => $"{Content.Card(cardId).Name} card";
+
+    private static void ToggleCard(HashSet<int> set, int index)
+    {
+        if (!set.Remove(index))
+            set.Add(index);
     }
 
     private static void Toggle(HashSet<string> set, string id)
@@ -117,6 +157,11 @@
         // Drop ticked properties that no longer belong to the right player (for example after switching partner).
         var giveList = give.Where(id => Request.View.Properties[id].OwnerId == Request.PlayerId).ToList();
         var getList = get.Where(id => Request.View.Properties[id].OwnerId == them).ToList();
-        return new TradeOffer(Request.PlayerId, them, Math.Max(0, giveCash), Math.Max(0, getCash), giveList, getList);
+        var hand = Request.View.MyHand;
+        return new TradeOffer(Request.PlayerId, them, Math.Max(0, giveCash), Math.Max(0, getCash), giveList, getList)
+        {
+            GiveCards = giveCards.Where(i => i < hand.Count).Order().Select(i => hand[i]).ToList(),
+            GetCards = getCards.Where(i => i < OfferedCards.Count).Order().Select(i => OfferedCards[i]).ToList(),
+        };
     }
 }

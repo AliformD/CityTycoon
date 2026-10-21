@@ -23,7 +23,8 @@ public static class TradeRules
             return "That player isn't in the game.";
         if (offer.GiveCash < 0 || offer.GetCash < 0)
             return "Cash amounts can't be negative.";
-        if (offer.GiveCash == 0 && offer.GetCash == 0 && offer.GiveProperties.Count == 0 && offer.GetProperties.Count == 0)
+        if (offer.GiveCash == 0 && offer.GetCash == 0 && offer.GiveProperties.Count == 0 && offer.GetProperties.Count == 0
+            && offer.GiveCards.Count == 0 && offer.GetCards.Count == 0)
             return "The trade is empty.";
         if (offer.GiveProperties.Concat(offer.GetProperties).Distinct().Count() != offer.GiveProperties.Count + offer.GetProperties.Count)
             return "A property is listed twice.";
@@ -34,6 +35,10 @@ public static class TradeRules
             return $"{from.Name} doesn't have that much cash.";
         if (to.Cash < offer.GetCash)
             return $"{to.Name} doesn't have that much cash.";
+        if (!Holds(from.Hand, offer.GiveCards))
+            return $"{from.Name} doesn't have those cards.";
+        if (!Holds(to.Hand, offer.GetCards))
+            return $"{to.Name} doesn't have those cards.";
 
         foreach (string id in offer.GiveProperties)
         {
@@ -68,14 +73,31 @@ public static class TradeRules
             return "A counter-offer goes back to the player who made the offer.";
         if (IsSameTrade(offer, counter))
             return "That's the same trade. Change something, or just accept it.";
+        if (!Holds(offer.GiveCards, counter.GetCards))
+            return "You can only ask for cards that were offered to you.";
         return WhyInvalid(ctx, counter);
     }
+
+    /// <summary>
+    /// Why a new offer (not a counter) can't ask for cards: the other hand is secret.
+    /// Returns null if it doesn't ask for any.
+    /// </summary>
+    public static string? WhyCantAskForCards(TradeOffer offer) =>
+        offer.GetCards.Count > 0 ? "Other players' cards are secret, so you can't ask for them. They can add cards in a counter-offer." : null;
 
     /// <summary>True if the counter swaps exactly what the offer did (just written from the other side).</summary>
     private static bool IsSameTrade(TradeOffer offer, TradeOffer counter) =>
         offer.GiveCash == counter.GetCash && offer.GetCash == counter.GiveCash
         && offer.GiveProperties.ToHashSet().SetEquals(counter.GetProperties)
-        && offer.GetProperties.ToHashSet().SetEquals(counter.GiveProperties);
+        && offer.GetProperties.ToHashSet().SetEquals(counter.GiveProperties)
+        && SameCards(offer.GiveCards, counter.GetCards) && SameCards(offer.GetCards, counter.GiveCards);
+
+    private static bool SameCards(IReadOnlyList<string> a, IReadOnlyList<string> b) =>
+        a.Order().SequenceEqual(b.Order());
+
+    /// <summary>True if <paramref name="hand"/> holds every card listed (a card listed twice needs two copies).</summary>
+    private static bool Holds(IReadOnlyList<string> hand, IReadOnlyList<string> cards) =>
+        cards.GroupBy(c => c).All(g => hand.Count(h => h == g.Key) >= g.Count());
 
     /// <summary>Only unbuilt, non-pending properties can be traded, and only if the whole group has no buildings.</summary>
     public static string? WhyCantTradeProperty(EngineContext ctx, int ownerId, string propertyId)
@@ -108,6 +130,17 @@ public static class TradeRules
             ctx.State.Properties[id].OwnerId = offer.ToId;
         foreach (string id in offer.GetProperties)
             ctx.State.Properties[id].OwnerId = offer.FromId;
+        // Cards change hands too. The hand limit is checked at the end of each player's own turn, as usual.
+        foreach (string card in offer.GiveCards)
+        {
+            from.Hand.Remove(card);
+            to.Hand.Add(card);
+        }
+        foreach (string card in offer.GetCards)
+        {
+            to.Hand.Remove(card);
+            from.Hand.Add(card);
+        }
         from.Cash -= feesFrom;
         to.Cash -= feesTo;
 

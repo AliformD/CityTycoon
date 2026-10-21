@@ -25,6 +25,18 @@ Hard beats Easy most of the time, and Normal sits in between, as Section 23 want
 - **Hard bots go bankrupt more often** (0.10 per game against 0.01 for Easy). That is the smaller reserve at work and is a trade the bot makes on purpose.
 - **Turn order is fair:** positions 1 to 4 each won between 24% and 27%.
 
+## Trades (2026-10-21)
+Normal and Hard bots now judge a trade that hands over a color group by the rent it should earn (decision #134), and bots answer with counter-offers. 1000 games each, 4 players, Timed, random characters, seed 1:
+
+| Match-up | Before | After |
+| --- | --- | --- |
+| HardVsEasy (Hard seats' win rate) | 64.9% | 64.5% |
+| NormalVsEasy (Normal seats' win rate) | 60.7% | 60.3% |
+| Trades per game | 0.0 | 0.8 |
+| Buildings per game | 13 | 17 |
+
+Win rates moved less than the noise, so the new judgement doesn't make bots worse; it makes groups (and so buildings) happen more often.
+
 ## How to repeat this
 `dotnet run -c Release --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots HardVsEasy --mode timed --characters random --seed 20000 --out <new folder>`
 `--bots` takes `Random`, `Easy`, `Normal`, `Hard`, `Mixed`, `NormalVsEasy`, `HardVsEasy` or `HardVsNormal`. The report prints the match-up result for the two-kind modes.

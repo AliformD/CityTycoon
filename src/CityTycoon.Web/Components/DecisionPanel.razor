@@ -38,8 +38,8 @@ else if (decision.Kind == DecisionKind.RespondToTrade && decision.Trade is { } o
     <div class="decision trade-offer">
         <h2>@view.Me.Name, @view.Player(offer.FromId).Name @(decision.CountersLeft < Content.Rules.MaxTradeCounters ? "sent you a counter-offer" : "offers you a trade")</h2>
         <div class="trade-sides">
-            <div><h3>You get</h3>@TradeSide(offer.GiveCash, offer.GiveProperties)</div>
-            <div><h3>You give</h3>@TradeSide(offer.GetCash, offer.GetProperties)</div>
+            <div><h3>You get</h3>@TradeSide(offer.GiveCash, offer.GiveProperties, offer.GiveCards)</div>
+            <div><h3>You give</h3>@TradeSide(offer.GetCash, offer.GetProperties, offer.GetCards)</div>
         </div>
         @if (showCounter)
         {
@@ -356,12 +356,13 @@ else
 
     private bool showTrade;
 
-    private RenderFragment TradeSide(int cash, IReadOnlyList<string> properties) => __builder =>
+    private RenderFragment TradeSide(int cash, IReadOnlyList<string> properties, IReadOnlyList<string> cards) => __builder =>
     {
         <ul>
             @if (cash > 0) { <li>@UiHelpers.Money(cash) cash</li> }
             @foreach (var id in properties) { <li>@Content.Property(id).Name@(Request.View.Properties[id].IsMortgaged ? " (mortgaged)" : "")</li> }
-            @if (cash == 0 && properties.Count == 0) { <li>Nothing</li> }
+            @foreach (var id in cards) { <li>@Content.Card(id).Name card <span class="hint">(@Content.Card(id).Text)</span></li> }
+            @if (cash == 0 && properties.Count == 0 && cards.Count == 0) { <li>Nothing</li> }
         </ul>
     };
 

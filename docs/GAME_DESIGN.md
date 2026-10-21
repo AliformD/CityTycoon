@@ -730,6 +730,7 @@ When a deck runs out, shuffle its discard pile to make a new deck. Cards held in
 - **Can't be traded:** pending properties, loans, Insured markers, and buildings.
 - A mortgaged property transfers still mortgaged. The receiver pays the bank 10% of the mortgage value right away.
 - The player asked can accept, decline, or send back a **counter-offer** with different terms. A trade can have up to 3 counter-offers, then it must be accepted or declined.
+- Opportunity cards: you can offer your own. Other hands are secret, so you can only ask for cards the other player offered first (in a counter-offer).
 
 ### 15.10 Bankruptcy
 

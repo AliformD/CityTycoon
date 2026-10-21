@@ -222,6 +222,7 @@ public sealed record ProposeTrade(TradeOffer Offer) : ManagementAction;
 
 /// <summary>
 /// A trade offer (Section 15.9): what the proposer gives and what they want back.
+/// Cards are Opportunity card IDs from the players' hands.
 /// </summary>
 public sealed record TradeOffer(
     int FromId,
@@ -229,7 +230,21 @@ public sealed record TradeOffer(
     int GiveCash,
     int GetCash,
     IReadOnlyList<string> GiveProperties,
-    IReadOnlyList<string> GetProperties);
+    IReadOnlyList<string> GetProperties)
+{
+    /// <summary>Opportunity cards the proposer gives.</summary>
+    public IReadOnlyList<string> GiveCards { get; init; } = [];
+
+    /// <summary>
+    /// Opportunity cards the proposer wants back. Hands are secret, so this can only
+    /// hold cards the other player offered first (in the trade a counter answers).
+    /// </summary>
+    public IReadOnlyList<string> GetCards { get; init; } = [];
+
+    /// <summary>The same trade, written from the other player's side.</summary>
+    public TradeOffer Reversed() =>
+        new(ToId, FromId, GetCash, GiveCash, GetProperties, GiveProperties) { GiveCards = GetCards, GetCards = GiveCards };
+}
 
 /// <summary>
 /// Which management actions a decision allows. [Flags] means several can be

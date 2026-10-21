@@ -45,7 +45,7 @@ public class MoneyAndTradeBotTests
     }
 
     [Fact]
-    public async Task EasyBot_DeclinesATradeThatCompletesSomeoneElsesGroup()
+    public async Task EasyBot_WantsMore_ForAPieceThatCompletesSomeoneElsesGroup()
     {
         var engine = NewGame();
         engine.State.Properties["mill-street"].OwnerId = 0;
@@ -56,7 +56,8 @@ public class MoneyAndTradeBotTests
         var decision = engine.GetPendingDecisions().Single();
         var choice = await new EasyBot(1).DecideAsync(engine.GetView(1), decision, engine.GetLegalActions(1));
 
-        Assert.Equal(new DeclineTrade(), choice);
+        // $70 for a $60 property is not enough when it finishes Brown for them: it asks for more.
+        Assert.True(Assert.IsType<CounterTrade>(choice).Offer.GetCash > 70);
     }
 
     [Fact]
@@ -88,7 +89,7 @@ public class MoneyAndTradeBotTests
 
         var choice = await new EasyBot(1).DecideAsync(engine.GetView(1), decision, [new AcceptTrade(), new DeclineTrade()]);
 
-        Assert.Equal(new DeclineTrade(), choice);
+        Assert.IsType<DeclineTrade>(choice);
     }
 
     [Fact]

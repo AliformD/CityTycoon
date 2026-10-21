@@ -19,8 +19,8 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
 {
     protected virtual double WorthScale => 1.0;
 
-    /// <summary>Normal and Hard bots judge a color group in a trade by the rent it can earn (see EasyBot.Trades.cs).</summary>
-    protected override bool JudgesGroupsCarefully => true;
+    /// <summary>Normal and Hard bots are less cautious than Easy about handing over a color group in a trade.</summary>
+    protected override double SetCaution => 1.0;
 
     /// <summary>1 early in a Timed game, fading to 0.5 in the last few rounds, when a set no longer has time to pay off.</summary>
     protected static double TimeLeftFactor(PlayerView view) =>

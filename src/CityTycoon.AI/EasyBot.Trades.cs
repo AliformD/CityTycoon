@@ -1,5 +1,6 @@
 using CityTycoon.Engine.Actions;
 using CityTycoon.Engine.Content;
+using CityTycoon.Engine.Events;
 using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.State;
 using CityTycoon.Engine.Steps;
@@ -15,19 +16,18 @@ namespace CityTycoon.AI;
 public partial class EasyBot
 {
     /// <summary>
-    /// False for the Easy bot: a color group it hands over or gets counts as half
-    /// the group's value, and it never counters a trade that hands someone a group.
-    /// True for Normal and Hard: a group is worth the rent it can earn before the
-    /// game ends, given the owner's cash to build, time left, and ordinances.
+    /// Every bot judges a color group in a trade by the rent it can earn before the game
+    /// ends (see <see cref="GroupEarnings"/>). This scales what handing a group to someone
+    /// else costs the bot: the Easy bot is extra cautious (1.5), Normal and Hard use 1.
     /// </summary>
-    protected virtual bool JudgesGroupsCarefully => false;
+    protected virtual double SetCaution => 1.25;
 
     /// <summary>How many rounds ahead the bot looks when it guesses what a color group will earn.</summary>
     private const int GroupHorizon = 10;
 
     /// <summary>
     /// Finds a color group where it owns every property but one, and offers
-    /// cash for the missing one: 150% of assessed value, or (careful bots) more
+    /// cash for the missing one: 150% of assessed value, or more
     /// when the group would pay off well, as long as it still comes out ahead.
     /// </summary>
     private TradeOffer? SetCompletingTrade(PlayerView view)
@@ -50,11 +50,15 @@ public partial class EasyBot
 
             int assessed = content.Property(target.Id).AssessedValue;
             int price = (int)(assessed * 1.5) / 10 * 10;
-            if (JudgesGroupsCarefully)
+            // A share of what the group should earn, so the owner has a reason to sell.
+            double earns = GroupEarnings(view, myId, group, view.Me.Cash - price);
+            price = Math.Max(price, (int)(assessed + earns * 0.35) / 10 * 10);
+            // Don't pester: wait a few rounds after an offer for this property, then only offer more than last time.
+            if (LastOffer(view, ownerId, target.Id) is (int round, int lastPrice))
             {
-                // A share of what the group should earn, so the owner has a reason to sell.
-                double earns = GroupEarnings(view, myId, group, view.Me.Cash - price);
-                price = Math.Max(price, (int)(assessed + earns * 0.35) / 10 * 10);
+                if (view.Round - round < RepeatOfferRounds)
+                    continue;
+                price = Math.Max(price, (int)Math.Ceiling(lastPrice * 1.15 / 10) * 10);
             }
             if (view.Me.Cash - price < Reserve(view))
                 continue;
@@ -66,6 +70,28 @@ public partial class EasyBot
         return null;
     }
 
+    /// <summary>After offering for a property, the bot waits this many rounds before offering for it again.</summary>
+    private const int RepeatOfferRounds = 3;
+
+    /// <summary>
+    /// The round and cash of this bot's last offer to that player for that property,
+    /// read from the game log (so it is the same after loading a save), or null if it never offered.
+    /// If the trade had happened the bot would own the property, so any offer found didn't work out.
+    /// </summary>
+    private static (int Round, int Price)? LastOffer(PlayerView view, int ownerId, string propertyId)
+    {
+        (int, int)? last = null;
+        int round = 0;
+        foreach (var e in view.Log)
+        {
+            if (e is TurnStarted t)
+                round = t.Round;
+            else if (e is TradeProposed { Offer: var o } && o.FromId == view.ViewerId && o.ToId == ownerId && o.GetProperties.Contains(propertyId))
+                last = (round, o.GiveCash);
+        }
+        return last;
+    }
+
     /// <summary>Accepts when the trade leaves it better off and it keeps some cash back.</summary>
     private bool IsGoodForMe(PlayerView view, TradeOffer offer) =>
         view.Me.Cash - offer.GetCash >= Reserve(view) / 2 && Gain(view, offer) > 0;
@@ -74,56 +100,114 @@ public partial class EasyBot
     /// How much better off the bot would be, in dollars, if it accepted this offer.
     /// The offer is written from the proposer's side; this bot is the receiver.
     /// </summary>
-    private double Gain(PlayerView view, TradeOffer offer)
+    private double Gain(PlayerView view, TradeOffer offer) => Sums(view, offer).Gain;
+
+    /// <summary>
+    /// The parts of <see cref="Gain"/>, kept apart so the bot can explain itself:
+    /// cash, properties and cards at face value, what color groups it would complete
+    /// (or break up) are worth to it, and what the groups the other player completes
+    /// would cost it. The names are the groups' names, for the explanation.
+    /// </summary>
+    private sealed record TradeSums(double Basic, double Mine, double Theirs, string? MyGroup, string? TheirGroup)
+    {
+        public double Gain => Basic + Mine - Theirs;
+    }
+
+    private TradeSums Sums(PlayerView view, TradeOffer offer)
     {
         int me = view.ViewerId;
         int them = offer.FromId;
-        double gain = offer.GiveCash - offer.GetCash
+        double basic = offer.GiveCash - offer.GetCash
             + offer.GiveProperties.Sum(id => Value(view, id))
             - offer.GetProperties.Sum(id => Value(view, id))
             + offer.GiveCards.Sum(id => CardWorth(view, id))
             - offer.GetCards.Sum(id => CardWorth(view, id));
-
-        if (!JudgesGroupsCarefully)
-        {
-            gain += GroupBonus(view, me, add: offer.GiveProperties, remove: offer.GetProperties);
-            gain -= GroupBonus(view, them, add: offer.GetProperties, remove: offer.GiveProperties);
-            return gain;
-        }
+        string? myGroup = CompletedGroup(view, me, add: offer.GiveProperties, remove: offer.GetProperties);
+        string? theirGroup = CompletedGroup(view, them, add: offer.GetProperties, remove: offer.GiveProperties);
 
         int myCashAfter = view.Me.Cash + offer.GiveCash - offer.GetCash;
         int theirCashAfter = view.Player(them).Cash - offer.GiveCash + offer.GetCash;
-        gain += GroupChange(view, me, add: offer.GiveProperties, remove: offer.GetProperties, myCashAfter);
         // What they earn from a new group is mostly what the bot (and the others) pay them,
         // and it matters more when they are already ahead.
-        gain -= GroupChange(view, them, add: offer.GetProperties, remove: offer.GiveProperties, theirCashAfter) * LeaderFactor(view, them);
-        return gain;
+        return new TradeSums(basic,
+            GroupChange(view, me, add: offer.GiveProperties, remove: offer.GetProperties, myCashAfter),
+            GroupChange(view, them, add: offer.GetProperties, remove: offer.GiveProperties, theirCashAfter) * LeaderFactor(view, them) * SetCaution,
+            myGroup, theirGroup);
     }
 
-    /// <summary>Accept a good offer. Otherwise send back terms it would take, if it can and counters are left, or decline.</summary>
+    /// <summary>The name of a color group this trade would complete for the player, or null.</summary>
+    private string? CompletedGroup(PlayerView view, int playerId, IReadOnlyList<string> add, IReadOnlyList<string> remove)
+    {
+        bool Owns(string id) => add.Contains(id) || (view.Properties[id].OwnerId == playerId && !view.Properties[id].IsPending && !remove.Contains(id));
+        return add.Select(id => content.Property(id).Group).OfType<string>().Distinct()
+            .Where(group => content.GroupMembers(group).All(Owns))
+            .Select(group => content.Groups[group].Name).FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Accept a good offer. Otherwise send back terms it would take, if it can and counters are left,
+    /// or decline. Either way it says why in a short sentence, so the person knows what to change.
+    /// </summary>
     private GameAction RespondToTrade(PlayerView view, PendingDecision decision)
     {
         TradeOffer offer = decision.Trade!;
         if (IsGoodForMe(view, offer))
             return new AcceptTrade();
-        if (decision.CountersLeft > 0 && CounterOffer(view, offer) is TradeOffer counter)
-            return new CounterTrade(counter);
-        return new DeclineTrade();
+
+        string problem = WhatsWrong(view, offer);
+        if (decision.CountersLeft == 0)
+            return new DeclineTrade($"{problem} We're out of counter-offers on this trade.");
+        var (counter, whyNot) = CounterOffer(view, offer);
+        if (counter != null)
+            return new CounterTrade(counter, $"{problem} Here's what I'd take.");
+        return new DeclineTrade($"{problem} {whyNot}");
     }
 
-    /// <summary>
-    /// A counter-offer the bot would accept itself: the same properties and cards,
-    /// with the cash moved so it comes out ahead by a small margin. It uses the same
-    /// sums as accepting, so countering never makes a bad trade easier to get.
-    /// The Easy bot doesn't counter a trade that would hand the other player a whole
-    /// color group: it just declines. Returns null when no counter makes sense.
-    /// </summary>
-    private TradeOffer? CounterOffer(PlayerView view, TradeOffer offer)
+    /// <summary>One or two plain sentences on why the bot won't take this offer as it is.</summary>
+    private string WhatsWrong(PlayerView view, TradeOffer offer)
     {
-        int me = view.ViewerId;
+        if (view.Me.Cash - offer.GetCash < Reserve(view) / 2)
+            return $"I can't pay ${offer.GetCash} and still keep enough cash for rent.";
+        TradeSums sums = Sums(view, offer);
+        int short_ = Math.Max(10, (int)Math.Ceiling(-sums.Gain / 10) * 10);
+        string text = $"By my sums I'd be about ${short_} worse off.";
+        if (sums.TheirGroup != null && sums.Theirs >= 10)
+            text += $" It gives you the whole {sums.TheirGroup} set, which I think costs me about ${Round10(sums.Theirs)}.";
+        if (sums.MyGroup != null && sums.Mine >= 10)
+            text += $" Finishing {sums.MyGroup} is worth about ${Round10(sums.Mine)} to me.";
+        return text;
+    }
+
+    private static int Round10(double dollars) => (int)Math.Round(dollars / 10) * 10;
+
+    /// <summary>
+    /// A counter-offer the bot would accept itself, with the cash moved so it comes out
+    /// ahead by a small margin. It uses the same sums as accepting, so countering never
+    /// makes a bad trade easier to get. First it keeps the properties and cards as they
+    /// are; if that can't work (for example the bot can't afford it), it tries again
+    /// without the properties the other player asked it for.
+    /// Returns the counter, or null and the reason why not.
+    /// </summary>
+    private (TradeOffer? Counter, string WhyNot) CounterOffer(PlayerView view, TradeOffer offer)
+    {
+        var (counter, whyNot) = CashCounter(view, offer);
+        if (counter == null && offer.GetProperties.Count > 0 && offer.GiveProperties.Count > 0)
+        {
+            // Keep what it was offered, but don't hand over the properties it was asked for.
+            var (smaller, _) = CashCounter(view, offer with { GetProperties = [] }, shareSurplus: true);
+            if (smaller != null)
+                return (smaller, "");
+        }
+        return (counter, whyNot);
+    }
+
+    /// <param name="shareSurplus">
+    /// When the trade is already good for the bot (it dropped what it was asked for),
+    /// offer half of what it would gain as cash, so the counter is a fair deal and not "give me it for nothing".
+    /// </param>
+    private (TradeOffer? Counter, string WhyNot) CashCounter(PlayerView view, TradeOffer offer, bool shareSurplus = false)
+    {
         int them = offer.FromId;
-        if (!JudgesGroupsCarefully && GroupBonus(view, them, add: offer.GetProperties, remove: offer.GiveProperties) > 0)
-            return null;
 
         // The margin: 5% of everything changing hands, at least $10, so the bot doesn't counter for a break-even trade.
         double traded = offer.GiveCash + offer.GetCash
@@ -137,6 +221,13 @@ public partial class EasyBot
         for (int attempt = 0; attempt < 4; attempt++)
         {
             int needed = (int)Math.Ceiling((margin - Gain(view, counter.Reversed())) / 10) * 10;
+            if (needed < 0 && shareSurplus && attempt == 0)
+            {
+                int extra = Math.Min(-needed / 2, view.Me.Cash - counter.GiveCash - Reserve(view)) / 10 * 10;
+                if (extra > 0)
+                    counter = counter with { GiveCash = counter.GiveCash + extra };
+                continue;
+            }
             if (needed <= 0)
                 break;
             int cut = Math.Min(counter.GiveCash, needed);
@@ -145,15 +236,16 @@ public partial class EasyBot
 
         // Cash for cash is pointless: there must be a property or a card in it.
         if (counter.GiveProperties.Count + counter.GetProperties.Count + counter.GiveCards.Count + counter.GetCards.Count == 0)
-            return null;
+            return (null, "I only want to trade if a property or a card changes hands.");
         // Both sides must be able to afford it, including the bank's fee on mortgaged properties.
-        if (view.Player(them).Cash < counter.GetCash + MortgageFees(view, counter.GiveProperties)
-            || view.Me.Cash - counter.GiveCash + counter.GetCash - MortgageFees(view, counter.GetProperties) < Reserve(view) / 2
+        if (view.Player(them).Cash < counter.GetCash + MortgageFees(view, counter.GiveProperties))
+            return (null, $"I'd need about ${counter.GetCash} from you, and you don't have that much cash.");
+        if (view.Me.Cash - counter.GiveCash + counter.GetCash - MortgageFees(view, counter.GetProperties) < Reserve(view) / 2
             || !IsGoodForMe(view, counter.Reversed()))
         {
-            return null;
+            return (null, "I can't find a price that works for both of us right now.");
         }
-        return counter;
+        return (counter, "");
     }
 
     private int MortgageFees(PlayerView view, IEnumerable<string> propertyIds) =>
@@ -166,21 +258,7 @@ public partial class EasyBot
         return view.Properties[id].IsMortgaged ? assessed / 2.0 : assessed;
     }
 
-    /// <summary>Half the group's value, for each color group this trade would complete for the player (the Easy bot's rule).</summary>
-    private double GroupBonus(PlayerView view, int playerId, IReadOnlyList<string> add, IReadOnlyList<string> remove)
-    {
-        bool Owns(string id) => add.Contains(id) || (view.Properties[id].OwnerId == playerId && !remove.Contains(id));
-        double bonus = 0;
-        foreach (string group in add.Select(id => content.Property(id).Group).OfType<string>().Distinct())
-        {
-            var members = content.GroupMembers(group).ToList();
-            if (members.All(Owns))
-                bonus += members.Sum(id => content.Property(id).AssessedValue) / 2.0;
-        }
-        return bonus;
-    }
-
-    // ----- Careful bots: what a color group is really worth -----
+    // ----- What a color group is really worth -----
 
     /// <summary>
     /// What the player would earn from groups this trade completes for them, minus

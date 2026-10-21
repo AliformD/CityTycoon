@@ -83,15 +83,16 @@ public sealed record PlaceBid(int Amount, bool DownPayment = false) : GameAction
 /// <summary>Say yes to a trade someone offered you.</summary>
 public sealed record AcceptTrade : GameAction;
 
-/// <summary>Say no to a trade someone offered you.</summary>
-public sealed record DeclineTrade : GameAction;
+/// <summary>Say no to a trade someone offered you. Bots add a short <paramref name="Why"/> for the log.</summary>
+public sealed record DeclineTrade(string? Why = null) : GameAction;
 
 /// <summary>
 /// Say no to a trade, but send back different terms instead. The counter is
 /// written from the side of the player sending it (they are its FromId), and
 /// goes to whoever made the offer they are answering.
 /// </summary>
-public sealed record CounterTrade(TradeOffer Offer) : GameAction;
+/// <param name="Why">A short reason for the other player (bots fill it in), or null.</param>
+public sealed record CounterTrade(TradeOffer Offer, string? Why = null) : GameAction;
 
 /// <summary>Give up a pending property instead of paying its balance (Section 8.5).</summary>
 public sealed record ForfeitProperty : GameAction;

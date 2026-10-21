@@ -173,10 +173,12 @@ public sealed record TradeProposed(Actions.TradeOffer Offer) : GameEvent;
 /// <param name="FromFees">The part of the fees the player who offered paid. <paramref name="ToFees"/> is the other player's part.
 /// Both are 0 in saves from before this was recorded.</param>
 public sealed record TradeCompleted(Actions.TradeOffer Offer, int MortgageFees, int FromFees = 0, int ToFees = 0) : GameEvent;
-public sealed record TradeDeclined(Actions.TradeOffer Offer, string Reason) : GameEvent;
+/// <param name="Reason">"declined", or why the trade couldn't happen when it was accepted.</param>
+/// <param name="Why">What the player who declined said about it (bots explain themselves), or null.</param>
+public sealed record TradeDeclined(Actions.TradeOffer Offer, string Reason, string? Why = null) : GameEvent;
 
 /// <summary>Someone answered a trade offer with different terms. <paramref name="Counter"/> is written from their side.</summary>
-public sealed record TradeCountered(Actions.TradeOffer Offer, Actions.TradeOffer Counter) : GameEvent;
+public sealed record TradeCountered(Actions.TradeOffer Offer, Actions.TradeOffer Counter, string? Why = null) : GameEvent;
 
 /// <summary>A player owes more cash than they have and must raise money first.</summary>
 public sealed record RaisingMoney(int PlayerId, int AmountOwed) : GameEvent;

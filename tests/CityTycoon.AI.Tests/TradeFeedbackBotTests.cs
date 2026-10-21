@@ -36,9 +36,9 @@ public class TradeFeedbackBotTests
         engine.State.Properties["fountain-square"].OwnerId = 0;
         var offer = new TradeOffer(0, 1, 300, 0, [], ["market-street"]);
 
-        var decline = Assert.IsType<DeclineTrade>(await Answer(new EasyBot(1), engine, offer));
-        Assert.Contains("Orange", decline.Why);
-        Assert.Contains("whole set", decline.Why);
+        var decline = Assert.IsType<DeclineTrade>(await Answer(new EasyBot(1), engine, offer, countersLeft: 0));
+        Assert.Contains("worse off", decline.Why);
+        Assert.Contains("whole Orange set", decline.Why);
     }
 
     [Fact]

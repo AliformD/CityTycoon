@@ -37,6 +37,8 @@ Normal and Hard bots now judge a trade that hands over a color group by the rent
 
 Win rates moved less than the noise, so the new judgement doesn't make bots worse; it makes groups (and so buildings) happen more often.
 
+Later the same day Easy bots got the same sums with a 1.25 caution (decision #139): HardVsEasy 65.8%, NormalVsEasy 59.1%, bot-to-bot trades about 0.1 per game (the old Easy rule had been selling sets too cheaply).
+
 ## Blocking a monopoly (2026-10-21)
 Every bot now bids extra to stop one opponent finishing a color group, and Easy bots value finishing their own group (decision #135). Measured on top of the trades change above, 1000 games each, 4 players, Timed, random characters, seed 1:
 

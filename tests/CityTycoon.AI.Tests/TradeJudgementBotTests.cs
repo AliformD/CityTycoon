@@ -71,10 +71,12 @@ public class TradeJudgementBotTests
     }
 
     [Fact]
-    public async Task EasyBot_StillUsesTheSimpleRule_AndWontCounterAGroupSale()
+    public async Task EasyBot_UsesTheSameSums_ButAsksMoreForASetThanHard()
     {
         var engine = OrangeAlmostDone(personCash: 1500);
-        Assert.IsType<DeclineTrade>(await Answer(new EasyBot(1), engine, ThreeHundredForMarket, countersLeft: 2));
+        var easy = Assert.IsType<CounterTrade>(await Answer(new EasyBot(1), engine, ThreeHundredForMarket, countersLeft: 2)).Offer;
+        var hard = Assert.IsType<CounterTrade>(await Answer(new HardBot(1), engine, ThreeHundredForMarket, countersLeft: 2)).Offer;
+        Assert.True(easy.GetCash > hard.GetCash);
     }
 
     [Fact]

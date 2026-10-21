@@ -16,19 +16,18 @@ namespace CityTycoon.AI;
 public partial class EasyBot
 {
     /// <summary>
-    /// False for the Easy bot: a color group it hands over or gets counts as half
-    /// the group's value, and it never counters a trade that hands someone a group.
-    /// True for Normal and Hard: a group is worth the rent it can earn before the
-    /// game ends, given the owner's cash to build, time left, and ordinances.
+    /// Every bot judges a color group in a trade by the rent it can earn before the game
+    /// ends (see <see cref="GroupEarnings"/>). This scales what handing a group to someone
+    /// else costs the bot: the Easy bot is extra cautious (1.5), Normal and Hard use 1.
     /// </summary>
-    protected virtual bool JudgesGroupsCarefully => false;
+    protected virtual double SetCaution => 1.25;
 
     /// <summary>How many rounds ahead the bot looks when it guesses what a color group will earn.</summary>
     private const int GroupHorizon = 10;
 
     /// <summary>
     /// Finds a color group where it owns every property but one, and offers
-    /// cash for the missing one: 150% of assessed value, or (careful bots) more
+    /// cash for the missing one: 150% of assessed value, or more
     /// when the group would pay off well, as long as it still comes out ahead.
     /// </summary>
     private TradeOffer? SetCompletingTrade(PlayerView view)
@@ -51,12 +50,9 @@ public partial class EasyBot
 
             int assessed = content.Property(target.Id).AssessedValue;
             int price = (int)(assessed * 1.5) / 10 * 10;
-            if (JudgesGroupsCarefully)
-            {
-                // A share of what the group should earn, so the owner has a reason to sell.
-                double earns = GroupEarnings(view, myId, group, view.Me.Cash - price);
-                price = Math.Max(price, (int)(assessed + earns * 0.35) / 10 * 10);
-            }
+            // A share of what the group should earn, so the owner has a reason to sell.
+            double earns = GroupEarnings(view, myId, group, view.Me.Cash - price);
+            price = Math.Max(price, (int)(assessed + earns * 0.35) / 10 * 10);
             // Don't pester: wait a few rounds after an offer for this property, then only offer more than last time.
             if (LastOffer(view, ownerId, target.Id) is (int round, int lastPrice))
             {
@@ -129,21 +125,13 @@ public partial class EasyBot
         string? myGroup = CompletedGroup(view, me, add: offer.GiveProperties, remove: offer.GetProperties);
         string? theirGroup = CompletedGroup(view, them, add: offer.GetProperties, remove: offer.GiveProperties);
 
-        if (!JudgesGroupsCarefully)
-        {
-            return new TradeSums(basic,
-                GroupBonus(view, me, add: offer.GiveProperties, remove: offer.GetProperties),
-                GroupBonus(view, them, add: offer.GetProperties, remove: offer.GiveProperties),
-                myGroup, theirGroup);
-        }
-
         int myCashAfter = view.Me.Cash + offer.GiveCash - offer.GetCash;
         int theirCashAfter = view.Player(them).Cash - offer.GiveCash + offer.GetCash;
         // What they earn from a new group is mostly what the bot (and the others) pay them,
         // and it matters more when they are already ahead.
         return new TradeSums(basic,
             GroupChange(view, me, add: offer.GiveProperties, remove: offer.GetProperties, myCashAfter),
-            GroupChange(view, them, add: offer.GetProperties, remove: offer.GiveProperties, theirCashAfter) * LeaderFactor(view, them),
+            GroupChange(view, them, add: offer.GetProperties, remove: offer.GiveProperties, theirCashAfter) * LeaderFactor(view, them) * SetCaution,
             myGroup, theirGroup);
     }
 
@@ -198,13 +186,11 @@ public partial class EasyBot
     /// makes a bad trade easier to get. First it keeps the properties and cards as they
     /// are; if that can't work (for example the bot can't afford it), it tries again
     /// without the properties the other player asked it for.
-    /// The Easy bot never hands the other player a whole color group in a counter
-    /// (it only tries the version without it). Returns the counter, or null and the reason why not.
+    /// Returns the counter, or null and the reason why not.
     /// </summary>
     private (TradeOffer? Counter, string WhyNot) CounterOffer(PlayerView view, TradeOffer offer)
     {
-        bool givesASet = !JudgesGroupsCarefully && GroupBonus(view, offer.FromId, add: offer.GetProperties, remove: offer.GiveProperties) > 0;
-        var (counter, whyNot) = givesASet ? (null, "I don't sell anyone a whole set.") : CashCounter(view, offer);
+        var (counter, whyNot) = CashCounter(view, offer);
         if (counter == null && offer.GetProperties.Count > 0 && offer.GiveProperties.Count > 0)
         {
             // Keep what it was offered, but don't hand over the properties it was asked for.
@@ -272,21 +258,7 @@ public partial class EasyBot
         return view.Properties[id].IsMortgaged ? assessed / 2.0 : assessed;
     }
 
-    /// <summary>Half the group's value, for each color group this trade would complete for the player (the Easy bot's rule).</summary>
-    private double GroupBonus(PlayerView view, int playerId, IReadOnlyList<string> add, IReadOnlyList<string> remove)
-    {
-        bool Owns(string id) => add.Contains(id) || (view.Properties[id].OwnerId == playerId && !remove.Contains(id));
-        double bonus = 0;
-        foreach (string group in add.Select(id => content.Property(id).Group).OfType<string>().Distinct())
-        {
-            var members = content.GroupMembers(group).ToList();
-            if (members.All(Owns))
-                bonus += members.Sum(id => content.Property(id).AssessedValue) / 2.0;
-        }
-        return bonus;
-    }
-
-    // ----- Careful bots: what a color group is really worth -----
+    // ----- What a color group is really worth -----
 
     /// <summary>
     /// What the player would earn from groups this trade completes for them, minus

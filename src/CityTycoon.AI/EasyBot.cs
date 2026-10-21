@@ -261,9 +261,83 @@ public class EasyBot : IPlayerController
         return new PassBid();
     }
 
-    /// <summary>The most this bot thinks the property is worth to it.</summary>
-    protected virtual double PropertyWorth(PlayerView view, PendingDecision decision) =>
-        content.Property(decision.PropertyId!).AssessedValue * MaxPriceRatio;
+    /// <summary>
+    /// The most this bot thinks the property is worth to it: its own price, plus a bonus when it finishes
+    /// the bot's color group (a little more than a blocker adds, so blockers raise the price without stopping
+    /// every set), or extra to stop an opponent finishing theirs.
+    /// </summary>
+    protected virtual double PropertyWorth(PlayerView view, PendingDecision decision)
+    {
+        string id = decision.PropertyId!;
+        double worth = content.Property(id).AssessedValue * MaxPriceRatio;
+        if (CompletesAGroup(view, id))
+            worth += GroupValue(id) * CompleteShare;
+        return WithBlocking(view, id, worth);
+    }
+
+    /// <summary>The share of a color group's value an Easy bot adds to win the last piece of its own group.</summary>
+    private const double CompleteShare = 0.15;
+
+    /// <summary>The assessed values of every property in this property's color group, added up.</summary>
+    protected double GroupValue(string propertyId) =>
+        content.GroupMembers(content.Property(propertyId).Group!).Sum(id => content.Property(id).AssessedValue);
+
+    // ----- Blocking: don't hand an opponent a color group (docs/DECISIONS.md #135) -----
+
+    /// <summary>
+    /// The share of a color group's value a bot adds to its bid to stop one opponent finishing the group.
+    /// Blocking helps the whole table more than the blocker, so bigger shares lost games in the Sim (docs/BALANCE.md).
+    /// </summary>
+    protected const double BlockShare = 0.1;
+
+    /// <summary>Blocking never takes a bid past this many times the assessed value, so a human can't bait a bot into any price.</summary>
+    protected const double MaxBlockRatio = 1.5;
+
+    /// <summary>
+    /// The opponent who would finish a color group by winning this property: they own every
+    /// other property in its group (paid off or still pending). Null if there is no such opponent.
+    /// </summary>
+    protected int? RivalCompleting(PlayerView view, string propertyId)
+    {
+        string? group = content.Property(propertyId).Group;
+        if (group == null)
+            return null;
+        var owners = content.GroupMembers(group).Where(id => id != propertyId)
+            .Select(id => view.Properties[id].OwnerId).Distinct().ToList();
+        return owners is [int owner] && owner != view.ViewerId ? owner : null;
+    }
+
+    /// <summary>
+    /// Roughly the most this player could pay for a property, from what everyone can see: cash,
+    /// what they could mortgage or sell, and loans they could still take, less what they already owe.
+    /// A down-payment winner who can't raise the rest by GO loses the property, so this is their real limit.
+    /// </summary>
+    protected int MostTheyCouldPay(PlayerView view, int playerId)
+    {
+        PlayerInfo player = view.Players.First(p => p.Id == playerId);
+        int total = player.Cash + Math.Max(0, player.MaxLoans - player.Loans) * content.Rules.LoanAmount;
+        foreach (PropertyInfo owned in view.Properties.Values.Where(p => p.OwnerId == playerId))
+        {
+            PropertyDefinition def = content.Property(owned.Id);
+            total += BuildingRules.SellAllValue(content, def, owned.Level) - owned.PendingBalance;
+            if (!owned.IsMortgaged && !owned.IsPending)
+                total += NetWorth.MortgageValue(content, def);
+        }
+        return total;
+    }
+
+    /// <summary>
+    /// A bot's price for a property, raised to stop an opponent finishing its color group: by a share
+    /// of the group's value, but no higher than that opponent could really pay (one step over is enough
+    /// to beat them) and never past <see cref="MaxBlockRatio"/> times the assessed value.
+    /// </summary>
+    protected double WithBlocking(PlayerView view, string propertyId, double worth)
+    {
+        if (RivalCompleting(view, propertyId) is not int rival)
+            return worth;
+        double cap = Math.Min(content.Property(propertyId).AssessedValue * MaxBlockRatio, MostTheyCouldPay(view, rival) + content.Rules.BidIncrement);
+        return Math.Max(worth, Math.Min(worth + GroupValue(propertyId) * BlockShare, cap));
+    }
 
     /// <summary>What to put in a sealed bid, given the most it is willing to pay.</summary>
     protected virtual int SealedAmount(PlayerView view, PendingDecision decision, int limit, int inc) =>

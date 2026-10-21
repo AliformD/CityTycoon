@@ -6,18 +6,13 @@ namespace CityTycoon.AI;
 /// <summary>
 /// The Hard bot (Section 23.2): the Normal bot, plus:
 /// it keeps a cash reserve sized to the biggest rent or tax in the next 12 spaces, it bids a little more
-/// for properties, it bids extra to stop an opponent finishing a color group, it only lobbies on votes
+/// for properties (including when it blocks an opponent's color group, which every bot does a little), it only lobbies on votes
 /// that matter, and it spends a Nudge token more readily to dodge a big rent or land somewhere good.
 ///
 /// The numbers below came from Sim runs of Hard against Normal (see docs/BALANCE.md).
 /// </summary>
 public sealed class HardBot(ulong seed, GameContent? content = null) : NormalBot(seed, content, 103)
 {
-    protected override bool BlocksOpponents => true;
-
-    /// <summary>A small extra bonus for blocking: bigger blocking bids tested worse in the Sim.</summary>
-    protected override double BlockShare => 0.1;
-
     /// <summary>Hard bots value property higher than Normal bots do, so they win more auctions. Tested: 1.2 beat 1.0, 1.4 did worse.</summary>
     protected override double WorthScale => 1.2;
 

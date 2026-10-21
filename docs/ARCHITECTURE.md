@@ -246,6 +246,7 @@ On one shared screen, the board and log are drawn from a **spectator view**: the
 
 - `EasyBot` answers every kind of decision. `NormalBot` and `HardBot` inherit from it and override a few `virtual` methods: `Reserve`, `PropertyWorth`, `SealedAmount`, `PickBuild`, `Vote`, `NudgeThreshold`.
 - The estimates (set bonus, blocking, vote impact) use only the bot's `PlayerView`.
+- Blocking lives in `EasyBot` (`WithBlocking`, `RivalCompleting`, `MostTheyCouldPay`), so every level bids a little extra to stop one opponent finishing a color group (decision #135).
 - The Sim has mixed-table modes so one kind of bot can be measured against another. Results are written up in `docs/BALANCE.md`.
 
 ## Replaying moves so they are easy to follow (Web)

@@ -632,6 +632,7 @@ html[data-reduce-motion="true"] * { animation: none !important; transition: none
 .trade-sides label { display: block; margin: 0.25rem 0; }
 .trade-sides input[type=number] { width: 6rem; }
 .trade-sides h3 { margin: 0.2rem 0; font-size: 1.05rem; }
+.trade-offer .buttons + .hint { margin-top: 0.5rem; }
 
 /* Where a Nudge or Precision Roll would land. Dashed outline for every choice, solid for the one you are pointing at. */
 .space.preview { box-shadow: 0 0 0 3px var(--primary); outline: 2px dashed var(--primary); outline-offset: -5px; z-index: 1; }

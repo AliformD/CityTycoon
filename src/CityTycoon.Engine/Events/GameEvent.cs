@@ -41,6 +41,7 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(TradeProposed), nameof(TradeProposed))]
 [JsonDerivedType(typeof(TradeCompleted), nameof(TradeCompleted))]
 [JsonDerivedType(typeof(TradeDeclined), nameof(TradeDeclined))]
+[JsonDerivedType(typeof(TradeCountered), nameof(TradeCountered))]
 [JsonDerivedType(typeof(RaisingMoney), nameof(RaisingMoney))]
 [JsonDerivedType(typeof(MomentumGained), nameof(MomentumGained))]
 [JsonDerivedType(typeof(PrecisionRolled), nameof(PrecisionRolled))]
@@ -173,6 +174,9 @@ public sealed record TradeProposed(Actions.TradeOffer Offer) : GameEvent;
 /// Both are 0 in saves from before this was recorded.</param>
 public sealed record TradeCompleted(Actions.TradeOffer Offer, int MortgageFees, int FromFees = 0, int ToFees = 0) : GameEvent;
 public sealed record TradeDeclined(Actions.TradeOffer Offer, string Reason) : GameEvent;
+
+/// <summary>Someone answered a trade offer with different terms. <paramref name="Counter"/> is written from their side.</summary>
+public sealed record TradeCountered(Actions.TradeOffer Offer, Actions.TradeOffer Counter) : GameEvent;
 
 /// <summary>A player owes more cash than they have and must raise money first.</summary>
 public sealed record RaisingMoney(int PlayerId, int AmountOwed) : GameEvent;

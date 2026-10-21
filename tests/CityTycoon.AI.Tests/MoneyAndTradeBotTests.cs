@@ -60,6 +60,84 @@ public class MoneyAndTradeBotTests
     }
 
     [Fact]
+    public async Task EasyBot_CountersALowOffer_WithOneItWouldTakeItself()
+    {
+        var engine = NewGame();
+        engine.State.Properties["market-street"].OwnerId = 1; // assessed $180
+        Assert.True(engine.Submit(0, new ProposeTrade(new TradeOffer(0, 1, 50, 0, [], ["market-street"]))).Accepted);
+
+        var decision = engine.GetPendingDecisions().Single();
+        var choice = await new EasyBot(1).DecideAsync(engine.GetView(1), decision, engine.GetLegalActions(1));
+
+        // It asks for more than the property is worth to it, and the engine takes the counter.
+        var counter = Assert.IsType<CounterTrade>(choice).Offer;
+        Assert.Equal((1, 0), (counter.FromId, counter.ToId));
+        Assert.Equal(["market-street"], counter.GiveProperties);
+        Assert.True(counter.GetCash > 180);
+        Assert.True(engine.Submit(1, choice).Accepted);
+        Assert.Equal(0, engine.GetPendingDecisions().Single().PlayerId);
+    }
+
+    [Fact]
+    public async Task EasyBot_Declines_WhenNoCountersAreLeft()
+    {
+        var engine = NewGame();
+        engine.State.Properties["market-street"].OwnerId = 1;
+        var offer = new TradeOffer(0, 1, 50, 0, [], ["market-street"]);
+        var decision = new PendingDecision(1, DecisionKind.RespondToTrade, "", Trade: offer, CountersLeft: 0);
+
+        var choice = await new EasyBot(1).DecideAsync(engine.GetView(1), decision, [new AcceptTrade(), new DeclineTrade()]);
+
+        Assert.Equal(new DeclineTrade(), choice);
+    }
+
+    [Fact]
+    public async Task EasyBot_HagglesOverItsOwnOffer_AndAcceptsAFairCounter()
+    {
+        var engine = NewGame();
+        // The bot owns half of Brown and wants the other half.
+        engine.State.Properties["mill-street"].OwnerId = 1;
+        engine.State.Properties["cobble-lane"].OwnerId = 0;
+        // The bot offered for Cobble Lane; the person counters asking far too much.
+        var bot = new EasyBot(1);
+        var tooMuch = new TradeOffer(0, 1, 0, 400, ["cobble-lane"], []);
+        var decision = new PendingDecision(1, DecisionKind.RespondToTrade, "", Trade: tooMuch, CountersLeft: 2);
+        var legal = new GameAction[] { new AcceptTrade(), new DeclineTrade() };
+
+        // $400 for a $60 property is too much, so it offers less instead.
+        var counter = Assert.IsType<CounterTrade>(await bot.DecideAsync(engine.GetView(1), decision, legal)).Offer;
+        Assert.Equal(["cobble-lane"], counter.GetProperties);
+        Assert.InRange(counter.GiveCash, 61, 399);
+
+        // A price just under what it offered is accepted.
+        var fair = new TradeOffer(0, 1, 0, counter.GiveCash - 10, ["cobble-lane"], []);
+        var answer = await bot.DecideAsync(engine.GetView(1), decision with { Trade = fair, CountersLeft = 0 }, legal);
+        Assert.Equal(new AcceptTrade(), answer);
+    }
+
+    [Fact]
+    public async Task APersonCanCounterABotsOffer_ThroughTheGameHost()
+    {
+        var engine = NewGame();
+        engine.State.Properties["market-street"].OwnerId = 0;
+        // The person asks too much for their property, the bot counters, then the person asks less and the bot accepts.
+        var host = new GameHost(engine, new Dictionary<int, IPlayerController>
+        {
+            [0] = new ScriptedController(new ProposeTrade(new TradeOffer(0, 1, 0, 400, ["market-street"], [])), new CounterTrade(new TradeOffer(0, 1, 0, 170, ["market-street"], []))),
+            [1] = new EasyBot(1),
+        });
+
+        await host.StepAsync(); // the person offers $400
+        await host.StepAsync(); // the bot counters with less
+        Assert.Equal(0, engine.GetPendingDecisions().Single().PlayerId);
+        await host.StepAsync(); // the person counters at $170, less than it's worth
+        await host.StepAsync(); // the bot accepts
+
+        Assert.Equal(1, engine.State.Properties["market-street"].OwnerId);
+        Assert.Equal(1500 + 170, engine.State.Player(0).Cash);
+    }
+
+    [Fact]
     public async Task EasyBot_RaisesMoney_ByMortgagingBeforeSellingOrBorrowing()
     {
         var engine = NewGame();

@@ -133,8 +133,8 @@ public static class GameHistory
                 case TradeCompleted t:
                 {
                     var o = t.Offer;
-                    string give = EventDescriber.DescribeTrade(o, Space);
-                    string get = EventDescriber.DescribeTrade(o with { GiveCash = o.GetCash, GetCash = o.GiveCash, GiveProperties = o.GetProperties, GetProperties = o.GiveProperties }, Space);
+                    string give = EventDescriber.DescribeTrade(o, Space, Card);
+                    string get = EventDescriber.DescribeTrade(o.Reversed(), Space, Card);
                     int net = o.GetCash - o.GiveCash;
                     Add(o.FromId, net, MoneyKind.Trade, $"Trade with {Name(o.ToId)}: {give}", o.ToId);
                     Add(o.ToId, -net, MoneyKind.Trade, $"Trade with {Name(o.FromId)}: {get}", o.FromId);

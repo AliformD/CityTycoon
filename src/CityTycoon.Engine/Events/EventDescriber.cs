@@ -60,10 +60,11 @@ public static class EventDescriber
             DownPaymentPaid d => $"{Name(d.PlayerId)} paid the ${d.Amount} balance on {Space(d.PropertyId)}. It's fully theirs now.",
             PropertyForfeited f => $"{Name(f.PlayerId)} couldn't pay for {Space(f.PropertyId)}, so it goes back to the bank.",
             RaisingMoney r => $"{Name(r.PlayerId)} owes ${r.AmountOwed} and must raise money.",
-            TradeProposed t => $"{Name(t.Offer.FromId)} offered {Name(t.Offer.ToId)} a trade: {DescribeTrade(t.Offer, Space)}.",
+            TradeProposed t => $"{Name(t.Offer.FromId)} offered {Name(t.Offer.ToId)} a trade: {DescribeTrade(t.Offer, Space, Card)}.",
             TradeCompleted t => $"{Name(t.Offer.ToId)} accepted the trade from {Name(t.Offer.FromId)}."
                 + (t.MortgageFees > 0 ? $" Mortgage fees paid: ${t.MortgageFees}." : ""),
             TradeDeclined t => $"The trade between {Name(t.Offer.FromId)} and {Name(t.Offer.ToId)} didn't happen ({t.Reason}).",
+            TradeCountered t => $"{Name(t.Counter.FromId)} turned down {Name(t.Counter.ToId)}'s offer and sent a counter-offer: {DescribeTrade(t.Counter, Space, Card)}.",
             MomentumGained m => $"{Name(m.PlayerId)} gained {Tokens(m.Amount)} ({m.Source}).",
             PrecisionRolled p => $"{Name(p.PlayerId)} spent {Tokens(p.TokensSpent)} on a Precision Roll: {string.Join(", ", p.Dice)}.",
             Nudged n => $"{Name(n.PlayerId)} spent {Tokens(n.TokensSpent)} to move {Math.Abs(n.Spaces)} space{(Math.Abs(n.Spaces) == 1 ? "" : "s")} {(n.Spaces > 0 ? "further" : "less")}.",
@@ -160,17 +161,18 @@ public static class EventDescriber
         _ => "a skyscraper",
     };
 
-    /// <summary>"$100 + Mill Street for Platinum Row", read from the proposer's side.</summary>
-    public static string DescribeTrade(Actions.TradeOffer offer, Func<string, string> spaceName)
+    /// <summary>"$100 + Mill Street + Audit card for Platinum Row", read from the proposer's side.</summary>
+    public static string DescribeTrade(Actions.TradeOffer offer, Func<string, string> spaceName, Func<string, string>? cardName = null)
     {
-        static string Side(int cash, IReadOnlyList<string> props, Func<string, string> spaceName)
+        string Side(int cash, IReadOnlyList<string> props, IReadOnlyList<string> cards)
         {
             var parts = new List<string>();
             if (cash > 0) parts.Add($"${cash}");
             parts.AddRange(props.Select(spaceName));
+            parts.AddRange(cards.Select(id => $"{cardName?.Invoke(id) ?? id} card"));
             return parts.Count == 0 ? "nothing" : string.Join(" + ", parts);
         }
-        return $"{Side(offer.GiveCash, offer.GiveProperties, spaceName)} for {Side(offer.GetCash, offer.GetProperties, spaceName)}";
+        return $"{Side(offer.GiveCash, offer.GiveProperties, offer.GiveCards)} for {Side(offer.GetCash, offer.GetProperties, offer.GetCards)}";
     }
 
     public static string ZoneName(ZoningLevel level) => level == ZoningLevel.HighRise ? "High-Rise" : level.ToString();

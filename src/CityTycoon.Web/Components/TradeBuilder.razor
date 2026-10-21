@@ -1,22 +1,34 @@
 @* Build a trade offer (Section 15.9): pick a player, then what you give and what you get.
-   The engine checks the offer before it's sent, and the reason shows if it can't be made. *@
+   The engine checks the offer before it's sent, and the reason shows if it can't be made.
+   With CounterTo set, it builds a counter-offer instead: it starts from that offer, turned
+   round to your side, and goes back to whoever made it. *@
 @{
     var view = Request.View;
     int me = Request.PlayerId;
     var others = view.Players.Where(p => p.Id != me && !p.IsBankrupt).ToList();
-    if (partnerId == null || others.All(p => p.Id != partnerId))
+    if (CounterTo == null && (partnerId == null || others.All(p => p.Id != partnerId)))
         partnerId = others.FirstOrDefault()?.Id;
     var offer = BuildOffer();
-    string? problem = offer == null ? "Choose a player to trade with." : Session.Engine!.WhyIllegal(me, new ProposeTrade(offer));
+    string? problem = offer == null ? "Choose a player to trade with."
+        : CounterTo != null ? Session.Engine!.WhyCantCounter(me, offer)
+        : Session.Engine!.WhyIllegal(me, new ProposeTrade(offer));
 }
 <div class="trade-builder">
-    <h3>Offer a trade</h3>
-    <label>
-        Trade with
-        <select @bind="partnerId">
-            @foreach (var p in others) { <option value="@p.Id">@p.Name</option> }
-        </select>
-    </label>
+    @if (CounterTo != null)
+    {
+        <h3>Your counter-offer to @view.Player(CounterTo.FromId).Name</h3>
+        <p class="hint">Change what you give and what you get, then send it back.</p>
+    }
+    else
+    {
+        <h3>Offer a trade</h3>
+        <label>
+            Trade with
+            <select @bind="partnerId">
+                @foreach (var p in others) { <option value="@p.Id">@p.Name</option> }
+            </select>
+        </label>
+    }
     @if (partnerId is int them)
     {
         <div class="trade-sides">
@@ -24,17 +36,39 @@
                 <legend>You give</legend>
                 <label>Cash $<input type="number" min="0" step="10" @bind="giveCash" @bind:event="oninput" /></label>
                 @foreach (var id in Owned(me)) { <label class="check"><input type="checkbox" checked="@give.Contains(id)" @onchange="() => Toggle(give, id)" /> @Label(id)</label> }
+                @for (int i = 0; i < view.MyHand.Count; i++)
+                {
+                    int card = i; // copy for the lambda below
+                    <label class="check"><input type="checkbox" checked="@giveCards.Contains(card)" @onchange="() => ToggleCard(giveCards, card)" /> @CardLabel(view.MyHand[card])</label>
+                }
             </fieldset>
             <fieldset>
                 <legend>You get from @view.Player(them).Name</legend>
                 <label>Cash $<input type="number" min="0" step="10" @bind="getCash" @bind:event="oninput" /></label>
                 @foreach (var id in Owned(them)) { <label class="check"><input type="checkbox" checked="@get.Contains(id)" @onchange="() => Toggle(get, id)" /> @Label(id)</label> }
+                @for (int i = 0; i < OfferedCards.Count; i++)
+                {
+                    int card = i; // copy for the lambda below
+                    <label class="check"><input type="checkbox" checked="@getCards.Contains(card)" @onchange="() => ToggleCard(getCards, card)" /> @CardLabel(OfferedCards[card])</label>
+                }
+                @if (CounterTo == null && view.Player(them).HandCount > 0)
+                {
+                    <p class="hint">@view.Player(them).Name's cards are secret, so you can't ask for them. They can add cards in a counter-offer.</p>
+                }
             </fieldset>
         </div>
     }
     @if (problem != null) { <p class="why" role="status">@problem</p> }
     <div class="buttons">
-        <button class="big primary" disabled="@(problem != null)" @onclick="() => OnPropose.InvokeAsync(offer!)">Send offer</button>
+        @if (CounterTo != null)
+        {
+            <button class="big primary" disabled="@(problem != null)" @onclick="() => OnCounter.InvokeAsync(offer!)">Send counter-offer</button>
+            <button class="big" @onclick="() => OnCancel.InvokeAsync()">Back</button>
+        }
+        else
+        {
+            <button class="big primary" disabled="@(problem != null)" @onclick="() => OnPropose.InvokeAsync(offer!)">Send offer</button>
+        }
     </div>
     <p class="hint">Properties with buildings in their group, and pending properties, can't be traded. Whoever receives a mortgaged property pays the bank 10% of its mortgage value.</p>
 </div>
@@ -45,11 +79,52 @@
     [Parameter, EditorRequired] public GameSession Session { get; set; } = default!;
     [Parameter] public EventCallback<TradeOffer> OnPropose { get; set; }
 
+    /// <summary>The offer being answered, when this builds a counter-offer (null for a new offer).</summary>
+    [Parameter] public TradeOffer? CounterTo { get; set; }
+    [Parameter] public EventCallback<TradeOffer> OnCounter { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>The offer the boxes were last filled in from, so a new offer to answer fills them again.</summary>
+    private TradeOffer? filledFrom;
+
     private int? partnerId;
     private int giveCash;
     private int getCash;
     private readonly HashSet<string> give = [];
     private readonly HashSet<string> get = [];
+
+    // Cards are picked by their place in the list, because a hand can hold two copies of a card.
+    private readonly HashSet<int> giveCards = [];
+    private readonly HashSet<int> getCards = [];
+
+    /// <summary>The other player's cards you may ask for: only the ones they offered in the trade you're answering.</summary>
+    private IReadOnlyList<string> OfferedCards => CounterTo?.GiveCards ?? [];
+
+    protected override void OnParametersSet()
+    {
+        if (CounterTo == null || ReferenceEquals(CounterTo, filledFrom))
+            return;
+        // Start from the offer, turned round: what they wanted from you is what you give.
+        filledFrom = CounterTo;
+        partnerId = CounterTo.FromId;
+        giveCash = CounterTo.GetCash;
+        getCash = CounterTo.GiveCash;
+        give.Clear();
+        give.UnionWith(CounterTo.GetProperties);
+        get.Clear();
+        get.UnionWith(CounterTo.GiveProperties);
+        // Tick the cards they asked for in your hand (one copy each), and every card they offered.
+        giveCards.Clear();
+        var hand = Request.View.MyHand;
+        foreach (string wanted in CounterTo.GetCards)
+        {
+            int index = Enumerable.Range(0, hand.Count).FirstOrDefault(i => hand[i] == wanted && !giveCards.Contains(i), -1);
+            if (index >= 0)
+                giveCards.Add(index);
+        }
+        getCards.Clear();
+        getCards.UnionWith(Enumerable.Range(0, CounterTo.GiveCards.Count));
+    }
 
     /// <summary>A player's properties in board order.</summary>
     private IEnumerable<string> Owned(int playerId) =>
@@ -59,6 +134,14 @@
     {
         var p = Request.View.Properties[id];
         return Content.Property(id).Name + (p.IsMortgaged ? " (mortgaged)" : "") + (p.IsPending ? " (pending)" : "");
+    }
+
+    private string CardLabel(string cardId) => $"{Content.Card(cardId).Name} card";
+
+    private static void ToggleCard(HashSet<int> set, int index)
+    {
+        if (!set.Remove(index))
+            set.Add(index);
     }
 
     private static void Toggle(HashSet<string> set, string id)
@@ -74,6 +157,11 @@
         // Drop ticked properties that no longer belong to the right player (for example after switching partner).
         var giveList = give.Where(id => Request.View.Properties[id].OwnerId == Request.PlayerId).ToList();
         var getList = get.Where(id => Request.View.Properties[id].OwnerId == them).ToList();
-        return new TradeOffer(Request.PlayerId, them, Math.Max(0, giveCash), Math.Max(0, getCash), giveList, getList);
+        var hand = Request.View.MyHand;
+        return new TradeOffer(Request.PlayerId, them, Math.Max(0, giveCash), Math.Max(0, getCash), giveList, getList)
+        {
+            GiveCards = giveCards.Where(i => i < hand.Count).Order().Select(i => hand[i]).ToList(),
+            GetCards = getCards.Where(i => i < OfferedCards.Count).Order().Select(i => OfferedCards[i]).ToList(),
+        };
     }
 }

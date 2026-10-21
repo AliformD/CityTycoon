@@ -116,7 +116,7 @@ Several different moments allow some of these, so instead of every step repeatin
 
 `ManagementOptions` is a **flags enum**: each option is one bit, so several can be combined with `|`, like `Mortgage | TakeLoan`, and checked with `HasFlag`.
 
-All the "manage money" actions inherit from one base class, `ManagementAction`. When one arrives, `GameEngine.Submit` hands it to `Rules/ManagementRules.cs` instead of the step on top of the stack. That class checks it against the decision's options and the rules (`BuildingRules`, `MoneyRules`, `TradeRules`), applies it, and then the engine simply asks the same question again with fresh numbers. A trade offer is the one exception: it pushes a `TradeResponseStep` on top of the stack, so the other player answers first and then the proposer's question comes back.
+All the "manage money" actions inherit from one base class, `ManagementAction`. When one arrives, `GameEngine.Submit` hands it to `Rules/ManagementRules.cs` instead of the step on top of the stack. That class checks it against the decision's options and the rules (`BuildingRules`, `MoneyRules`, `TradeRules`), applies it, and then the engine simply asks the same question again with fresh numbers. A trade offer is the one exception: it pushes a `TradeResponseStep` on top of the stack, so the other player answers first and then the proposer's question comes back. That player may also answer with a `CounterTrade` (checked by `TradeRules.WhyBadCounter`, and by `GameEngine.WhyCantCounter` for the screen): the step swaps in the counter, counts it, and asks the other side, up to `maxTradeCounters` times. A `TradeOffer` can also carry Opportunity cards (`GiveCards`, `GetCards`); `Reversed()` gives the same trade from the other side. Bot trade logic lives in `src/CityTycoon.AI/EasyBot.Trades.cs` (one `Gain` sum for accepting, offering and countering).
 
 Every rule that can say "no" has a `WhyCant...` method that returns a plain-English reason (or `null` for "yes"). The screen uses the same methods to grey out buttons and explain why, so the screen and the engine can never disagree.
 
@@ -212,7 +212,7 @@ The Web project draws the game and passes clicks to the engine. It never changes
 | `Services/GameSession.cs` | Starts a game, gives each seat a controller, runs the `GameHost` in the background, and tells the pages to redraw when something changes. |
 | `Services/HumanUiController.cs` | The controller for a person. |
 | `Components/PropertyActions.razor` | Build, sell, mortgage and unmortgage buttons for one of your properties (Phase 3). |
-| `Components/TradeBuilder.razor` | The "offer a trade" form (Phase 3). |
+| `Components/TradeBuilder.razor` | The "offer a trade" form (Phase 3). With `CounterTo` set it builds a counter-offer instead, starting from the offer being answered. |
 | `Components/CasinoPanel.razor` | The Casino: bet High/Low or challenge someone to a Dice Duel (Phase 4). |
 | `Components/HandPanel.razor`, `CardView.razor` | Your Opportunity cards with their Play buttons, and how one card looks (Phase 5). |
 

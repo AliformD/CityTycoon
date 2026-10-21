@@ -37,13 +37,13 @@ Status: Phases 0 to 10 done. Phase 11 (online multiplayer) is on hold by Angel's
 | A Government tile | `content/govtiles.json`, `Tiles/TileLandings.cs` |
 | A character or perk | `content/characters.json` / `groups.json`, `Modifiers/*Modifiers.cs` |
 | A new action, event or step | Add the type, then register it with `[JsonDerivedType]` on `GameAction`, `GameEvent` or `Step`, describe events in `Events/EventDescriber.cs` |
-| A bot behavior | The `virtual` methods in `EasyBot` (Reserve, PropertyWorth, SealedAmount, PickBuild, Vote, NudgeThreshold) |
+| A bot behavior | The `virtual` methods in `EasyBot` (Reserve, PropertyWorth, SealedAmount, PickBuild, Vote, NudgeThreshold); trades and card values in `EasyBot.Trades.cs` |
 | A screen | `src/CityTycoon.Web/Components/` and `Pages/`; styles in `wwwroot/css/app.css` (colors are variables at the top, Day and Night) |
 | A new event that moves money or changes a property | Also add it to `Events/GameHistory.cs` (money ledger and space history); a test checks every dollar is listed |
 | How an event is shown (pause, icon, sound, money, token walk) | `src/CityTycoon.Web/Services/Playback.cs`; pictures in `Components/Icon.razor`, sounds in `wwwroot/js/app.js` (`ct.sound`) |
 
 ## Commands
-- Build and test: `dotnet test` (all projects). Last known: 443 engine tests and 53 bot tests, all passing.
+- Build and test: `dotnet test` (all projects). Last known: 461 engine tests and 64 bot tests, all passing.
 - Run the game: `dotnet run --project src/CityTycoon.Web`.
 - Balance Sim: `dotnet run -c Release --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots HardVsEasy --mode timed --characters random --seed 1 --out <NEW folder>`. `--out` must be a folder that does not exist yet.
 - CI (`.github/workflows/ci.yml`) builds and tests on every push and PR.

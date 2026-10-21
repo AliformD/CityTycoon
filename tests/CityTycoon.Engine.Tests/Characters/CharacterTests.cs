@@ -153,12 +153,13 @@ public class CharacterTests
     // ----- The Commuter -----
 
     [Fact]
-    public void Commuter_StartsWithThreeTokens_AndCanHoldSix()
+    public void Commuter_StartsWithThreeTokens_AndCanHoldFour()
     {
         var game = With("commuter");
         Assert.Equal(3, game.Player(0).Momentum);
-        Assert.Equal(6, game.Engine.GetView(0).Me.MomentumCap);
-        Assert.Equal(1, game.Player(1).Momentum);
+        Assert.Equal(4, game.Engine.GetView(0).Me.MomentumCap);
+        Assert.Equal(2, game.Player(1).Momentum);
+        Assert.Equal(2, game.Engine.GetView(1).Me.MomentumCap);
     }
 
     // ----- The Lawyer -----
@@ -344,7 +345,7 @@ public class CharacterTests
         engine.Submit(1, new PickCharacter("commuter"));
         engine.Submit(0, new PickCharacter("mogul"));
         Assert.Equal(3, engine.State.Player(1).Momentum);
-        Assert.Equal(1, engine.State.Player(0).Momentum);
+        Assert.Equal(2, engine.State.Player(0).Momentum);
     }
 
     [Fact]

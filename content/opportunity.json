@@ -18,7 +18,7 @@
       "effect": { "type": "CancelCard" } },
 
     { "id": "detour", "deck": "opportunity", "polarity": "negative", "name": "Detour", "copies": 2,
-      "text": "Reaction: after another player rolls and nudges, move their piece 1 space forward or back from where it would land.",
+      "text": "Reaction: after another player rolls and nudges, cancel their Nudge (the token stays spent) and move their piece 1 space forward or back from what they rolled.",
       "timing": "reaction", "trigger": "opponentMoving",
       "effect": { "type": "Detour", "spaces": 1 } },
 

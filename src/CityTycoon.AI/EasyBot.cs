@@ -167,10 +167,10 @@ public partial class EasyBot : IPlayerController
 
     private GameAction MainChoice(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions) => decision.Kind switch
     {
-        // A Precision Roll costs tokens, so only use one when the tokens would
-        // otherwise go to waste (it's at its token limit and GO would add more).
+        // A Precision Roll costs tokens, so only use one when it's at its token limit
+        // (a new token would go to waste) and a token is left over for a Nudge.
         DecisionKind.ChooseMoveMethod when legalActions.Contains(new PrecisionRoll())
-            && view.Me.Momentum >= view.Me.MomentumCap => new PrecisionRoll(),
+            && view.Me.Momentum >= view.Me.MomentumCap && view.Me.Momentum > content.Rules.PrecisionRollCost => new PrecisionRoll(),
         // Pay bail when comfortably rich (or when it's free); otherwise hope for doubles (it's free).
         DecisionKind.JailChoice => legalActions.Contains(new PayBail()) && (view.Me.Bail == 0 || view.Me.Cash > Reserve(view) * 3)
             ? new PayBail()
@@ -484,7 +484,8 @@ public partial class EasyBot : IPlayerController
         if (decision.Kind == DecisionKind.JailChoice)
             return Find("GetOutOfJailFree");
 
-        if (Find("GainMomentum") is PlayCard fastTrack && view.Me.Momentum + content.Card(fastTrack.CardId).Int("amount") <= content.Rules.MomentumCap - 2)
+        // Only when every token fits under its limit, so none go to waste.
+        if (Find("GainMomentum") is PlayCard fastTrack && view.Me.Momentum + content.Card(fastTrack.CardId).Int("amount") <= view.Me.MomentumCap)
             return fastTrack;
 
         // Audit the richest opponent, if it's worth it.

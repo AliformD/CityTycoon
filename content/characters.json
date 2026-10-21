@@ -19,8 +19,8 @@
     {
       "id": "commuter",
       "name": "The Commuter",
-      "text": "Start the game with 3 Momentum tokens instead of 1. Your token limit is 6 instead of 5.",
-      "modifiers": [ { "type": "StartingMomentum", "value": 3 }, { "type": "MomentumCap", "value": 1 } ]
+      "text": "Start the game with 3 Momentum tokens instead of 2. Your token limit is 4 instead of 2.",
+      "modifiers": [ { "type": "StartingMomentum", "value": 3 }, { "type": "MomentumCap", "value": 2 } ]
     },
     {
       "id": "lawyer",

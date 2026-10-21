@@ -54,6 +54,20 @@ Game length stayed at 30 rounds. What else was tried:
 - **Blocking alone, with no own-group bonus for Easy:** all-Easy tables almost never finished a set (0.1 buildings per game), because three blockers always beat one Easy bot that didn't know the set was worth more to it.
 - **Bigger blocking shares (15% Easy, 25% Normal and Hard):** Normal fell to 53% to 56% against Easy and 38% against Hard. Blocking helps the other players as much as the blocker, so paying a lot for it loses games. 10% keeps the order Easy < Normal < Hard.
 
+## Fewer Momentum tokens (2026-10-21)
+Start with 2, hold 2, none from GO, and Detour cancels a Nudge (decisions #140 and #141). 500 games each, 4 players, Timed 30 rounds, random characters, seed 1. "Before" is the same code run with `--set startingMomentum=1 --set momentumCap=5 --set goMomentumGain=1`.
+
+| Run | Before | After |
+| --- | --- | --- |
+| Nudges per game (Normal only) | 25.8 | 15.8 |
+| Average rent payment (Normal only) | $57 | $91 |
+| Bankruptcies per game (Normal only / Easy only) | 0.09 / 0.02 | 0.31 / 0.04 |
+| Buildings per game (Normal only) | 20.8 | 24.9 |
+| HardVsEasy (Hard seats' win rate) | 64.8% | 80.4% |
+
+With fewer tokens players can't dodge rent as often, so rent hurts more and the better builder pulls ahead. That widens the gap between Hard and Easy bots a lot. Easy bots were not retuned: worth watching in playtests.
+
 ## How to repeat this
 `dotnet run -c Release --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots HardVsEasy --mode timed --characters random --seed 20000 --out <new folder>`
+`--set name=value` changes any rules.json number for one run (repeatable), and `--rounds` sets the Timed limit.
 `--bots` takes `Random`, `Easy`, `Normal`, `Hard`, `Mixed`, `NormalVsEasy`, `HardVsEasy` or `HardVsNormal`. The report prints the match-up result for the two-kind modes.

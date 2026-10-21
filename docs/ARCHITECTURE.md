@@ -122,7 +122,7 @@ Every rule that can say "no" has a `WhyCant...` method that returns a plain-Engl
 
 ## Momentum and landmarks (Phase 4)
 
-`Rules/MomentumRules.cs` is the one place that gives or spends Momentum tokens. `Gain` always respects the cap (5), and `CanSpend` says no in Jail, so no other code has to remember those rules.
+`Rules/MomentumRules.cs` is the one place that gives or spends Momentum tokens. `Gain` always respects the cap (2 by default), and `CanSpend` says no in Jail, so no other code has to remember those rules.
 
 A turn now has a few more stages in `TurnStep`: choose how to move (normal roll or Precision Roll), keep two of three dice if it was a Precision Roll, then choose a Nudge (−2 to +2, or 0 for no Nudge), then move. Each stage is just another question the step asks and waits on, the same pattern as everything else.
 
@@ -145,7 +145,7 @@ So adding a card is usually just JSON. Audit and a made-up "Tax Inspector" (20% 
 | `Steps/CardPlayStep.cs` | Plays one card: first it opens an Insurance window if the card hurts someone, then it applies the effect. |
 | `Steps/CardSteps.cs` | The questions cards ask: City Park, the Mall, Fire!, Tip-Off, the Dice Duel and the hand limit. |
 
-Some effects need to change the thing they react to. Rent Strike halves a rent payment that's already being asked for, and Detour changes a move that's about to happen. The effect gets a `Parent`: the step it was played under (the `PaymentStep` or the `TurnStep`), and changes that.
+Some effects need to change the thing they react to. Rent Strike halves a rent payment that's already being asked for, and Detour changes a move that's about to happen (it also undoes the mover's Nudge, so its numbers are counted from the dice roll). The effect gets a `Parent`: the step it was played under (the `PaymentStep` or the `TurnStep`), and changes that.
 
 Opportunity cards are secret. The log only says "Angel drew an Opportunity card", and `PlayerView.MyHand` shows the cards to their owner only. Everyone else just sees how many cards each player holds.
 

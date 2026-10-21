@@ -96,7 +96,7 @@ public static class EventDescriber
             CashToBank c => $"{Name(c.PlayerId)} paid ${c.Amount} to the bank ({Card(c.CardId)}).",
             CardPaymentMade p => $"{Name(p.FromId)} paid ${p.Amount} to {(p.ToId is int to ? Name(to) : "the bank")} ({Card(p.CardId)}).",
             RentReduced r => $"Rent Strike! {Name(r.PlayerId)} pays ${r.To} instead of ${r.From} for {Space(r.PropertyId)}.",
-            Detoured d => $"{Name(d.ByPlayerId)}'s Detour moves {Name(d.MoverId)} {Spaces(Math.Abs(d.Spaces))} {(d.Spaces > 0 ? "further" : "back")}.",
+            Detoured d => $"{Name(d.ByPlayerId)}'s Detour {(d.CancelledNudge ? "cancels the Nudge and " : "")}moves {Name(d.MoverId)} {Spaces(Math.Abs(d.Spaces))} {(d.Spaces > 0 ? "further" : "back")}.",
             BuildingBurned b => $"Fire! {Space(b.PropertyId)} lost a level (now {LevelName(b.NewLevel)}).",
             FireAvoided f => $"Fire! But {Name(f.PlayerId)} is safe ({f.Reason}).",
             LotteryRolled l => "Lottery rolls: " + string.Join(", ", l.Rolls.Select(r => $"{Name(r.PlayerId)} {r.Die}")) + ".",

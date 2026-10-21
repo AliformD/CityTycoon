@@ -9,8 +9,9 @@ using CityTycoon.Engine.State;
 namespace CityTycoon.Sim;
 
 /// <param name="Characters">None plays the plain rules; Random deals every bot a different character.</param>
+/// <param name="Content">The rules to play by. Null uses the game's own content files; <c>--set</c> changes numbers in a copy.</param>
 public sealed record SimOptions(int Games, int Players, ulong Seed, GameMode Mode, int Rounds, string OutputFolder,
-    BotKind Bots = BotKind.Mixed, CharacterMode Characters = CharacterMode.Random);
+    BotKind Bots = BotKind.Mixed, CharacterMode Characters = CharacterMode.Random, GameContent? Content = null);
 
 /// <summary>Which bots play in the Sim: all one kind, or two kinds in alternating seats (even seats get the first, listed one, so HardVsEasy gives Hard bots seats 0, 2, 4).</summary>
 public enum BotKind { Random, Easy, Normal, Hard, Mixed, NormalVsEasy, HardVsEasy, HardVsNormal }
@@ -83,6 +84,19 @@ public sealed record GameStats(
     public int CouncilCancelled { get; init; }
     public Dictionary<string, int> OrdinanceCounts { get; init; } = [];
     public int PerkPayments { get; init; }
+    // Pacing numbers (how soon building starts, close calls, how much money is around).
+    /// <summary>The round the first building went up, or null if nobody built.</summary>
+    public int? FirstBuildingRound { get; init; }
+    /// <summary>Times a player fell below <see cref="SimulationRunner.LowCash"/> and later climbed back to <see cref="SimulationRunner.RecoveredCash"/> without going bankrupt.</summary>
+    public int CloseCalls { get; init; }
+    /// <summary>How many players built at least once, and the building levels standing at the end.</summary>
+    public int Builders { get; init; }
+    public int EndBuildingLevels { get; init; }
+    /// <summary>Average cash and net worth of the players still in at the end.</summary>
+    public double EndCash { get; init; }
+    public double EndNetWorth { get; init; }
+    /// <summary>The average rent payment, so it can be compared with how much cash players hold.</summary>
+    public double AverageRent { get; init; }
 }
 
 /// <summary>Plays many bot-vs-bot games and gathers statistics (Section 26.3).</summary>
@@ -90,6 +104,12 @@ public static class SimulationRunner
 {
     /// <summary>Classic games can, in theory, go on forever. Stop them here and count them as "stalled".</summary>
     public const int ClassicRoundCap = 500;
+
+    /// <summary>A close call: cash dropped under this...</summary>
+    public const int LowCash = 150;
+
+    /// <summary>...and later climbed back to this, without going bankrupt.</summary>
+    public const int RecoveredCash = 400;
 
     public static async Task<List<GameStats>> RunAsync(SimOptions options)
     {
@@ -114,18 +134,30 @@ public static class SimulationRunner
         GameEngine? engine = null;
         try
         {
-            engine = GameEngine.NewGame(setup);
+            GameContent content = options.Content ?? GameContent.Default;
+            engine = GameEngine.NewGame(setup, content);
             var controllers = engine.State.Players.ToDictionary(
                 p => p.Id,
-                p => CreateBot(options.Bots, p.Id, seed * 31 + (ulong)p.Id));
+                p => CreateBot(options.Bots, p.Id, seed * 31 + (ulong)p.Id, content));
             var host = new GameHost(engine, controllers);
+            var low = new HashSet<int>();
+            int closeCalls = 0;
             while (!engine.State.IsOver)
             {
                 if (engine.State.Round > ClassicRoundCap)
-                    return Summarize(game, seed, engine, error: null) with { Stalled = true };
+                    return Summarize(game, seed, engine, error: null) with { Stalled = true, CloseCalls = closeCalls };
                 await host.StepAsync();
+                foreach (PlayerState p in engine.State.Players)
+                {
+                    if (p.IsBankrupt)
+                        low.Remove(p.Id);
+                    else if (p.Cash < LowCash)
+                        low.Add(p.Id);
+                    else if (p.Cash >= RecoveredCash && low.Remove(p.Id))
+                        closeCalls++;
+                }
             }
-            return Summarize(game, seed, engine, error: null);
+            return Summarize(game, seed, engine, error: null) with { CloseCalls = closeCalls };
         }
         catch (Exception ex)
         {
@@ -133,6 +165,19 @@ public static class SimulationRunner
                 ? new GameStats(game, seed, 0, false, ex.Message, [], [], 0, 0, 0, 0)
                 : Summarize(game, seed, engine, ex.GetType().Name + ": " + ex.Message);
         }
+    }
+
+    private static int? FirstBuildingRound(IEnumerable<GameEvent> log)
+    {
+        int round = 0;
+        foreach (var e in log)
+        {
+            if (e is TurnStarted t)
+                round = t.Round;
+            else if (e is BuildingBuilt)
+                return round;
+        }
+        return null;
     }
 
     /// <summary>For each color group, how many of these players own the whole group (none of it mortgaged or pending).</summary>
@@ -144,16 +189,16 @@ public static class SimulationRunner
             group => ids.Count(id => RentCalculator.OwnsFullGroup(state, content, id, group)));
     }
 
-    private static IPlayerController CreateBot(BotKind kind, int playerId, ulong botSeed) => kind switch
+    private static IPlayerController CreateBot(BotKind kind, int playerId, ulong botSeed, GameContent content) => kind switch
     {
         BotKind.Random => new RandomBot(botSeed),
-        BotKind.Easy => new EasyBot(botSeed),
-        BotKind.Normal => new NormalBot(botSeed),
-        BotKind.Hard => new HardBot(botSeed),
-        BotKind.NormalVsEasy => playerId % 2 == 0 ? new NormalBot(botSeed) : new EasyBot(botSeed),
-        BotKind.HardVsEasy => playerId % 2 == 0 ? new HardBot(botSeed) : new EasyBot(botSeed),
-        BotKind.HardVsNormal => playerId % 2 == 0 ? new HardBot(botSeed) : new NormalBot(botSeed),
-        _ => playerId % 2 == 0 ? new EasyBot(botSeed) : new RandomBot(botSeed),
+        BotKind.Easy => new EasyBot(botSeed, content),
+        BotKind.Normal => new NormalBot(botSeed, content),
+        BotKind.Hard => new HardBot(botSeed, content),
+        BotKind.NormalVsEasy => playerId % 2 == 0 ? new NormalBot(botSeed, content) : new EasyBot(botSeed, content),
+        BotKind.HardVsEasy => playerId % 2 == 0 ? new HardBot(botSeed, content) : new EasyBot(botSeed, content),
+        BotKind.HardVsNormal => playerId % 2 == 0 ? new HardBot(botSeed, content) : new NormalBot(botSeed, content),
+        _ => playerId % 2 == 0 ? new EasyBot(botSeed, content) : new RandomBot(botSeed),
     };
 
     /// <summary>One sealed auction that ended with bids: was the top bid tied, and did the Mogul win it on their edge or a tie?</summary>
@@ -233,6 +278,12 @@ public static class SimulationRunner
             CouncilCancelled = log.OfType<CouncilCancelled>().Count(),
             OrdinanceCounts = log.OfType<CouncilResolved>().Where(r => r.Passed).GroupBy(r => r.OrdinanceId).ToDictionary(g => g.Key, g => g.Count()),
             PerkPayments = log.OfType<PerkPaid>().Count() + log.OfType<PerkIncome>().Count(),
+            FirstBuildingRound = FirstBuildingRound(log),
+            Builders = log.OfType<BuildingBuilt>().Select(b => b.PlayerId).Distinct().Count(),
+            EndBuildingLevels = state.Properties.Values.Sum(p => p.Level),
+            EndCash = state.Players.Where(p => !p.IsBankrupt).Select(p => (double)p.Cash).DefaultIfEmpty(0).Average(),
+            EndNetWorth = state.Players.Where(p => !p.IsBankrupt).Select(p => (double)NetWorth.Calculate(state, engine.Content, p.Id)).DefaultIfEmpty(0).Average(),
+            AverageRent = log.OfType<RentPaid>().Select(r => (double)r.Amount).DefaultIfEmpty(0).Average(),
         };
     }
 }

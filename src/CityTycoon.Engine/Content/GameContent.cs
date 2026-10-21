@@ -90,6 +90,17 @@ public sealed class GameContent
         new BonusesFile(1, Bonuses),
         new OrdinancesFile(1, Ordinances));
 
+    /// <summary>A copy of this content with different rules numbers (the Sim uses it to try out settings).</summary>
+    public GameContent WithRules(RulesConfig rules) => new(
+        rules, Board,
+        new PropertiesFile(1, Properties.Values.ToList()),
+        new GroupsFile(1, Groups.Values.ToList()),
+        new GovTilesFile(1, GovTilesPerGame, GovTiles),
+        cardFiles,
+        new CharactersFile(1, Characters),
+        new BonusesFile(1, Bonuses),
+        new OrdinancesFile(1, Ordinances));
+
     public CardDefinition Card(string id) =>
         Cards.TryGetValue(id, out var c) ? c : throw new KeyNotFoundException($"Unknown card '{id}'.");
 

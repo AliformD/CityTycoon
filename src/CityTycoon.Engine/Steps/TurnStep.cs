@@ -437,7 +437,10 @@ public sealed class TurnStep : Step
             var others = CardEffects.OthersInTurnOrder(ctx.State, PlayerId).Select(p => p.Id);
             DetourWindow = ReactionWindow.Open(ctx, CardTrigger.OpponentMoving, others, moverId: PlayerId, moveSpaces: PlannedSpaces);
         }
-        if (DetourWindow.Decision(ctx, $"{player.Name} is about to move {PlannedSpaces} spaces. Play a Detour?") is { } ask)
+        string prompt = NudgeSpaces != 0
+            ? $"{player.Name} rolled {Die1 + Die2} and nudged to {PlannedSpaces} spaces. A Detour cancels the Nudge and moves them 1 space from the roll. Play one?"
+            : $"{player.Name} is about to move {PlannedSpaces} spaces. Play a Detour?";
+        if (DetourWindow.Decision(ctx, prompt) is { } ask)
             return StepResult.WaitFor(ask);
         if (DetourWindow.Played is { } play && !DetourPlayed)
         {

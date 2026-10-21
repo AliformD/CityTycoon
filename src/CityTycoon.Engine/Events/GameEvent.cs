@@ -251,7 +251,9 @@ public sealed record CardPaymentMade(int FromId, int? ToId, int Amount, string C
 public sealed record RentReduced(int PlayerId, string PropertyId, int From, int To) : GameEvent;
 
 /// <summary>A Detour moved another player's landing spot.</summary>
-public sealed record Detoured(int ByPlayerId, int MoverId, int Spaces) : GameEvent;
+/// <param name="Spaces">How far from where the mover would have landed (after their Nudge).</param>
+/// <param name="CancelledNudge">True when the Detour undid the mover's Nudge (Decision #140).</param>
+public sealed record Detoured(int ByPlayerId, int MoverId, int Spaces, bool CancelledNudge = false) : GameEvent;
 
 /// <summary>Fire!: a property lost a building level.</summary>
 public sealed record BuildingBurned(int PlayerId, string PropertyId, int NewLevel) : GameEvent;

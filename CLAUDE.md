@@ -43,9 +43,9 @@ Status: Phases 0 to 10 done. Phase 11 (online multiplayer) is on hold by Angel's
 | How an event is shown (pause, icon, sound, money, token walk) | `src/CityTycoon.Web/Services/Playback.cs`; pictures in `Components/Icon.razor`, sounds in `wwwroot/js/app.js` (`ct.sound`) |
 
 ## Commands
-- Build and test: `dotnet test` (all projects). Last known: 461 engine tests and 74 bot tests, all passing.
+- Build and test: `dotnet test` (all projects). Last known: 462 engine tests and 75 bot tests, all passing.
 - Run the game: `dotnet run --project src/CityTycoon.Web`.
-- Balance Sim: `dotnet run -c Release --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots HardVsEasy --mode timed --characters random --seed 1 --out <NEW folder>`. `--out` must be a folder that does not exist yet.
+- Balance Sim: `dotnet run -c Release --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots HardVsEasy --mode timed --characters random --seed 1 --out <NEW folder>`. `--out` must be a folder that does not exist yet. Try other numbers without editing `rules.json` with `--set goSalary=300` (any rules.json name, repeatable) and `--rounds 50`. The report includes pacing: first building, close calls, bankruptcies, money at the end.
 - CI (`.github/workflows/ci.yml`) builds and tests on every push and PR.
 
 ## Gotchas that cost time before

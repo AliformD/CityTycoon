@@ -76,7 +76,7 @@ public static class Movement
             ctx.Emit(new CatchUpPaid(player.Id, ctx.Rules.CatchUpBonus));
         }
 
-        // Step 5: gain a Momentum token (and the extra one from Commuter Belt).
+        // Step 5: Momentum tokens. The base rule gives none now (decision #140), but Commuter Belt still gives 1.
         MomentumRules.Gain(ctx, player, ctx.Rules.GoMomentumGain, "GO");
         foreach (var (amount, source) in RuleModifiers.GoMomentums(ctx.State, ctx.Content, player.Id))
             MomentumRules.Gain(ctx, player, amount, source);

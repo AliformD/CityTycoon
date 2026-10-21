@@ -404,7 +404,11 @@ public sealed class CancelCardEffect : ICardEffect
     public void Apply(CardEffectContext c) { }
 }
 
-/// <summary>Detour: move another player's piece a space forward or back from where it would land.</summary>
+/// <summary>
+/// Detour: cancels the other player's Nudge (the token stays spent), then moves their piece
+/// a space forward or back from what they rolled. The card's Number is how far that is from
+/// where they would have landed, so a Detour that would land them where their Nudge did isn't offered.
+/// </summary>
 public sealed class DetourEffect : ICardEffect
 {
     public string Type => "Detour";
@@ -416,10 +420,11 @@ public sealed class DetourEffect : ICardEffect
         if (CardRules.CurrentTurn(ctx) is not { } turn || turn.PlayerId == player.Id)
             return [];
         int spaces = card.Int("spaces");
+        int rolled = turn.Die1 + turn.Die2;
         // The move must still be at least 1 space forward, like a Nudge.
-        return new[] { -spaces, spaces }
-            .Where(n => turn.PlannedSpaces + n >= 1)
-            .Select(n => new PlayCard(card.Id, TargetPlayerId: turn.PlayerId, Number: n));
+        return new[] { rolled - spaces, rolled + spaces }
+            .Where(total => total >= 1 && total != turn.PlannedSpaces)
+            .Select(total => new PlayCard(card.Id, TargetPlayerId: turn.PlayerId, Number: total - turn.PlannedSpaces));
     }
 
     public int? Victim(CardEffectContext c) => (c.Parent as TurnStep)?.PlayerId;
@@ -429,7 +434,7 @@ public sealed class DetourEffect : ICardEffect
         if (c.Parent is not TurnStep turn)
             return;
         turn.DetourSpaces = c.Play.Number;
-        c.Ctx.Emit(new Detoured(c.Player.Id, turn.PlayerId, c.Play.Number));
+        c.Ctx.Emit(new Detoured(c.Player.Id, turn.PlayerId, c.Play.Number, CancelledNudge: turn.NudgeSpaces != 0));
     }
 }
 

@@ -8,31 +8,33 @@ namespace CityTycoon.Engine.Tests.Momentum;
 public class MomentumTests
 {
     [Fact]
-    public void EveryoneStartsWithOneToken()
+    public void EveryoneStartsWithTwoTokens_AndCanHoldTwo()
     {
         var game = new TestGame();
-        Assert.All(game.State.Players, p => Assert.Equal(1, p.Momentum));
+        Assert.All(game.State.Players, p => Assert.Equal(2, p.Momentum));
+        Assert.Equal(2, game.Engine.GetView(0).Me.MomentumCap);
     }
 
     [Fact]
-    public void PassingGo_GivesAToken()
+    public void PassingGo_GivesNoToken()
     {
         var game = new TestGame();
+        game.Player(0).Momentum = 0;
         game.PlaceBefore(0, "go", 5);
         game.Roll(0, 1, 4);
-        Assert.Equal(2, game.Player(0).Momentum);
-        Assert.Contains(game.State.Log, e => e is MomentumGained { Source: "GO", Amount: 1 });
+        Assert.Equal(0, game.Player(0).Momentum);
+        Assert.DoesNotContain(game.State.Log, e => e is MomentumGained);
     }
 
     [Fact]
     public void TokensNeverGoPastTheLimit()
     {
         var game = new TestGame();
-        game.Player(0).Momentum = 5;
-        game.PlaceBefore(0, "go", 5);
-        game.Roll(0, 1, 4);
-        Assert.Equal(5, game.Player(0).Momentum);
-        Assert.DoesNotContain(game.State.Log, e => e is MomentumGained);
+        game.GiveCard(0, "fast-track");
+        game.Player(0).Momentum = 1;
+        game.Do(0, new PlayCard("fast-track"));
+        Assert.Equal(2, game.Player(0).Momentum);
+        Assert.Contains(game.State.Log, e => e is MomentumGained { Amount: 1 }); // only the token that fit is logged
     }
 
     [Fact]
@@ -59,7 +61,7 @@ public class MomentumTests
         game.Do(0, new Nudge(2));
 
         Assert.Equal(game.State.IndexOf("jail"), game.Player(0).Position);
-        Assert.Equal(0, game.Player(0).Momentum);
+        Assert.Equal(1, game.Player(0).Momentum);
         Assert.Contains(game.State.Log, e => e is Nudged { Spaces: 2 });
     }
 
@@ -72,7 +74,7 @@ public class MomentumTests
         game.Do(0, new RollDice());
         game.Do(0, new Nudge(0));
 
-        Assert.Equal(1, game.Player(0).Momentum);
+        Assert.Equal(2, game.Player(0).Momentum);
         Assert.Equal(game.State.IndexOf("jail"), game.Player(0).Position);
     }
 
@@ -121,6 +123,7 @@ public class MomentumTests
     public void PrecisionRoll_NeedsTwoTokens()
     {
         var game = new TestGame();
+        game.Player(0).Momentum = 1;
         Assert.DoesNotContain(new PrecisionRoll(), game.Engine.GetLegalActions(0));
         game.Player(0).Momentum = 2;
         Assert.Contains(new PrecisionRoll(), game.Engine.GetLegalActions(0));

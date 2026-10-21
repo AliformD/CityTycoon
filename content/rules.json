@@ -2,14 +2,15 @@
   "contentVersion": 1,
 
   "startingCash": 1500,
-  "startingMomentum": 1,
-  "momentumCap": 5,
+  "startingMomentum": 2,
+  "momentumCap": 2,
   "nudgeMaxSpaces": 2,
   "nudgeCost": 1,
   "precisionRollCost": 2,
 
   "goSalary": 200,
-  "goMomentumGain": 1,
+  // Passing GO gives no Momentum (decision #140). Tokens come from spaces and cards instead.
+  "goMomentumGain": 0,
   "catchUpBonus": 100,
   // What each Opportunity card in your hand adds to your net worth (Section 16.3).
   "handCardNetWorth": 50,

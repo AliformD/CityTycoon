@@ -215,9 +215,11 @@ public class EventCardTests
     public void MomentumSurge_EveryoneGainsATokenAndYouGainTwo()
     {
         var game = new TestGame();
+        game.Player(0).Momentum = 0;
+        game.Player(1).Momentum = 0;
         game.DrawEvent(0, "momentum-surge");
-        Assert.Equal(3, game.Player(0).Momentum);
-        Assert.Equal(2, game.Player(1).Momentum);
+        Assert.Equal(2, game.Player(0).Momentum);
+        Assert.Equal(1, game.Player(1).Momentum);
     }
 
     [Fact]
@@ -250,7 +252,7 @@ public class EventCardTests
         game.DrawEvent(0, "advance-to-go");
         Assert.Equal(0, game.Player(0).Position);
         Assert.Equal(1700, game.Player(0).Cash);
-        Assert.Equal(1, game.Player(0).Momentum);
+        Assert.Equal(0, game.Player(0).Momentum); // GO gives no tokens (decision #140)
     }
 
     [Fact]

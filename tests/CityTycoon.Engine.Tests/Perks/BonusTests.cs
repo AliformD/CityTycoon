@@ -58,6 +58,7 @@ public class BonusTests
     {
         var game = new TestGame();
         game.Give(1, Stations[0], Stations[1], Stations[2]);
+        game.Player(1).Momentum = 0;
         int before = game.Player(1).Momentum;
         game.RollOnto(0, "harbor-station");
         Assert.Equal(before + 1, game.Player(1).Momentum);

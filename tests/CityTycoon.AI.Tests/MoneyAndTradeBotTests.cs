@@ -61,6 +61,21 @@ public class MoneyAndTradeBotTests
     }
 
     [Fact]
+    public async Task EasyBot_CountsTheCostOfAMortgage_WhenOfferedAMortgagedProperty()
+    {
+        var engine = NewGame();
+        engine.State.Properties["market-street"].OwnerId = 0; // assessed $180, mortgage $90
+        engine.State.Properties["market-street"].IsMortgaged = true;
+        // $85 for it: less than the $90 mortgage, but the bot pays a $9 fee now and $99 to lift it later.
+        Assert.True(engine.Submit(0, new ProposeTrade(new TradeOffer(0, 1, 0, 85, ["market-street"], []))).Accepted);
+
+        var decision = engine.GetPendingDecisions().Single();
+        var choice = await new EasyBot(1).DecideAsync(engine.GetView(1), decision, engine.GetLegalActions(1));
+
+        Assert.IsNotType<AcceptTrade>(choice);
+    }
+
+    [Fact]
     public async Task EasyBot_CountersALowOffer_WithOneItWouldTakeItself()
     {
         var engine = NewGame();

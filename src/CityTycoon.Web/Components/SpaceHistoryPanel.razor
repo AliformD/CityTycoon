@@ -1,0 +1,75 @@
+@* The history of one space: who bought it and for how much, then every trade, building change and mortgage, by round. *@
+@{
+    var history = GameHistory.ForSpace(View, Content, SpaceId);
+    bool isProperty = Content.Properties.ContainsKey(SpaceId);
+}
+<section class="space-history" aria-label="History">
+    <h3>History</h3>
+    @if (isProperty)
+    {
+        <p class="acquired">@Acquired(history)</p>
+    }
+    <p class="stats">@Stats(history, isProperty)</p>
+    @if (history.Entries.Count > 0)
+    {
+        <ol class="history-list">
+            @foreach (var entry in history.Entries)
+            {
+                <li>
+                    <span class="when">@When(entry)</span>
+                    @if (entry.PlayerId is int who)
+                    {
+                        <span class="dot" style="background:@UiHelpers.PlayerColor(who)" aria-hidden="true"></span>
+                    }
+                    <span>@entry.Text</span>
+                </li>
+            }
+        </ol>
+    }
+    else if (isProperty)
+    {
+        <p class="small-print">Nothing has happened to it yet.</p>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string SpaceId { get; set; } = "";
+    [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+
+    private static string When(HistoryEntry entry) =>
+        entry.Round == 0 ? "Start" : entry.TurnPlayerId == null ? $"End of round {entry.Round}" : $"Round {entry.Round}";
+
+    private string Acquired(SpaceHistory history)
+    {
+        View.Properties.TryGetValue(SpaceId, out var owned);
+        if (owned?.OwnerId is not int ownerId)
+            return history.Entries.Count == 0 ? "The bank owns it. Nobody has bought it yet." : "The bank owns it again.";
+        if (history.Acquired is not { } got || got.OwnerId != ownerId)
+            return $"{View.Player(ownerId).Name} owns it.";
+        string name = View.Player(ownerId).Name;
+        string when = got.Round == 0 ? "at the start" : $"in round {got.Round}";
+        return got.How switch
+        {
+            HistoryKind.Bought => $"{name} bought it for {UiHelpers.Money(got.Price ?? 0)} {when}.",
+            HistoryKind.Traded when got.Price is int price => $"{name} got it in a trade for {UiHelpers.Money(price)} {when}.",
+            HistoryKind.Traded => $"{name} got it in a trade {when} (see below for what was swapped).",
+            _ => $"{name} got it when another player went bankrupt, {when}.",
+        };
+    }
+
+    private static string Stats(SpaceHistory history, bool isProperty)
+    {
+        string landed = history.TimesLandedOn switch
+        {
+            0 => "Nobody has landed here yet.",
+            1 => "Landed on once.",
+            int n => $"Landed on {n} times.",
+        };
+        if (isProperty && history.TimesRentPaid > 0)
+            landed += $" Rent collected: {UiHelpers.Money(history.RentCollected)} ({(history.TimesRentPaid == 1 ? "once" : history.TimesRentPaid + " times")}).";
+        if (history.FeesCollected > 0)
+            landed += $" Paid here so far: {UiHelpers.Money(history.FeesCollected)}.";
+        return landed;
+    }
+}

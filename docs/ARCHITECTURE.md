@@ -263,3 +263,9 @@ On one shared screen, the board and log are drawn from a **spectator view**: the
 - All colors are CSS variables at the top of `app.css`. Night redefines them under `html[data-theme="night"]`, and again for "Match my device" on a dark device. `ct.applySettings` sets `data-theme` from Settings > Look.
 - `Components/Icon.razor` draws every picture as inline SVG by name (`dice`, `coin`, `jail`...). Add a new picture as a new `case` there.
 - The board size is one variable, `--cell` (one square). It is worked out from the window size, so the whole board fits on screen.
+
+## Property history and the money ledger (Web + Engine)
+
+Both are worked out from the game log (`State.Log`), never stored separately. `Events/GameHistory.cs` walks the log once: `Ledger` turns every money event into one line per player (a payment between two players becomes two lines, out and in), starting with their starting cash, so a player's lines always add up to their cash. `ForSpace` collects what happened to one space and who got it last, and how. Both take a `PlayerView`, like `EventDescriber`, so they can only use what every player may see.
+
+A new event that moves money must be added to `GameHistory.Ledger`, or the test `EveryDollar_IsInTheLedger` (AI tests, plays bot games) fails. On screen: `Components/SpaceHistoryPanel.razor` (inside `PropertyCard` and the space details panel) and `Components/LedgerDialog.razor` (opened by the letter circles in `PlayerPanels`).

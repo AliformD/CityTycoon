@@ -8,12 +8,12 @@ namespace CityTycoon.Engine.Tests.Cards;
 public class EventCardTests
 {
     [Fact]
-    public void EventCards_ArePublic_AndGoToTheDiscardPile()
+    public void EventCards_ArePublic_AndGoToTheBottomOfTheDeck()
     {
         var game = new TestGame();
         game.DrawEvent(0, "tax-refund");
         Assert.Contains(game.State.Log, e => e is EventDrawn { PlayerId: 0, CardId: "tax-refund" });
-        Assert.Contains("tax-refund", game.State.EventDiscard);
+        Assert.Equal("tax-refund", game.State.EventDeck[^1]);
     }
 
     [Fact]

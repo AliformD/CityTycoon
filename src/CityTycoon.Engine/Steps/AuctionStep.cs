@@ -85,7 +85,7 @@ public sealed class AuctionStep : Step
         {
             string name = ctx.Content.Property(PropertyId).Name;
             return StepResult.WaitFor(waitingOn.Select(id => new PendingDecision(
-                id, DecisionKind.SubmitBid, $"Auction for {name}: bid (minimum ${MinBid}) or pass.",
+                id, DecisionKind.SubmitBid, $"Silent auction for {name}: bid in secret (minimum ${MinBid}) or pass.",
                 PropertyId, MinBid, MaxBidFor(ctx, id), ctx.Rules.BidIncrement,
                 MaxDownPaymentBid: MaxDownPaymentBidFor(ctx, id),
                 // Taking a loan is the only other thing you can do mid-auction (Section 8.4).
@@ -376,7 +376,8 @@ public sealed class AuctionStep : Step
                 PropertyId, CurrentMin(ctx), MaxBidFor(ctx, id), ctx.Rules.BidIncrement,
                 MaxDownPaymentBid: MaxDownPaymentBidFor(ctx, id),
                 Management: ManagementOptions.TakeLoan,
-                OpenAuction: true, HighBidderId: HighBidderId, HighBid: HighBid));
+                OpenAuction: true, HighBidderId: HighBidderId, HighBid: HighBid,
+                Bidders: Bidders.ToList(), DroppedOut: Bidders.Where(Out.Contains).ToList()));
         }
     }
 

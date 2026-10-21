@@ -43,7 +43,9 @@ public static class CardRules
 
     /// <summary>
     /// Makes sure the draw pile has at least this many cards, shuffling the
-    /// discard pile underneath when it runs low (Section 15.6). Returns false
+    /// discard pile underneath when it runs low (Section 15.6). Used cards now go
+    /// straight to the bottom of the deck, so only a save from before decision #146
+    /// still has a discard pile to shuffle in. Returns false
     /// if there still aren't any cards (they're all in hands or the shop).
     /// </summary>
     public static bool EnsureCards(EngineContext ctx, CardDeck deck, int wanted = 1)
@@ -111,8 +113,12 @@ public static class CardRules
         ctx.Push(new CardPlayStep { PlayerId = player.Id, Play = new PlayCard(card) });
     }
 
+    /// <summary>
+    /// A used card goes to the bottom of its deck, never into a pile that gets shuffled (decision #146).
+    /// So the deck keeps its order all game, and players who remember what was drawn can guess what comes next.
+    /// </summary>
     public static void Discard(EngineContext ctx, string cardId) =>
-        DiscardPile(ctx.State, ctx.Content.Card(cardId).Deck).Add(cardId);
+        DrawPile(ctx.State, ctx.Content.Card(cardId).Deck).Add(cardId);
 
     /// <summary>Takes a card out of a hand, puts it on the discard pile and logs that it was played.</summary>
     public static void TakeFromHand(EngineContext ctx, PlayerState player, PlayCard play)

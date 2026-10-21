@@ -113,7 +113,6 @@ public class MomentumTests
         game.Dice.Add(3, 3);
         game.Do(0, new RollDice());
         game.Do(0, new Nudge(-1));
-        game.EndTurn(0);
 
         // Doubles still give another turn, even though the move was 5.
         Assert.Equal(DecisionKind.ChooseMoveMethod, game.DecisionFor(0)!.Kind);
@@ -158,7 +157,6 @@ public class MomentumTests
 
         game.Do(0, new PrecisionRoll());
         game.Do(0, new ChooseDice(0, 1)); // 4 + 4: doubles
-        game.EndTurn(0);
 
         Assert.Equal(DecisionKind.ChooseMoveMethod, game.DecisionFor(0)!.Kind); // another turn
     }

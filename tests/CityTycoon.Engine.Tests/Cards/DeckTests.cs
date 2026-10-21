@@ -49,7 +49,7 @@ public class DeckTests
         Assert.Equal(DecisionKind.DiscardCards, game.DecisionFor(0)!.Kind);
         game.Do(0, new DiscardCard("lobbyist"));
         Assert.Equal(3, game.Player(0).Hand.Count);
-        Assert.Contains("lobbyist", game.State.OpportunityDiscard);
+        Assert.Equal("lobbyist", game.State.OpportunityDeck[^1]); // back on the bottom of the deck
         Assert.Equal(DecisionKind.ChooseMoveMethod, game.DecisionFor(1)!.Kind);
     }
 
@@ -65,7 +65,30 @@ public class DeckTests
     }
 
     [Fact]
-    public void AnEmptyDeck_ReshufflesItsDiscardPile()
+    public void ADrawnEventCard_GoesToTheBottom_SoTheOrderNeverChanges()
+    {
+        var game = new TestGame();
+        var before = game.State.EventDeck.ToList();
+        game.RollOnto(0, "midtown-event");
+
+        // The top card was played and is now on the bottom; nothing was shuffled.
+        Assert.Equal([.. before.Skip(1), before[0]], game.State.EventDeck);
+        Assert.Empty(game.State.EventDiscard);
+        Assert.DoesNotContain(game.State.Log, e => e is DeckReshuffled);
+    }
+
+    [Fact]
+    public void APlayedOpportunityCard_GoesToTheBottom()
+    {
+        var game = new TestGame();
+        game.GiveCard(0, "audit");
+        game.Do(0, new PlayCard("audit", TargetPlayerId: 1));
+        Assert.Equal("audit", game.State.OpportunityDeck[^1]);
+        Assert.Empty(game.State.OpportunityDiscard);
+    }
+
+    [Fact]
+    public void AnOldSavesDiscardPile_IsStillShuffledIn_WhenTheDeckRunsOut()
     {
         var game = new TestGame();
         game.State.EventDiscard.AddRange(game.State.EventDeck);
@@ -111,7 +134,7 @@ public class DeckTests
         game.Do(0, new SellCard("audit"));
         Assert.Empty(game.Player(0).Hand);
         Assert.Equal(1550, game.Player(0).Cash);
-        Assert.Contains("audit", game.State.OpportunityDiscard);
+        Assert.Equal("audit", game.State.OpportunityDeck[^1]);
     }
 
     [Fact]

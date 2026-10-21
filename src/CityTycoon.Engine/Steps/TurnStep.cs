@@ -120,6 +120,7 @@ public sealed class TurnStep : Step
                 return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.ChooseMoveMethod,
                     RecoveringThisTurn ? "You're recovering from the Hospital, so you roll only 1 die this turn."
                     : RoadWorkCost > 0 ? $"Road Work! You roll only 1 die this turn, unless you spend {RoadWorkCost} Momentum token."
+                    : player.DoublesInARow > 0 ? "You rolled doubles, so you go again! How do you want to move?"
                     : "How do you want to move?",
                     Management: ManagementOptions.OwnTurn));
 
@@ -168,6 +169,13 @@ public sealed class TurnStep : Step
                 if (player.InJail)
                 {
                     Stage = TurnStage.EndOfTurn;
+                    return StepResult.Continue;
+                }
+                // Doubles: skip the "end your turn?" question and go straight to rolling again. The roll
+                // question allows the same building, trading and cards, so nothing is lost (decision #145).
+                if (ExtraTurnEarned)
+                {
+                    Stage = TurnStage.AfterPostMove;
                     return StepResult.Continue;
                 }
                 return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.PostMoveActions, "Anything else before you end your turn?",

@@ -43,9 +43,20 @@
                     @if (p.ExtraBuildsThisTurn > 0) { <span class="chip good"><Icon Name="permit" /> Construction Permit: +@p.ExtraBuildsThisTurn builds, @p.BuildDiscountThisTurn% off this turn</span> }
                     @foreach (var perk in p.Perks)
                     {
-                        <span class="chip perk"><Icon Name="star" /> @perk</span>
+                        @* Hover for a tooltip, or click (tap) to show what the power does under the chips. *@
+                        var (where, text) = PerkInfo(perk);
+                        var playerId = p.Id;
+                        <button type="button" class="chip perk @(IsOpen(playerId, perk) ? "open" : "")" title="@($"{perk}, {where}: {text}")"
+                                aria-expanded="@(IsOpen(playerId, perk) ? "true" : "false")" @onclick="() => Toggle(playerId, perk)">
+                            <Icon Name="star" /> @perk
+                        </button>
                     }
                 </div>
+                @foreach (var perk in p.Perks.Where(x => IsOpen(p.Id, x)))
+                {
+                    var (where, text) = PerkInfo(perk);
+                    <p class="perk-text"><strong>@perk</strong> <span class="small-print">(@where)</span><br />@text</p>
+                }
                 @if (p.CharacterId != null)
                 {
                     var character = Session.Content.Character(p.CharacterId);
@@ -70,6 +81,27 @@
 
     /// <summary>Clicking a player's letter circle opens their money ledger.</summary>
     [Parameter] public EventCallback<int> OnOpenLedger { get; set; }
+
+    // Which perk explanations are open, per player. Only this screen needs to know.
+    private readonly HashSet<(int PlayerId, string Perk)> openPerks = [];
+
+    private bool IsOpen(int playerId, string perk) => openPerks.Contains((playerId, perk));
+
+    private void Toggle(int playerId, string perk)
+    {
+        if (!openPerks.Remove((playerId, perk)))
+            openPerks.Add((playerId, perk));
+    }
+
+    /// <summary>Where a perk comes from (a whole color group, or railroads/utilities) and what it does, from the content files.</summary>
+    private (string Where, string Text) PerkInfo(string perk)
+    {
+        if (Session.Content.Groups.Values.FirstOrDefault(g => g.Perk.Name == perk) is { } group)
+            return ($"from owning all of {group.Name}", group.Perk.Text);
+        if (Session.Content.Bonuses.FirstOrDefault(b => b.Name == perk) is { } bonus)
+            return ($"from owning {bonus.Count} {(bonus.PropertyType == PropertyType.Railroad ? "railroads" : "utilities")}", bonus.Text);
+        return ("a power", "");
+    }
 
     private string SeatLabel(int playerId) => Session.Seats.GetValueOrDefault(playerId) switch
     {

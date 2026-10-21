@@ -37,6 +37,21 @@ Normal and Hard bots now judge a trade that hands over a color group by the rent
 
 Win rates moved less than the noise, so the new judgement doesn't make bots worse; it makes groups (and so buildings) happen more often.
 
+## Blocking a monopoly (2026-10-21)
+Every bot now bids extra to stop one opponent finishing a color group, and Easy bots value finishing their own group (decision #135). Measured on top of the trades change above, 1000 games each, 4 players, Timed, random characters, seed 1:
+
+| Run | Before | After |
+| --- | --- | --- |
+| NormalVsEasy (Normal seats' win rate) | 60.3% | 59.1% |
+| HardVsEasy (Hard seats' win rate) | 64.5% | 66.1% |
+| HardVsNormal (Hard seats' win rate) | 54.1% | 57.4% |
+| Easy only: buildings per game | 6.5 | 9.1 |
+| Bankruptcies per game (Easy only / HardVsEasy) | 0.01 / 0.03 | 0.02 / 0.05 |
+
+Game length stayed at 30 rounds. What else was tried:
+- **Blocking alone, with no own-group bonus for Easy:** all-Easy tables almost never finished a set (0.1 buildings per game), because three blockers always beat one Easy bot that didn't know the set was worth more to it.
+- **Bigger blocking shares (15% Easy, 25% Normal and Hard):** Normal fell to 53% to 56% against Easy and 38% against Hard. Blocking helps the other players as much as the blocker, so paying a lot for it loses games. 10% keeps the order Easy < Normal < Hard.
+
 ## How to repeat this
 `dotnet run -c Release --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots HardVsEasy --mode timed --characters random --seed 20000 --out <new folder>`
 `--bots` takes `Random`, `Easy`, `Normal`, `Hard`, `Mixed`, `NormalVsEasy`, `HardVsEasy` or `HardVsNormal`. The report prints the match-up result for the two-kind modes.

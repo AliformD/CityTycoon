@@ -17,10 +17,7 @@ namespace CityTycoon.AI;
 /// </summary>
 public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 102) : EasyBot(seed, content, stream)
 {
-    /// <summary>True for bots that also bid to stop an opponent finishing a color group.</summary>
-    protected virtual bool BlocksOpponents => false;
     protected virtual double WorthScale => 1.0;
-    protected virtual double BlockShare => 0.5;
 
     /// <summary>Normal and Hard bots judge a color group in a trade by the rent it can earn (see EasyBot.Trades.cs).</summary>
     protected override bool JudgesGroupsCarefully => true;
@@ -36,7 +33,7 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
         string id = decision.PropertyId!;
         PropertyDefinition def = content.Property(id);
         double worth = def.AssessedValue * MaxPriceRatio + SetBonus(view, id) * TimeLeftFactor(view);
-        return worth * WorthScale;
+        return WithBlocking(view, id, worth * WorthScale);
     }
 
     /// <summary>Extra dollars a property is worth because of the color group (or railroads and utilities) it belongs to.</summary>
@@ -51,7 +48,7 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
         }
 
         var others = content.GroupMembers(def.Group).Where(m => m != id).ToList();
-        double groupValue = content.GroupMembers(def.Group).Sum(m => content.Property(m).AssessedValue);
+        double groupValue = GroupValue(id);
         bool Mine(string m) => view.Properties[m].OwnerId == view.ViewerId && !view.Properties[m].IsPending;
 
         double bonus = 0;
@@ -60,21 +57,14 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
         else if (others.Any(Mine) && others.All(m => Mine(m) || view.Properties[m].OwnerId == null))
             bonus += groupValue * 0.15 * others.Count(Mine);
 
-        if (BlocksOpponents)
-        {
-            // Stop one opponent from owning everything else in the group.
-            var rival = others.GroupBy(m => view.Properties[m].OwnerId).FirstOrDefault(g =>
-                g.Key is int owner && owner != view.ViewerId && g.Count() == others.Count && others.Count >= 1);
-            if (rival != null && others.Count >= Math.Min(2, content.GroupMembers(def.Group).Count() - 1))
-                bonus += groupValue * BlockShare;
-        }
         return bonus;
     }
 
     /// <summary>A sealed bid close to its limit, and all the way up to it when the set matters.</summary>
     protected override int SealedAmount(PlayerView view, PendingDecision decision, int limit, int inc)
     {
-        double share = SetBonus(view, decision.PropertyId!) > 0 ? 1.0 : 0.8 + rng.NextDouble() * 0.2;
+        bool matters = SetBonus(view, decision.PropertyId!) > 0 || RivalCompleting(view, decision.PropertyId!) != null;
+        double share = matters ? 1.0 : 0.8 + rng.NextDouble() * 0.2;
         int amount = (int)(limit * share) / inc * inc;
         return Math.Clamp(amount, decision.MinBid, limit);
     }

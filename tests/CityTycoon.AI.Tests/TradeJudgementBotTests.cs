@@ -61,13 +61,14 @@ public class TradeJudgementBotTests
     public async Task HardBot_ExpectsLessForTheGroup_DuringABuildingMoratorium()
     {
         var rich = OrangeAlmostDone(personCash: 1500);
-        var counterNormally = Assert.IsType<CounterTrade>(await Answer(new HardBot(1), rich, ThreeHundredForMarket, 2)).Offer;
+        // With one counter left the bot sends its limit, so the two counters show what it thinks the group is worth.
+        var counterNormally = Assert.IsType<CounterTrade>(await Answer(new HardBot(1), rich, ThreeHundredForMarket, 1)).Offer;
 
         var frozen = OrangeAlmostDone(personCash: 1500);
-        frozen.State.ActiveOrdinances.Add(new("building-moratorium", null, 2));
-        var counterFrozen = Assert.IsType<CounterTrade>(await Answer(new HardBot(1), frozen, ThreeHundredForMarket, 2)).Offer;
+        frozen.State.ActiveOrdinances.Add(new("building-moratorium", null, 5));
+        var counterFrozen = Assert.IsType<CounterTrade>(await Answer(new HardBot(1), frozen, ThreeHundredForMarket, 1)).Offer;
 
-        Assert.True(counterFrozen.GetCash < counterNormally.GetCash);
+        Assert.True(counterFrozen.GetCash < counterNormally.GetCash, $"{counterFrozen.GetCash} vs {counterNormally.GetCash}");
     }
 
     [Fact]

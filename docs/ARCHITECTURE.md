@@ -253,5 +253,13 @@ On one shared screen, the board and log are drawn from a **spectator view**: the
 - `Services/Playback.cs` takes the events a step produced and shows them one at a time. `GameSession.RunAsync` calls `Prepare` before each step and `PlayAsync` after it.
 - `Playback.Apply` turns the real `PlayerView` into the view the screen draws while a replay is running. `GameSession.PublicView` goes through it, so every component shows the replayed state without knowing about it.
 - Money, ownership and positions are worked out from events only for the common cases. If an event is not covered, the screen simply catches up when the replay ends.
-- New pieces: `CaptionView` (big caption, card pop-up, skip button), tumbling dice in `DiceView`, space flashes in `SpaceCell`, and money pop-ups in `PlayerPanels`. Their CSS is at the end of `app.css`.
-- To replay a new kind of event: add its pause in `PauseFor`, its icon in `Look`, and (if it moves money or changes a property) its entry in `MoneyChanges` or `ApplyBoard`.
+- New pieces: `NoticeStack` (notices at the top of the board that fade, card pop-up, skip button), tumbling dice in `DiceView` (each die is a `Die`), space flashes in `SpaceCell`, and money pop-ups in `PlayerPanels`. Their CSS is at the end of `app.css`.
+- `Playback.Notices` keeps the last three notices; `Show` adds one. `Look` gives each event an icon name (for `Icon`), a tone, a card and a sound.
+- Sounds: `Services/SoundService.cs` calls `ct.sound` in `wwwroot/js/app.js`, which makes each sound with Web Audio. Playback asks for a sound per event; Settings has the on/off switch and volume.
+- To replay a new kind of event: add its pause in `PauseFor`, its icon and sound in `Look`, and (if it moves money or changes a property) its entry in `MoneyChanges` or `ApplyBoard`.
+
+## The look (Web)
+
+- All colors are CSS variables at the top of `app.css`. Night redefines them under `html[data-theme="night"]`, and again for "Match my device" on a dark device. `ct.applySettings` sets `data-theme` from Settings > Look.
+- `Components/Icon.razor` draws every picture as inline SVG by name (`dice`, `coin`, `jail`...). Add a new picture as a new `case` there.
+- The board size is one variable, `--cell` (one square). It is worked out from the window size, so the whole board fits on screen.

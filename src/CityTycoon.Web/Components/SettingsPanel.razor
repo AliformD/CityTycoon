@@ -1,9 +1,17 @@
-@* Settings (Sections 24.2 and 27): font, text size, spacing, animation, bots and reactions. Saved in the browser. *@
+@* Settings (Sections 24.2 and 27): look (day or night), font, text size, spacing, animation, bots and reactions. Saved in the browser. *@
 @inject SettingsService Settings
+@inject SoundService Sounds
 
 <div class="settings-panel" role="group" aria-labelledby="settings-title">
     <h2 id="settings-title">Settings</h2>
 
+    <label>Look
+        <select value="@S.Theme" @onchange="SetTheme">
+            <option value="day">Day (bright)</option>
+            <option value="night">Night (dark)</option>
+            <option value="auto">Match my device (light or dark)</option>
+        </select>
+    </label>
     <label>Font
         <select value="@S.Font" @onchange="SetFont">
             <option value="atkinson">Atkinson Hyperlegible (easy to read)</option>
@@ -26,6 +34,10 @@
             <option value="@AnimationSpeed.Off">Off (no animation, no pause between bot moves)</option>
         </select>
     </label>
+    <label class="toggle"><input type="checkbox" checked="@S.Sound" @onchange="SetSound" /> Sound effects</label>
+    <label>Volume: @S.Volume%
+        <input type="range" min="0" max="100" step="10" value="@S.Volume" @onchange="SetVolume" disabled="@(!S.Sound)" />
+    </label>
     <label class="toggle"><input type="checkbox" checked="@S.ReduceMotion" @onchange="SetReduceMotion" /> Reduce motion (your device's setting is always respected too)</label>
     <label class="toggle"><input type="checkbox" checked="@S.FastBots" @onchange="SetFastBots" /> Fast bots: no pause between bot moves</label>
     <label class="toggle"><input type="checkbox" checked="@S.AutoPassReactions" @onchange="SetAutoPass" /> New games: auto-pass Reaction cards for every person</label>
@@ -36,11 +48,18 @@
 @code {
     private UserSettings S => Settings.Current;
 
+    private Task SetTheme(ChangeEventArgs e) => Change(() => S.Theme = e.Value?.ToString() ?? "day");
+    private Task SetSound(ChangeEventArgs e) => Change(() => S.Sound = e.Value is true);
+    private async Task SetVolume(ChangeEventArgs e)
+    {
+        await Change(() => S.Volume = int.TryParse(e.Value?.ToString(), out int volume) ? volume : 60);
+        Sounds.Play("coin-in");   // a sample, so the new volume can be heard
+    }
     private Task SetFont(ChangeEventArgs e) => Change(() => S.Font = e.Value?.ToString() ?? "atkinson");
     private Task SetTextSize(ChangeEventArgs e) => Change(() => S.TextSize = int.TryParse(e.Value?.ToString(), out int size) ? size : 100);
     private Task SetLineSpacing(ChangeEventArgs e) => Change(() =>
         S.LineSpacing = double.TryParse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out double spacing) ? spacing : 1.5);
-    private Task SetAnimation(ChangeEventArgs e) => Change(() => S.Animation = Enum.TryParse(e.Value?.ToString(), out AnimationSpeed speed) ? speed : AnimationSpeed.Normal);
+    private Task SetAnimation(ChangeEventArgs e) => Change(() => S.Animation = Enum.TryParse(e.Value?.ToString(), out AnimationSpeed speed) ? speed : AnimationSpeed.Slow);
     private Task SetReduceMotion(ChangeEventArgs e) => Change(() => S.ReduceMotion = e.Value is true);
     private Task SetFastBots(ChangeEventArgs e) => Change(() => S.FastBots = e.Value is true);
     private Task SetAutoPass(ChangeEventArgs e) => Change(() => S.AutoPassReactions = e.Value is true);

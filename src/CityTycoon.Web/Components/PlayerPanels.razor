@@ -1,16 +1,14 @@
-@* One card per player: cash, net worth, and status. *@
+@* One card per player: cash (big), then net worth, properties and anything special going on. *@
 <section class="players" aria-label="Players">
     @foreach (var p in View.Players)
     {
-        <article class="player-card @(p.IsActive ? "active" : "") @(p.IsBankrupt ? "bankrupt" : "")" style="border-color:@UiHelpers.PlayerColor(p.Id)">
-            @foreach (var pop in Session.Playback.PopsFor(p.Id))
-            {
-                <span class="pop @(pop.Amount > 0 ? "up" : "down")" @key="pop.Number" aria-hidden="true">@(pop.Amount > 0 ? "+" : "−")@UiHelpers.Money(Math.Abs(pop.Amount))</span>
-            }
+        <article class="player-card @(p.IsActive && !View.IsOver ? "active" : "") @(p.IsBankrupt ? "bankrupt" : "")" style="--player:@UiHelpers.PlayerColor(p.Id)">
             <header>
                 <span class="token" style="background:@UiHelpers.PlayerColor(p.Id)" aria-hidden="true">@UiHelpers.Initial(p.Name)</span>
-                <strong>@p.Name</strong>
-                <span class="seat-kind">@(Session.IsHuman(p.Id) ? "Human" : "Bot")</span>
+                <div class="who">
+                    <strong>@p.Name</strong>
+                    <span class="seat-kind">@SeatLabel(p.Id)@(p.CharacterId != null ? " · " + Session.Content.Character(p.CharacterId).Name : "")</span>
+                </div>
                 @if (p.IsActive && !View.IsOver) { <span class="badge">Their turn</span> }
             </header>
             @if (p.IsBankrupt)
@@ -19,30 +17,41 @@
             }
             else
             {
-                @if (p.CharacterId != null)
-                {
-                    var character = Session.Content.Character(p.CharacterId);
-                    <p class="character" title="@character.Text"><strong>@character.Name</strong>: @character.Text</p>
-                }
-                @foreach (var perk in p.Perks)
-                {
-                    <p class="status perk">★ @perk</p>
-                }
+                <p class="cash"><span class="visually-hidden">Cash </span>@UiHelpers.Money(p.Cash)
+                    @* Money floats up from the cash amount while a move is replayed. *@
+                    @foreach (var pop in Session.Playback.PopsFor(p.Id))
+                    {
+                        <span class="pop @(pop.Amount > 0 ? "up" : "down")" @key="pop.Number" aria-hidden="true">@(pop.Amount > 0 ? "+" : "−")@UiHelpers.Money(Math.Abs(pop.Amount))</span>
+                    }
+                </p>
                 <dl>
-                    <dt>Cash</dt><dd>@UiHelpers.Money(p.Cash)</dd>
                     <dt>Net worth</dt><dd>@UiHelpers.Money(p.NetWorth)</dd>
                     <dt>Properties</dt><dd>@View.Properties.Values.Count(x => x.OwnerId == p.Id)</dd>
                     <dt>Cards</dt><dd>@p.HandCount</dd>
-                    <dt>Momentum</dt><dd><span aria-hidden="true">@(new string('●', p.Momentum))</span> @p.Momentum of @p.MomentumCap</dd>
+                    <dt>Momentum</dt><dd><span class="momentum" aria-hidden="true">@for (int m = 0; m < p.MomentumCap; m++) { <span class="@(m < p.Momentum ? "on" : "")"></span> }</span> @p.Momentum of @p.MomentumCap</dd>
                     @if (p.Loans > 0) { <dt>Loans</dt><dd>@p.Loans (repay @UiHelpers.Money(p.Loans * p.LoanRepayCost))</dd> }
                     @{ var pending = View.Properties.Values.Where(x => x.OwnerId == p.Id && x.IsPending).ToList(); }
                     @if (pending.Count > 0) { <dt>Pending</dt><dd>@pending.Count (owes @UiHelpers.Money(pending.Sum(x => x.PendingBalance)) at GO)</dd> }
                 </dl>
-                @if (p.InJail) { <p class="status">▦ In Jail@(p.JailTurns > 0 ? $" (turn {p.JailTurns})" : ""): rent halved</p> }
-                @if (p.IsInsured) { <p class="status">✚ Insured</p> }
-                @if (p.IsRecovering) { <p class="status">✚ Recovering: rolls 1 die next turn</p> }
-                @if (p.HasRoadWork) { <p class="status">🚧 Road Work: rolls 1 die next turn</p> }
-                @if (p.ExtraBuildsThisTurn > 0) { <p class="status">📜 Construction Permit: +@p.ExtraBuildsThisTurn builds, @p.BuildDiscountThisTurn% off this turn</p> }
+                <div class="chips">
+                    @if (p.InJail) { <span class="chip bad"><Icon Name="jail" /> In Jail@(p.JailTurns > 0 ? $" (turn {p.JailTurns})" : ""): rent halved</span> }
+                    @if (p.IsInsured) { <span class="chip good"><Icon Name="medic" /> Insured</span> }
+                    @if (p.IsRecovering) { <span class="chip"><Icon Name="medic" /> Recovering: rolls 1 die next turn</span> }
+                    @if (p.HasRoadWork) { <span class="chip"><Icon Name="cone" /> Road Work: rolls 1 die next turn</span> }
+                    @if (p.ExtraBuildsThisTurn > 0) { <span class="chip good"><Icon Name="permit" /> Construction Permit: +@p.ExtraBuildsThisTurn builds, @p.BuildDiscountThisTurn% off this turn</span> }
+                    @foreach (var perk in p.Perks)
+                    {
+                        <span class="chip perk"><Icon Name="star" /> @perk</span>
+                    }
+                </div>
+                @if (p.CharacterId != null)
+                {
+                    var character = Session.Content.Character(p.CharacterId);
+                    <details class="character">
+                        <summary>@character.Name's power</summary>
+                        <p>@character.Text</p>
+                    </details>
+                }
                 @if (Session.IsHuman(p.Id))
                 {
                     <label class="toggle small-print"><input type="checkbox" checked="@Session.AutoPassesReactions(p.Id)"
@@ -56,4 +65,12 @@
 @code {
     [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
     [Parameter, EditorRequired] public GameSession Session { get; set; } = default!;
+
+    private string SeatLabel(int playerId) => Session.Seats.GetValueOrDefault(playerId) switch
+    {
+        SeatKind.Human => "Human",
+        SeatKind.NormalBot => "Normal bot",
+        SeatKind.HardBot => "Hard bot",
+        _ => "Easy bot",
+    };
 }

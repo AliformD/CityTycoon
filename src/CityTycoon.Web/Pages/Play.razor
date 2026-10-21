@@ -2,6 +2,8 @@
 @implements IDisposable
 @inject GameSession Session
 @inject NavigationManager Nav
+@inject SettingsService Settings
+@inject SoundService Sounds
 
 <PageTitle>City Tycoon</PageTitle>
 
@@ -16,11 +18,45 @@ else
 {
     var view = Session.PublicView;
     var request = Session.Request;
+    var turnPlayer = view.Players.FirstOrDefault(p => p.IsActive);
+    <header class="topbar">
+        <h1 class="brand">
+            <span class="brand-mark" aria-hidden="true"><Icon Name="build" /></span>
+            <span class="brand-name">City <span>Tycoon</span></span>
+        </h1>
+        <div class="topbar-status">
+            <span class="chip">Round @view.Round@(view.Mode == GameMode.Timed ? $" of {view.MaxRounds}" : "")</span>
+            @if (turnPlayer != null && !view.IsOver)
+            {
+                <span class="chip turn-chip" style="background:@UiHelpers.PlayerColor(turnPlayer.Id)">@turnPlayer.Name's turn</span>
+            }
+            <div class="segmented" role="group" aria-label="Animation speed">
+                @foreach (var speed in Speeds)
+                {
+                    var choice = speed;
+                    <button aria-pressed="@(Settings.Current.Animation == choice ? "true" : "false")" @onclick="() => SetSpeed(choice)">@choice</button>
+                }
+            </div>
+        </div>
+        <nav class="topbar-actions" aria-label="Game menu">
+            <button class="pill icon-only" aria-label="@(IsNight ? "Switch to Day" : "Switch to Night")" title="@(IsNight ? "Switch to Day" : "Switch to Night")" @onclick="ToggleTheme">
+                <Icon Name="@(IsNight ? "sun" : "moon")" />
+            </button>
+            <button class="pill icon-only" aria-pressed="@(Settings.Current.Sound ? "true" : "false")" aria-label="Sound effects" title="Sound effects" @onclick="ToggleSound">
+                <Icon Name="@(Settings.Current.Sound ? "sound" : "mute")" />
+            </button>
+            <a class="pill" href="rules" target="_blank" rel="noopener" title="Rules"><Icon Name="book" /><span class="label">Rules</span></a>
+            <button class="pill" title="Settings" aria-expanded="@showSettings" @onclick="() => showSettings = !showSettings"><Icon Name="gear" /><span class="label">Settings</span></button>
+            <button class="pill" title="Save in this browser" @onclick="SaveNow"><Icon Name="save" /><span class="label">Save</span></button>
+            <button class="pill" @onclick="Session.DownloadSaveAsync" title="Download a save file"><Icon Name="download" /><span class="visually-hidden">Download save file</span></button>
+            <button class="pill" title="Back to the menu" @onclick='() => Nav.NavigateTo("")'><Icon Name="home" /><span class="label">Menu</span></button>
+        </nav>
+    </header>
     <div class="game">
         <BoardView View="view" Content="Session.Content" HighlightSpaceId="@selectedSpaceId" OnSelect="Select"
                    PreviewSpaceIds="PreviewSpots(request)" PreviewFocusId="@previewFocusId"
                    FlashSpaceId="@Session.Playback.FlashSpaceId" FlashTone="@Session.Playback.FlashTone">
-            <CaptionView Playback="Session.Playback" Content="Session.Content" />
+            <NoticeStack Playback="Session.Playback" Content="Session.Content" OnShow="ShowSpace" />
             <DiceView View="view" Rolling="Session.Playback.Rolling" RollingFaces="Session.Playback.RollingFaces" />
             @if (Session.Error != null)
             {
@@ -38,29 +74,48 @@ else
             {
                 <p class="waiting">Waiting for @string.Join(", ", view.WaitingOn.Select(id => view.Player(id).Name))…</p>
             }
-            <GameLog View="view" Content="Session.Content" />
         </BoardView>
 
         <aside class="sidebar">
-            <section class="city" aria-label="City">
-                <strong>Round @view.Round@(view.Mode == GameMode.Timed ? $" of {view.MaxRounds}" : "")</strong>
-                <span>@(view.Mode == GameMode.Timed ? "Timed game" : "Classic game")</span>
-                <span class="council-next">City Council: next session at the end of round @view.NextCouncilRound</span>
-                @foreach (var active in view.ActiveOrdinances)
-                {
-                    var ordinance = Session.Content.Ordinance(active.OrdinanceId);
-                    <span class="boost">🏛️ @ordinance.Name@(active.DistrictId is string districtId ? $" ({Session.Content.Board.Districts.First(x => x.Id == districtId).Name})" : ""):
-                        @(active.RoundsLeft is int left ? $"{left} round{(left == 1 ? "" : "s")} left" : "permanent")</span>
-                }
-                <span class="permits">Permits left: @view.HotelPermitsLeft hotel, @view.SkyscraperPermitsLeft skyscraper</span>
-                @foreach (var boost in view.StadiumBoosts)
-                {
-                    <span class="boost">🏟️ @Session.Content.Groups[boost.GroupId].Name rent doubled by @view.Player(boost.ChosenById).Name</span>
-                }
-                @foreach (var boost in view.PropertyBoosts)
-                {
-                    <span class="boost">🎉 Grand Opening: @Session.Content.Property(boost.PropertyId).Name rent ×@boost.Multiplier until @view.Player(boost.ChosenById).Name's next turn</span>
-                }
+            @if (saveMessage != null) { <p class="hint" role="status">@saveMessage</p> }
+            @if (showSettings) { <SettingsPanel /> }
+            <PlayerPanels View="view" Session="Session" />
+            @if (selectedSpaceId != null && Session.Content.Properties.ContainsKey(selectedSpaceId))
+            {
+                <section class="detail panel" aria-label="Property details">
+                    @if (request != null && !Session.ShowPassScreen && request.Decision.Management != ManagementOptions.None
+                         && view.Properties[selectedSpaceId].OwnerId == request.PlayerId)
+                    {
+                        <PropertyActions PropertyId="@selectedSpaceId" Request="request" Content="Session.Content" Session="Session" OnAnswer="Session.Answer" />
+                    }
+                    <PropertyCard PropertyId="@selectedSpaceId" View="view" Content="Session.Content" Breakdown="Session.Engine!.ExplainRent(selectedSpaceId)" />
+                    <button class="small" @onclick="() => selectedSpaceId = null">Close</button>
+                </section>
+            }
+            else if (selectedSpaceId != null)
+            {
+                <section class="detail panel"><p>@SpaceHelp(view) <SpeakButton Text="@SpaceHelp(view)" Label="this space" /></p><button class="small" @onclick="() => selectedSpaceId = null">Close</button></section>
+            }
+            <section class="city panel" aria-label="City">
+                <h2>City Hall</h2>
+                <span class="council-next">City Council meets at the end of round @view.NextCouncilRound</span>
+                <div class="chips">
+                    @foreach (var active in view.ActiveOrdinances)
+                    {
+                        var ordinance = Session.Content.Ordinance(active.OrdinanceId);
+                        <span class="chip boost"><Icon Name="council" /> @ordinance.Name@(active.DistrictId is string districtId ? $" ({Session.Content.Board.Districts.First(x => x.Id == districtId).Name})" : ""):
+                            @(active.RoundsLeft is int left ? $"{left} round{(left == 1 ? "" : "s")} left" : "permanent")</span>
+                    }
+                    @foreach (var boost in view.StadiumBoosts)
+                    {
+                        <span class="chip boost"><Icon Name="stadium" /> @Session.Content.Groups[boost.GroupId].Name rent doubled by @view.Player(boost.ChosenById).Name</span>
+                    }
+                    @foreach (var boost in view.PropertyBoosts)
+                    {
+                        <span class="chip boost"><Icon Name="party" /> Grand Opening: @Session.Content.Property(boost.PropertyId).Name rent ×@boost.Multiplier until @view.Player(boost.ChosenById).Name's next turn</span>
+                    }
+                    <span class="chip permits">Permits left: @view.HotelPermitsLeft hotel, @view.SkyscraperPermitsLeft skyscraper</span>
+                </div>
                 <span class="decks">Opportunity deck @view.OpportunityDeckCount (discards @view.OpportunityDiscardCount) · Event deck @view.EventDeckCount (discards @view.EventDiscardCount)</span>
                 <details>
                     <summary>For sale at the Mall</summary>
@@ -78,42 +133,20 @@ else
                         @foreach (var district in Session.Content.Board.Districts)
                         {
                             var zoning = view.Zoning[district.Id];
-                            <li>@district.Name: <strong>@UiHelpers.ZoningName(zoning)</strong> (up to @EventDescriber.LevelName(Session.Content.Rules.MaxBuildingLevel(zoning)))@(view.ActiveOrdinances.Any(a => a.DistrictId == district.Id && Session.Content.Ordinance(a.OrdinanceId).EffectType == "Preserve") ? " 🔒 frozen" : "")</li>
+                            <li>@district.Name: <strong>@UiHelpers.ZoningName(zoning)</strong> (up to @EventDescriber.LevelName(Session.Content.Rules.MaxBuildingLevel(zoning)))@(view.ActiveOrdinances.Any(a => a.DistrictId == district.Id && Session.Content.Ordinance(a.OrdinanceId).EffectType == "Preserve") ? " (frozen)" : "")</li>
                         }
                     </ul>
                 </details>
             </section>
-            <PlayerPanels View="view" Session="Session" />
-            @if (selectedSpaceId != null && Session.Content.Properties.ContainsKey(selectedSpaceId))
-            {
-                <section class="detail" aria-label="Property details">
-                    @if (request != null && !Session.ShowPassScreen && request.Decision.Management != ManagementOptions.None
-                         && view.Properties[selectedSpaceId].OwnerId == request.PlayerId)
-                    {
-                        <PropertyActions PropertyId="@selectedSpaceId" Request="request" Content="Session.Content" Session="Session" OnAnswer="Session.Answer" />
-                    }
-                    <PropertyCard PropertyId="@selectedSpaceId" View="view" Content="Session.Content" Breakdown="Session.Engine!.ExplainRent(selectedSpaceId)" />
-                    <button class="small" @onclick="() => selectedSpaceId = null">Close</button>
-                </section>
-            }
-            else if (selectedSpaceId != null)
-            {
-                <section class="detail"><p>@SpaceHelp(view) <SpeakButton Text="@SpaceHelp(view)" Label="this space" /></p><button class="small" @onclick="() => selectedSpaceId = null">Close</button></section>
-            }
-            else
+            <section class="panel log-panel" aria-labelledby="log-title">
+                <h2 id="log-title">What just happened</h2>
+                <GameLog View="view" Content="Session.Content" />
+            </section>
+            @if (selectedSpaceId == null)
             {
                 <p class="hint">Tip: click any space on the board to see its details.</p>
             }
             <label class="toggle"><input type="checkbox" @bind="Session.FastBots" /> Fast bots</label>
-            <div class="save-row">
-                <button class="small" @onclick="SaveNow">Save game</button>
-                <button class="small" @onclick="Session.DownloadSaveAsync">Download save file</button>
-                <a href="rules" target="_blank" rel="noopener">Rules</a>
-                <button class="small" aria-expanded="@showSettings" @onclick="() => showSettings = !showSettings">Settings</button>
-                <button class="small" @onclick='() => Nav.NavigateTo("")'>Menu</button>
-            </div>
-            @if (saveMessage != null) { <p class="hint" role="status">@saveMessage</p> }
-            @if (showSettings) { <SettingsPanel /> }
         </aside>
     </div>
 
@@ -140,6 +173,33 @@ else
             : "The browser wouldn't keep the save (it may be full). Use \"Download save file\" instead.";
     }
     private string? previewFocusId;
+
+    private static readonly AnimationSpeed[] Speeds = [AnimationSpeed.Slow, AnimationSpeed.Normal, AnimationSpeed.Fast];
+
+    private async Task SetSpeed(AnimationSpeed speed)
+    {
+        Settings.Current.Animation = speed;
+        await Settings.SaveAsync();
+    }
+
+    private bool IsNight => Settings.Current.Theme == "night";
+
+    /// <summary>The sun/moon button: flips between Day and Night, and remembers the choice for next time.</summary>
+    private async Task ToggleTheme()
+    {
+        Settings.Current.Theme = IsNight ? "day" : "night";
+        await Settings.SaveAsync();
+    }
+
+    private async Task ToggleSound()
+    {
+        Settings.Current.Sound = !Settings.Current.Sound;
+        await Settings.SaveAsync();
+        Sounds.Play("click");
+    }
+
+    /// <summary>A notice's "Show" button: select that space, so it is outlined on the board and its details open.</summary>
+    private void ShowSpace(string spaceId) => selectedSpaceId = spaceId;
 
     private void Answer(GameAction action)
     {

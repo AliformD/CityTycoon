@@ -1,11 +1,16 @@
 @page "/"
 @inject GameSession Session
 @inject NavigationManager Nav
+@inject SettingsService Settings
 
 <PageTitle>City Tycoon</PageTitle>
 
 <main class="menu">
-    <h1>City Tycoon</h1>
+    <header class="hero">
+        <span class="brand-mark big-mark" aria-hidden="true"><Icon Name="build" /></span>
+        <h1 class="brand-name">City <span>Tycoon</span></h1>
+        <p class="tagline">Buy streets, build up the city, and outsmart the City Council.</p>
+    </header>
 
     @if (Session.HasGame && !Session.Engine!.State.IsOver)
     {
@@ -14,7 +19,7 @@
 
     @if (saved != null)
     {
-        <section class="saved-game" aria-labelledby="saved-title">
+        <section class="saved-game panel" aria-labelledby="saved-title">
             <h2 id="saved-title">Saved game</h2>
             <p>@saved.Describe()</p>
             <div class="save-row">
@@ -24,11 +29,12 @@
         </section>
     }
 
-    <p class="save-row">
-        <label class="small">Load a save file: <InputFile OnChange="LoadFile" accept=".json,application/json" /></label>
-        <a href="rules">Rules</a>
-        <button class="small" aria-expanded="@showSettings" @onclick="() => showSettings = !showSettings">Settings</button>
-    </p>
+    <div class="save-row menu-actions">
+        <label class="pill file-pill"><Icon Name="download" />Load a save file <InputFile class="visually-hidden" OnChange="LoadFile" accept=".json,application/json" /></label>
+        <a class="pill" href="rules"><Icon Name="book" />Rules</a>
+        <button class="pill" @onclick="ToggleTheme"><Icon Name="@(Settings.Current.Theme == "night" ? "sun" : "moon")" />@(Settings.Current.Theme == "night" ? "Day" : "Night")</button>
+        <button class="pill" aria-expanded="@showSettings" @onclick="() => showSettings = !showSettings"><Icon Name="gear" />Settings</button>
+    </div>
     @if (loadError != null)
     {
         <p class="error" role="alert">@loadError</p>
@@ -38,7 +44,7 @@
         <SettingsPanel />
     }
 
-    <section class="setup" aria-labelledby="setup-title">
+    <section class="setup panel" aria-labelledby="setup-title">
         <h2 id="setup-title">New game</h2>
 
         <fieldset>
@@ -161,6 +167,13 @@
         {
             loadError = "That file couldn't be read as a City Tycoon save.";
         }
+    }
+
+    /// <summary>The Day/Night button: flips the look and remembers it for next time.</summary>
+    private async Task ToggleTheme()
+    {
+        Settings.Current.Theme = Settings.Current.Theme == "night" ? "day" : "night";
+        await Settings.SaveAsync();
     }
 
     private void AddSeat() =>

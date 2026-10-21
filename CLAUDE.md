@@ -38,8 +38,8 @@ Status: Phases 0 to 10 done. Phase 11 (online multiplayer) is on hold by Angel's
 | A character or perk | `content/characters.json` / `groups.json`, `Modifiers/*Modifiers.cs` |
 | A new action, event or step | Add the type, then register it with `[JsonDerivedType]` on `GameAction`, `GameEvent` or `Step`, describe events in `Events/EventDescriber.cs` |
 | A bot behavior | The `virtual` methods in `EasyBot` (Reserve, PropertyWorth, SealedAmount, PickBuild, Vote, NudgeThreshold) |
-| A screen | `src/CityTycoon.Web/Components/` and `Pages/`; styles in `wwwroot/css/app.css` |
-| How an event is shown (pause, icon, money, token walk) | `src/CityTycoon.Web/Services/Playback.cs` |
+| A screen | `src/CityTycoon.Web/Components/` and `Pages/`; styles in `wwwroot/css/app.css` (colors are variables at the top, Day and Night) |
+| How an event is shown (pause, icon, sound, money, token walk) | `src/CityTycoon.Web/Services/Playback.cs`; pictures in `Components/Icon.razor`, sounds in `wwwroot/js/app.js` (`ct.sound`) |
 
 ## Commands
 - Build and test: `dotnet test` (all projects). Last known: 439 engine tests and 44 bot tests, all passing.

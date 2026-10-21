@@ -27,7 +27,7 @@ public sealed class SeatSetup
 /// This lives in the Web project because it's about the screen. The rules
 /// themselves stay in the Engine.
 /// </summary>
-public sealed class GameSession(SettingsService settings, IJSRuntime js)
+public sealed class GameSession(SettingsService settings, SoundService sounds, IJSRuntime js)
 {
     private const string SaveKey = "citytycoon.save";
 
@@ -89,7 +89,7 @@ public sealed class GameSession(SettingsService settings, IJSRuntime js)
     private Playback? playback;
 
     /// <summary>Slows the game down and replays each step's events one at a time (see <see cref="Playback"/>).</summary>
-    public Playback Playback => playback ??= new Playback(settings, Content, () => Changed?.Invoke());
+    public Playback Playback => playback ??= new Playback(settings, sounds, Content, () => Changed?.Invoke());
 
     /// <summary>What everyone at the table can see (no secrets), for drawing the board. While a replay is playing it shows only what has been replayed so far.</summary>
     public PlayerView PublicView => Playback.Apply(Engine!.GetView(viewerId: -1));

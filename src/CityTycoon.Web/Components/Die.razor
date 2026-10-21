@@ -1,0 +1,22 @@
+@* One die face: a 3 x 3 grid where only the spots for this number are filled in. *@
+<span class="die" aria-hidden="true">
+    @for (int spot = 0; spot < 9; spot++)
+    {
+        <span class="pip @(Spots(Value).Contains(spot) ? "" : "off")"></span>
+    }
+</span>
+
+@code {
+    [Parameter] public int Value { get; set; } = 1;
+
+    // Spots are numbered 0-8, left to right, top to bottom.
+    private static int[] Spots(int value) => value switch
+    {
+        1 => [4],
+        2 => [0, 8],
+        3 => [0, 4, 8],
+        4 => [0, 2, 6, 8],
+        5 => [0, 2, 4, 6, 8],
+        _ => [0, 2, 3, 5, 6, 8],
+    };
+}

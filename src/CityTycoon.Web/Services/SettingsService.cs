@@ -20,7 +20,17 @@ public sealed class UserSettings
     /// <summary>Turns animation off even if the device didn't ask for reduced motion.</summary>
     public bool ReduceMotion { get; set; }
 
-    public AnimationSpeed Animation { get; set; } = AnimationSpeed.Normal;
+    /// <summary>How fast moves are replayed. Slow is the default so everyone can follow each move.</summary>
+    public AnimationSpeed Animation { get; set; } = AnimationSpeed.Slow;
+
+    /// <summary>"day" (the default), "night", or "auto" (follow the device's light or dark setting).</summary>
+    public string Theme { get; set; } = "day";
+
+    /// <summary>Sound effects for dice, money, cards and so on.</summary>
+    public bool Sound { get; set; } = true;
+
+    /// <summary>Sound volume as a percentage.</summary>
+    public int Volume { get; set; } = 60;
 
     /// <summary>Skip the short pause between bot moves.</summary>
     public bool FastBots { get; set; }
@@ -63,11 +73,19 @@ public sealed class SettingsService(IJSRuntime js)
 
     private ValueTask ApplyAsync()
     {
-        double animationScale = Current.Animation switch { AnimationSpeed.Fast => 0.4, AnimationSpeed.Off => 0.0001, AnimationSpeed.Slow => 1.6, _ => 1.0 };
+        double animationScale = Current.Animation == AnimationSpeed.Off ? 0.0001 : AnimationScale;
         return js.InvokeVoidAsync("ct.applySettings", Current.Font, Current.TextSize / 100.0, Current.LineSpacing,
-            Current.ReduceMotion || Current.Animation == AnimationSpeed.Off, animationScale);
+            Current.ReduceMotion || Current.Animation == AnimationSpeed.Off, animationScale, Current.Theme);
     }
 
+    /// <summary>How much longer than "1x" each pause and animation lasts. The replay (Playback) and the CSS animations both use it.</summary>
+    public double AnimationScale => Current.Animation switch
+    {
+        AnimationSpeed.Slow => 2.0,
+        AnimationSpeed.Fast => 0.6,
+        _ => 1.4,
+    };
+
     /// <summary>How long to pause between bot moves, in milliseconds.</summary>
-    public int BotDelayMs => Current.FastBots ? 0 : Current.Animation switch { AnimationSpeed.Fast => 60, AnimationSpeed.Off => 0, AnimationSpeed.Slow => 300, _ => 200 };
+    public int BotDelayMs => Current.FastBots ? 0 : Current.Animation switch { AnimationSpeed.Fast => 100, AnimationSpeed.Off => 0, AnimationSpeed.Slow => 500, _ => 300 };
 }

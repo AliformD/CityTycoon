@@ -21,7 +21,7 @@
     if (opening != null)
         label += $", Grand Opening: rent ×{opening.Multiplier}";
 }
-<button class="space side-@UiHelpers.Side(Space.Index) kind-@Space.Kind.ToString().ToLowerInvariant() @(Highlight ? "highlight" : "") @(Preview ? "preview" : "") @(PreviewFocus ? "preview-focus" : "") @(Flash ? "flash flash-" + FlashTone : "")"
+<button class="space side-@UiHelpers.Side(Space.Index) kind-@Space.Kind.ToString().ToLowerInvariant() @(owned?.IsMortgaged == true ? "mortgaged" : "") @(Highlight ? "highlight" : "") @(Preview ? "preview" : "") @(PreviewFocus ? "preview-focus" : "") @(Flash ? "flash flash-" + FlashTone : "")"
         style="grid-column:@col; grid-row:@row;"
         title="@label"
         aria-label="@label"
@@ -29,39 +29,60 @@
     @if (group != null)
     {
         bool boosted = View.StadiumBoosts.Any(b => b.GroupId == group.Id);
-        <span class="band" style="background:@group.Color">@group.Code@(boosted ? " ×2" : "")</span>
-    }
-    else if (def != null)
-    {
-        @* Railroads and utilities get a plain band with a short code, so every property looks alike. *@
-        <span class="band" style="background:#555">@(def.Type == PropertyType.Railroad ? "RR" : "UT")</span>
+        <span class="band" style="background:@group.Color">
+            @if (owned is { Level: > 0 and <= 4 })
+            {
+                @for (int h = 0; h < owned.Level; h++)
+                {
+                    <span class="house"></span>
+                }
+            }
+            else if (owned is { Level: 5 })
+            {
+                <span class="hotel">H</span>
+            }
+            else if (owned is { Level: >= 6 })
+            {
+                <span class="hotel tower">S</span>
+            }
+            @if (boosted)
+            {
+                <span class="boost-x2">×2</span>
+            }
+        </span>
     }
     else
     {
-        <span class="icon" aria-hidden="true">@UiHelpers.KindIcon(Space)</span>
+        <Icon Name="@UiHelpers.KindIconName(Space, def)" Class="space-icon" />
     }
-    <span class="name">@name</span>
+    @if (UiHelpers.IsCorner(Space))
+    {
+        <span class="corner-title">@CornerTitle()</span>
+        <span class="corner-sub">@CornerSub()</span>
+    }
+    else
+    {
+        <span class="name">@name</span>
+    }
     @if (def != null && owned?.OwnerId == null)
     {
         <span class="price">@UiHelpers.Money(def.AssessedValue)</span>
     }
     @if (owned?.OwnerId is int ownerId)
     {
-        <span class="owner" style="background:@UiHelpers.PlayerColor(ownerId)">
-            @UiHelpers.Initial(View.Player(ownerId).Name)@(owned.IsMortgaged ? " (M)" : "")@(owned.IsPending ? " (P)" : "")
-        </span>
+        <span class="owner" style="background:@UiHelpers.PlayerColor(ownerId)" aria-hidden="true">@UiHelpers.Initial(View.Player(ownerId).Name)</span>
+        @if (owned.IsMortgaged || owned.IsPending)
+        {
+            <span class="owner-note" aria-hidden="true">@(owned.IsMortgaged ? "M" : "P")</span>
+        }
         @if (opening != null)
         {
-            <span class="opening" aria-hidden="true">🎉</span>
-        }
-        @if (owned.Level > 0)
-        {
-            <span class="level level-@owned.Level">@UiHelpers.LevelMarker(owned.Level)</span>
+            <Icon Name="party" Class="opening" />
         }
     }
     @if (tokens.Count > 0)
     {
-        <span class="tokens">
+        <span class="tokens @(tokens.Count > 2 ? "crowded" : "")">
             @foreach (var p in tokens)
             {
                 <span class="token @(p.IsActive ? "active" : "")" @key="p.Id" style="background:@UiHelpers.PlayerColor(p.Id)" title="@p.Name">@UiHelpers.Initial(p.Name)</span>
@@ -82,4 +103,20 @@
     [Parameter] public bool Flash { get; set; }
     [Parameter] public string FlashTone { get; set; } = "";
     [Parameter] public EventCallback<SpaceInfo> OnSelect { get; set; }
+
+    private string CornerTitle() => Space.Kind switch
+    {
+        SpaceKind.Go => "GO",
+        SpaceKind.Jail => "JAIL",
+        SpaceKind.CityPark => "CITY PARK",
+        _ => "GO TO JAIL",
+    };
+
+    private string CornerSub() => Space.Kind switch
+    {
+        SpaceKind.Go => $"Collect {UiHelpers.Money(Content.Rules.GoSalary)}",
+        SpaceKind.Jail => "Just visiting",
+        SpaceKind.CityPark => "Take a break",
+        _ => "Do not pass GO",
+    };
 }

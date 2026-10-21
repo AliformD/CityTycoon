@@ -85,7 +85,7 @@ For reference, these are Angel's decisions that replaced parts of the first rule
 | --- | --- |
 | Board | 48 spaces: 4 corners + 4 sides × 11 spaces (10 fixed spaces + 1 Government tile per side). |
 | Dice | 2 standard six-sided dice, plus a 3rd die for Precision Rolls. |
-| Money | Starting cash $1,000 per player. The bank has unlimited money. |
+| Money | Starting cash $1,200 per player. The bank has unlimited money. |
 | Properties | 28 total: 22 color properties in 8 color groups, 4 railroads, 2 utilities. |
 | Buildings | Houses (unlimited), hotels and skyscrapers (limited by permits). |
 | Government tiles | 7 types. 4 are used each game, one per side, face-down. |
@@ -190,7 +190,7 @@ Every character ability goes through the rule-modifier system (Section 20) so ab
 8. **Starting zoning:** every district starts at **Residential**, except one randomly chosen district that starts at **Commercial** (Section 10).
 9. **Permits:** set the hotel and skyscraper permit supply for the player count (Section 10.3).
 10. Shuffle the Opportunity, Event and Ordinance decks. Deal 3 Opportunity cards face up to the Mall shop.
-11. Each player gets $1,000 and 2 Momentum tokens (the Commuter gets 3).
+11. Each player gets $1,200 and 2 Momentum tokens (the Commuter gets 3).
 12. The City Planner takes their first secret peek.
 13. The first player starts round 1.
 
@@ -799,7 +799,7 @@ Every value below must live in one config file that loads at startup. The rules 
 
 | Key | Default | Section |
 | --- | --- | --- |
-| `startingCash` | 1000 | 6 |
+| `startingCash` | 1200 | 6 |
 | `startingMomentum` | 2 | 7.3 |
 | `momentumCap` | 2 | 7.3 |
 | `nudgeMaxSpaces` | 2 | 7.3 |

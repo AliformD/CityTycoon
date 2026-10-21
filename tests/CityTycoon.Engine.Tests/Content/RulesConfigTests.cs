@@ -10,7 +10,7 @@ public class RulesConfigTests
         RulesConfig rules = ContentLoader.LoadRules();
 
         // Decision #143: less cash at the start, more at GO, no catch-up bonus, 40 rounds.
-        Assert.Equal(1000, rules.StartingCash);
+        Assert.Equal(1200, rules.StartingCash);
         Assert.Equal(300, rules.GoSalary);
         Assert.Equal(0, rules.CatchUpBonus);
         Assert.Equal(40, rules.TimedModeDefaultRounds);

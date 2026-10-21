@@ -2,7 +2,7 @@
   "contentVersion": 1,
 
   // Less cash at the start and more at GO (decision #143): a slower start, steadier money later.
-  "startingCash": 1000,
+  "startingCash": 1200,
   "startingMomentum": 2,
   "momentumCap": 2,
   "nudgeMaxSpaces": 2,

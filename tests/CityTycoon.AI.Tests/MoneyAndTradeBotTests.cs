@@ -41,7 +41,7 @@ public class MoneyAndTradeBotTests
         await host.StepAsync(); // the bot answers
 
         Assert.Equal(0, engine.State.Properties["market-street"].OwnerId);
-        Assert.Equal(1000 - 400, engine.State.Player(0).Cash);
+        Assert.Equal(1200 - 400, engine.State.Player(0).Cash);
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public class MoneyAndTradeBotTests
         await host.StepAsync(); // the bot accepts
 
         Assert.Equal(1, engine.State.Properties["market-street"].OwnerId);
-        Assert.Equal(1000 + 170, engine.State.Player(0).Cash);
+        Assert.Equal(1200 + 170, engine.State.Player(0).Cash);
     }
 
     [Fact]

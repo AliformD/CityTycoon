@@ -49,7 +49,7 @@ window.ct = {
         root.style.setProperty('--line-spacing', String(lineSpacing));
         root.style.setProperty('--anim-scale', String(animationScale));
         root.dataset.reduceMotion = reduceMotion ? 'true' : 'false';
-        root.dataset.theme = theme || 'auto';
+        root.dataset.theme = theme || 'day';
         if (font === 'opendyslexic' && !document.getElementById('opendyslexic-css')) {
             // OpenDyslexic isn't on Google Fonts, so it is fetched only when someone picks it.
             const link = document.createElement('link');

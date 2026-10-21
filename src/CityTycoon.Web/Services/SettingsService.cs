@@ -23,8 +23,8 @@ public sealed class UserSettings
     /// <summary>How fast moves are replayed. Slow is the default so everyone can follow each move.</summary>
     public AnimationSpeed Animation { get; set; } = AnimationSpeed.Slow;
 
-    /// <summary>"auto" (follow the device's light or dark setting), "day" or "night".</summary>
-    public string Theme { get; set; } = "auto";
+    /// <summary>"day" (the default), "night", or "auto" (follow the device's light or dark setting).</summary>
+    public string Theme { get; set; } = "day";
 
     /// <summary>Sound effects for dice, money, cards and so on.</summary>
     public bool Sound { get; set; } = true;

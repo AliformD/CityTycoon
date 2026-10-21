@@ -1,6 +1,7 @@
 @page "/"
 @inject GameSession Session
 @inject NavigationManager Nav
+@inject SettingsService Settings
 
 <PageTitle>City Tycoon</PageTitle>
 
@@ -31,6 +32,7 @@
     <div class="save-row menu-actions">
         <label class="pill file-pill"><Icon Name="download" />Load a save file <InputFile class="visually-hidden" OnChange="LoadFile" accept=".json,application/json" /></label>
         <a class="pill" href="rules"><Icon Name="book" />Rules</a>
+        <button class="pill" @onclick="ToggleTheme"><Icon Name="@(Settings.Current.Theme == "night" ? "sun" : "moon")" />@(Settings.Current.Theme == "night" ? "Day" : "Night")</button>
         <button class="pill" aria-expanded="@showSettings" @onclick="() => showSettings = !showSettings"><Icon Name="gear" />Settings</button>
     </div>
     @if (loadError != null)
@@ -165,6 +167,13 @@
         {
             loadError = "That file couldn't be read as a City Tycoon save.";
         }
+    }
+
+    /// <summary>The Day/Night button: flips the look and remembers it for next time.</summary>
+    private async Task ToggleTheme()
+    {
+        Settings.Current.Theme = Settings.Current.Theme == "night" ? "day" : "night";
+        await Settings.SaveAsync();
     }
 
     private void AddSeat() =>

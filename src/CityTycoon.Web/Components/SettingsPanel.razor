@@ -7,9 +7,9 @@
 
     <label>Look
         <select value="@S.Theme" @onchange="SetTheme">
-            <option value="auto">Match my device (light or dark)</option>
             <option value="day">Day (bright)</option>
             <option value="night">Night (dark)</option>
+            <option value="auto">Match my device (light or dark)</option>
         </select>
     </label>
     <label>Font
@@ -48,7 +48,7 @@
 @code {
     private UserSettings S => Settings.Current;
 
-    private Task SetTheme(ChangeEventArgs e) => Change(() => S.Theme = e.Value?.ToString() ?? "auto");
+    private Task SetTheme(ChangeEventArgs e) => Change(() => S.Theme = e.Value?.ToString() ?? "day");
     private Task SetSound(ChangeEventArgs e) => Change(() => S.Sound = e.Value is true);
     private async Task SetVolume(ChangeEventArgs e)
     {

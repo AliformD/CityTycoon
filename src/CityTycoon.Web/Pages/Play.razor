@@ -39,6 +39,9 @@ else
             </div>
         </div>
         <nav class="topbar-actions" aria-label="Game menu">
+            <button class="pill icon-only" aria-label="@(IsNight ? "Switch to Day" : "Switch to Night")" title="@(IsNight ? "Switch to Day" : "Switch to Night")" @onclick="ToggleTheme">
+                <Icon Name="@(IsNight ? "sun" : "moon")" />
+            </button>
             <button class="pill icon-only" aria-pressed="@(Settings.Current.Sound ? "true" : "false")" aria-label="Sound effects" title="Sound effects" @onclick="ToggleSound">
                 <Icon Name="@(Settings.Current.Sound ? "sound" : "mute")" />
             </button>
@@ -176,6 +179,15 @@ else
     private async Task SetSpeed(AnimationSpeed speed)
     {
         Settings.Current.Animation = speed;
+        await Settings.SaveAsync();
+    }
+
+    private bool IsNight => Settings.Current.Theme == "night";
+
+    /// <summary>The sun/moon button: flips between Day and Night, and remembers the choice for next time.</summary>
+    private async Task ToggleTheme()
+    {
+        Settings.Current.Theme = IsNight ? "day" : "night";
         await Settings.SaveAsync();
     }
 

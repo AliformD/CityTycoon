@@ -56,7 +56,7 @@ public class MoneyAndTradeBotTests
         var decision = engine.GetPendingDecisions().Single();
         var choice = await new EasyBot(1).DecideAsync(engine.GetView(1), decision, engine.GetLegalActions(1));
 
-        Assert.Equal(new DeclineTrade(), choice);
+        Assert.IsType<DeclineTrade>(choice);
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public class MoneyAndTradeBotTests
 
         var choice = await new EasyBot(1).DecideAsync(engine.GetView(1), decision, [new AcceptTrade(), new DeclineTrade()]);
 
-        Assert.Equal(new DeclineTrade(), choice);
+        Assert.IsType<DeclineTrade>(choice);
     }
 
     [Fact]

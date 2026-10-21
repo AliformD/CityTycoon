@@ -41,7 +41,7 @@ public class TradeJudgementBotTests
     public async Task HardBot_WontSellTheSamePiece_ToSomeoneRichEnoughToBuildRightAway()
     {
         var engine = OrangeAlmostDone(personCash: 1500);
-        Assert.Equal(new DeclineTrade(), await Answer(new HardBot(1), engine, ThreeHundredForMarket));
+        Assert.IsType<DeclineTrade>(await Answer(new HardBot(1), engine, ThreeHundredForMarket));
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class TradeJudgementBotTests
     public async Task EasyBot_StillUsesTheSimpleRule_AndWontCounterAGroupSale()
     {
         var engine = OrangeAlmostDone(personCash: 1500);
-        Assert.Equal(new DeclineTrade(), await Answer(new EasyBot(1), engine, ThreeHundredForMarket, countersLeft: 2));
+        Assert.IsType<DeclineTrade>(await Answer(new EasyBot(1), engine, ThreeHundredForMarket, countersLeft: 2));
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class TradeJudgementBotTests
         engine.State.Properties["baker-street"].OwnerId = null;
         // $120 plus the card for Market Street (assessed $180): not quite enough on a normal day.
         var offer = new TradeOffer(0, 1, 120, 0, [], ["market-street"]) { GiveCards = ["get-out-of-jail-free"] };
-        Assert.Equal(new DeclineTrade(), await Answer(new HardBot(1), engine, offer));
+        Assert.IsType<DeclineTrade>(await Answer(new HardBot(1), engine, offer));
 
         engine.State.Player(1).InJail = true;
         Assert.Equal(new AcceptTrade(), await Answer(new HardBot(1), engine, offer));

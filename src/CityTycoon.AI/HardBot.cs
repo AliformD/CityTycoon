@@ -36,6 +36,6 @@ public sealed class HardBot(ulong seed, GameContent? content = null) : NormalBot
             };
             danger = Math.Max(danger, cost);
         }
-        return (int)(Math.Clamp(danger + 40, 80, 700) * 0.5);
+        return (int)(Math.Clamp(danger + 40, 80, 700) * 0.5 * ReserveFactor);
     }
 }

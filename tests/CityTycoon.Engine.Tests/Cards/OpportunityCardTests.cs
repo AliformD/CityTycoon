@@ -119,6 +119,24 @@ public class OpportunityCardTests
     }
 
     [Fact]
+    public void Detour_CancelsTheNudge_AndMovesFromTheRoll()
+    {
+        var game = new TestGame();
+        game.GiveCard(1, "detour");
+        game.PlaceBefore(0, "jail", 7);
+        game.Dice.Add(3, 4);
+        game.Do(0, new RollDice());
+        game.Do(0, new Nudge(2)); // aiming for 9 spaces
+
+        // Rolled 7, so a Detour lands on 6 or 8: 3 or 1 spaces back from where the Nudge aimed.
+        Assert.Equal([new NoThanks(), new PlayCard("detour", 0, null, -3), new PlayCard("detour", 0, null, -1)], game.Engine.GetLegalActions(1));
+        game.Do(1, new PlayCard("detour", TargetPlayerId: 0, Number: -3));
+        Assert.Equal(game.State.IndexOf("jail") - 1, game.Player(0).Position);
+        Assert.Equal(1, game.Player(0).Momentum); // the token stays spent
+        Assert.Contains(game.State.Log, e => e is Detoured { Spaces: -3, CancelledNudge: true });
+    }
+
+    [Fact]
     public void Detour_CantStopAMoveDead()
     {
         var game = new TestGame();
@@ -128,7 +146,8 @@ public class OpportunityCardTests
         game.Dice.Add(1, 2);
         game.Do(0, new RollDice());
         game.Do(0, new Nudge(-2)); // moving just 1 space
-        Assert.Equal([new NoThanks(), new PlayCard("detour", 0, null, 1)], game.Engine.GetLegalActions(1));
+        // Rolled 3: a Detour lands on 2 or 4, never 0.
+        Assert.Equal([new NoThanks(), new PlayCard("detour", 0, null, 1), new PlayCard("detour", 0, null, 3)], game.Engine.GetLegalActions(1));
     }
 
     [Fact]
@@ -322,9 +341,10 @@ public class OpportunityCardTests
     public void FastTrack_GainsTwoTokens()
     {
         var game = new TestGame();
+        game.Player(0).Momentum = 0;
         game.GiveCard(0, "fast-track");
         game.Do(0, new PlayCard("fast-track"));
-        Assert.Equal(3, game.Player(0).Momentum);
+        Assert.Equal(2, game.Player(0).Momentum);
     }
 
     [Fact]

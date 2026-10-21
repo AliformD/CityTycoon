@@ -8,7 +8,7 @@ namespace CityTycoon.Engine.Rules;
 /// <summary>Momentum tokens (Section 7.3): gaining them, the limit, and what they cost.</summary>
 public static class MomentumRules
 {
-    /// <summary>The most tokens this player can hold: 5, plus the Commuter's and Commuter Belt's extra room.</summary>
+    /// <summary>The most tokens this player can hold: 2, plus the Commuter's and Commuter Belt's extra room.</summary>
     public static int Cap(EngineContext ctx, PlayerState player) => RuleModifiers.MomentumCap(ctx.State, ctx.Content, player.Id);
 
     /// <summary>What a Precision Roll costs. Owning all 4 railroads (Rail Baron) lowers it.</summary>

@@ -27,7 +27,7 @@ public sealed class TestGame
         };
         if (characters != null)
             setup.Players = setup.Players.Select((p, i) => i < characters.Length ? p with { CharacterId = characters[i] } : p).ToList();
-        Engine = GameEngine.NewGame(setup, dice: Dice);
+        Engine = GameEngine.NewGame(setup, TestContent.ClassicMoney, Dice);
     }
 
     /// <summary>Gives a player a character straight away (the pick step has its own tests).</summary>

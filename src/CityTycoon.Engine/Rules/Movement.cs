@@ -69,14 +69,15 @@ public static class Movement
             ctx.Emit(new PerkIncome(player.Id, amount, source));
         }
 
-        // Step 4: catch-up bonus. Whoever has the lowest net worth (ties all count) gets $100 (Section 16.2).
-        if (IsLowestNetWorth(ctx, player))
+        // Step 4: catch-up bonus. Whoever has the lowest net worth (ties all count) gets it (Section 16.2).
+        // It is 0 by default now (decision #143), so nothing happens unless a house rule turns it back on.
+        if (ctx.Rules.CatchUpBonus > 0 && IsLowestNetWorth(ctx, player))
         {
             player.Cash += ctx.Rules.CatchUpBonus;
             ctx.Emit(new CatchUpPaid(player.Id, ctx.Rules.CatchUpBonus));
         }
 
-        // Step 5: gain a Momentum token (and the extra one from Commuter Belt).
+        // Step 5: Momentum tokens. The base rule gives none now (decision #140), but Commuter Belt still gives 1.
         MomentumRules.Gain(ctx, player, ctx.Rules.GoMomentumGain, "GO");
         foreach (var (amount, source) in RuleModifiers.GoMomentums(ctx.State, ctx.Content, player.Id))
             MomentumRules.Gain(ctx, player, amount, source);

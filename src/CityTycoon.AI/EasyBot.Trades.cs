@@ -121,7 +121,9 @@ public partial class EasyBot
             + offer.GiveProperties.Sum(id => Value(view, id))
             - offer.GetProperties.Sum(id => Value(view, id))
             + offer.GiveCards.Sum(id => CardWorth(view, id))
-            - offer.GetCards.Sum(id => CardWorth(view, id));
+            - offer.GetCards.Sum(id => CardWorth(view, id))
+            // The bank's 10% fee on any mortgaged property the bot would receive.
+            - MortgageFees(view, offer.GiveProperties);
         string? myGroup = CompletedGroup(view, me, add: offer.GiveProperties, remove: offer.GetProperties);
         string? theirGroup = CompletedGroup(view, them, add: offer.GetProperties, remove: offer.GiveProperties);
 
@@ -252,10 +254,14 @@ public partial class EasyBot
         propertyIds.Where(id => view.Properties[id].IsMortgaged)
                    .Sum(id => MoneyRules.MortgageTransferFee(content, content.Property(id)));
 
+    /// <summary>
+    /// A property's assessed value. A mortgaged one is worth what is left after paying to
+    /// lift the mortgage (the mortgage plus 10%), because that's what it takes to earn rent from it again.
+    /// </summary>
     private double Value(PlayerView view, string id)
     {
-        int assessed = content.Property(id).AssessedValue;
-        return view.Properties[id].IsMortgaged ? assessed / 2.0 : assessed;
+        PropertyDefinition def = content.Property(id);
+        return view.Properties[id].IsMortgaged ? def.AssessedValue - MoneyRules.UnmortgageCost(content, def) : def.AssessedValue;
     }
 
     // ----- What a color group is really worth -----
@@ -275,11 +281,23 @@ public partial class EasyBot
             bool before = members.All(OwnsNow);
             bool after = members.All(OwnsAfter);
             if (after && !before)
-                change += GroupEarnings(view, playerId, group, cashAfter);
+                change += EarningsOnceLifted(view, playerId, group, cashAfter);
             else if (before && !after)
-                change -= GroupEarnings(view, playerId, group, view.Player(playerId).Cash);
+                change -= EarningsOnceLifted(view, playerId, group, view.Player(playerId).Cash);
         }
         return change;
+    }
+
+    /// <summary>
+    /// What a whole group earns once any mortgages in it are lifted. A mortgaged piece earns no rent
+    /// and stops the double rent and building, so the owner must pay to lift it first, and that cash
+    /// can't go on houses. If they can't afford to lift it, the group earns nothing for now.
+    /// </summary>
+    private double EarningsOnceLifted(PlayerView view, int playerId, string group, int cash)
+    {
+        int lift = content.GroupMembers(group).Where(id => view.Properties[id].IsMortgaged)
+                          .Sum(id => MoneyRules.UnmortgageCost(content, content.Property(id)));
+        return cash < lift ? 0 : GroupEarnings(view, playerId, group, cash - lift);
     }
 
     /// <summary>

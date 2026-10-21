@@ -37,15 +37,15 @@ Status: Phases 0 to 10 done. Phase 11 (online multiplayer) is on hold by Angel's
 | A Government tile | `content/govtiles.json`, `Tiles/TileLandings.cs` |
 | A character or perk | `content/characters.json` / `groups.json`, `Modifiers/*Modifiers.cs` |
 | A new action, event or step | Add the type, then register it with `[JsonDerivedType]` on `GameAction`, `GameEvent` or `Step`, describe events in `Events/EventDescriber.cs` |
-| A bot behavior | The `virtual` methods in `EasyBot` (Reserve, PropertyWorth, SealedAmount, PickBuild, Vote, NudgeThreshold); trades and card values in `EasyBot.Trades.cs` |
+| A bot behavior | The `virtual` methods in `EasyBot` (Reserve, PropertyWorth, SealedAmount, PickBuild, Vote, NudgeThreshold); trades and card values in `EasyBot.Trades.cs`; secret personalities (`BotPersonality`, decision #144) in `EasyBot`'s constructor |
 | A screen | `src/CityTycoon.Web/Components/` and `Pages/`; styles in `wwwroot/css/app.css` (colors are variables at the top, Day and Night) |
 | A new event that moves money or changes a property | Also add it to `Events/GameHistory.cs` (money ledger and space history); a test checks every dollar is listed |
 | How an event is shown (pause, icon, sound, money, token walk) | `src/CityTycoon.Web/Services/Playback.cs`; pictures in `Components/Icon.razor`, sounds in `wwwroot/js/app.js` (`ct.sound`) |
 
 ## Commands
-- Build and test: `dotnet test` (all projects). Last known: 461 engine tests and 74 bot tests, all passing.
+- Build and test: `dotnet test` (all projects). Last known: 462 engine tests and 78 bot tests, all passing.
 - Run the game: `dotnet run --project src/CityTycoon.Web`.
-- Balance Sim: `dotnet run -c Release --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots HardVsEasy --mode timed --characters random --seed 1 --out <NEW folder>`. `--out` must be a folder that does not exist yet.
+- Balance Sim: `dotnet run -c Release --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots HardVsEasy --mode timed --characters random --seed 1 --out <NEW folder>`. `--out` must be a folder that does not exist yet. Try other numbers without editing `rules.json` with `--set goSalary=300` (any rules.json name, repeatable) and `--rounds 50`. The report includes pacing: first building, close calls, bankruptcies, money at the end.
 - CI (`.github/workflows/ci.yml`) builds and tests on every push and PR.
 
 ## Gotchas that cost time before
@@ -53,6 +53,8 @@ Status: Phases 0 to 10 done. Phase 11 (online multiplayer) is on hold by Angel's
 - Explicit lists (card effects, tile landings, ordinance effects, modifier types) are hand-written on purpose (Blazor trimming). A new type that is not in its list does nothing.
 - Razor: string component parameters need `@` (`Id="@var"`); copy a `for` loop variable to a local before using it inside child content; no nested quotes in lambda attributes (use a handler method); do not name a loop variable `section`; build mixed text and C# strings in a method.
 - Cloud container: install the SDK with `apt` (`dotnet-sdk-10.0`). To check the UI, run Web with `--urls http://localhost:5199` in the background and kill it by PID only. Never `pkill -f` or `ps | grep` with text from your own command line.
+- `TestGame` plays with the old money ($1,500 start, $200 GO, $100 catch-up) from `Helpers/TestContent.cs`, so rebalancing `rules.json` doesn't break rule tests. Bot tests use the real rules.
+- The Sim runs Release builds: rebuild with `dotnet build -c Release` after changing `content/*.json`, or `--no-build` runs the old numbers.
 - Bot tuning: measure in the Sim before and after. Lobbying and blocking bids looked smart but lost games (see `docs/BALANCE.md`).
 
 ## Keeping this file honest

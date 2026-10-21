@@ -24,8 +24,8 @@
       "perk": {
         "id": "commuter-belt",
         "name": "Commuter Belt",
-        "text": "Gain 1 extra Momentum token when you pass GO. Your token limit goes up by 2.",
-        "modifiers": [ { "type": "GoMomentum", "value": 1 }, { "type": "MomentumCap", "value": 2 } ]
+        "text": "Gain 1 Momentum token when you pass GO. Your token limit goes up by 1.",
+        "modifiers": [ { "type": "GoMomentum", "value": 1 }, { "type": "MomentumCap", "value": 1 } ]
       }
     },
     {

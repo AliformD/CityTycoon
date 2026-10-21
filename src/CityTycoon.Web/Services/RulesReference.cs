@@ -27,10 +27,11 @@ public static class RulesReference
             ]),
             new("turn", "Your turn", [
                 "Before you roll you can build, sell buildings, mortgage, take or repay loans, and offer trades. Then you roll two dice and move. After you move, whatever you landed on happens, and you can manage your money again before you end your turn.",
-                $"Rolling doubles gives you another turn. Three doubles in a row sends you to Jail. Passing or landing on GO pays {money(r.GoSalary)}, and gives you {r.GoMomentumGain} Momentum token. If you have the lowest net worth when you pass GO, you also get a {money(r.CatchUpBonus)} catch-up bonus.",
+                $"Rolling doubles gives you another turn. Three doubles in a row sends you to Jail. Passing or landing on GO pays {money(r.GoSalary)}{(r.GoMomentumGain > 0 ? $" and gives you {r.GoMomentumGain} Momentum token" : "")}.{(r.CatchUpBonus > 0 ? $" If you have the lowest net worth when you pass GO, you also get a {money(r.CatchUpBonus)} catch-up bonus." : "")}",
             ]),
             new("momentum", "Momentum tokens", [
-                $"Momentum tokens let you bend the dice. After rolling, a Nudge costs {r.NudgeCost} token and moves you up to {r.NudgeMaxSpaces} spaces further or back. A Precision Roll costs {r.PrecisionRollCost} tokens: you roll {r.PrecisionRollDice} dice and keep the two you like. You can hold up to {r.MomentumCap} tokens.",
+                $"Momentum tokens let you bend the dice. After rolling, a Nudge costs {r.NudgeCost} token and moves you up to {r.NudgeMaxSpaces} spaces further or back. A Precision Roll costs {r.PrecisionRollCost} tokens: you roll {r.PrecisionRollDice} dice and keep the two you like. You start with {r.StartingMomentum} and can hold up to {r.MomentumCap} (the Commuter more).",
+                $"You earn more at City Park, the Fire Station, the Fast Track card and the Momentum Surge event. A Detour card played on you cancels your Nudge (the token stays spent) and moves you 1 space from your roll.",
             ]),
             new("auctions", "Buying property and auctions", [
                 "When you land on a property nobody owns, it goes to auction. The first property of a color group, the first railroad and the first utility are sealed-bid auctions: everyone secretly bids, and the highest bid wins.",

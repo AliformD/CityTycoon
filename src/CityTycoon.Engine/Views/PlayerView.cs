@@ -135,7 +135,7 @@ public sealed record PlayerInfo(
     public int HandLimit { get; init; } = 3;
 
     /// <summary>How many Momentum tokens they can hold.</summary>
-    public int MomentumCap { get; init; } = 5;
+    public int MomentumCap { get; init; } = 2;
 
     /// <summary>What paying back one loan costs them, and how many loans they may hold.</summary>
     public int LoanRepayCost { get; init; } = 250;

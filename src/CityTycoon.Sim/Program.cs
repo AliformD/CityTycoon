@@ -1,9 +1,13 @@
 // CityTycoon.Sim: plays many bot-vs-bot games and writes a balance report.
 //
 // Example:  dotnet run --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots easy
+// Try other numbers without editing rules.json: --set goSalary=300 --set startingCash=2000
 using System.Diagnostics;
 using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using CityTycoon.Engine;
+using CityTycoon.Engine.Content;
 using CityTycoon.Engine.State;
 using CityTycoon.Sim;
 
@@ -33,6 +37,7 @@ static SimOptions ParseArgs(string[] args)
     string output = "sim-results";
     BotKind bots = BotKind.Mixed;
     CharacterMode characters = CharacterMode.Random;
+    var overrides = new Dictionary<string, string>();
     for (int i = 0; i < args.Length - 1; i += 2)
     {
         string value = args[i + 1];
@@ -46,10 +51,33 @@ static SimOptions ParseArgs(string[] args)
             case "--out": output = value; break;
             case "--bots": bots = Enum.Parse<BotKind>(value, ignoreCase: true); break;
             case "--characters": characters = Enum.Parse<CharacterMode>(value, ignoreCase: true); break;
-            default: throw new ArgumentException($"Unknown option {args[i]}. Options: --games --players --rounds --seed --mode --bots --characters (none or random) --out");
+            case "--set":
+                string[] parts = value.Split('=', 2);
+                if (parts.Length != 2)
+                    throw new ArgumentException($"--set needs name=value, like --set goSalary=300 (got '{value}').");
+                overrides[parts[0]] = parts[1];
+                break;
+            default: throw new ArgumentException($"Unknown option {args[i]}. Options: --games --players --rounds --seed --mode --bots --characters (none or random) --set name=value --out");
         }
     }
-    return new SimOptions(games, players, seed, mode, rounds, output, bots, characters);
+    return new SimOptions(games, players, seed, mode, rounds, output, bots, characters, WithOverrides(overrides));
+}
+
+// A copy of the game's rules with some numbers changed, or null when nothing was changed.
+// The names are the ones in rules.json. The rules go to JSON and back, so a misspelt name is caught.
+static GameContent? WithOverrides(Dictionary<string, string> overrides)
+{
+    if (overrides.Count == 0)
+        return null;
+    var rules = JsonSerializer.SerializeToNode(GameContent.Default.Rules, ContentLoader.JsonOptions)!.AsObject();
+    foreach (var (name, value) in overrides)
+    {
+        if (!rules.ContainsKey(name))
+            throw new ArgumentException($"rules.json has no number called '{name}'.");
+        rules[name] = JsonNode.Parse(value);
+        Console.WriteLine($"Rule changed for this run: {name} = {value}");
+    }
+    return GameContent.Default.WithRules(rules.Deserialize<RulesConfig>(ContentLoader.JsonOptions)!);
 }
 
 static IEnumerable<string> ToCsv(List<GameStats> results)
@@ -98,6 +126,21 @@ static void AddCharacterReport(List<string> lines, List<GameStats> finished, Sim
     }
 }
 
+// Win rate by secret bot personality, counted the same way as characters.
+static void AddPersonalityReport(List<string> lines, List<GameStats> finished, SimOptions options)
+{
+    var seats = finished.SelectMany(r => r.Personalities).Where(p => p != "").ToList();
+    if (seats.Count == 0)
+        return;
+    lines.Add($"Win rate by bot personality. Even share would be {1.0 / options.Players:P1}:");
+    foreach (string personality in seats.Distinct().Order())
+    {
+        int played = seats.Count(p => p == personality);
+        double wins = finished.Sum(r => r.WinnerPersonalities.Count(p => p == personality) / (double)Math.Max(1, r.WinnerPersonalities.Count));
+        lines.Add($"  {personality,-10} {wins / played,6:P1}  (in {played} seats)");
+    }
+}
+
 // Which color perks the winners owned at the end, compared with everyone who owned them.
 static void AddPerkReport(List<string> lines, List<GameStats> finished, SimOptions options)
 {
@@ -143,6 +186,13 @@ static string Summarize(List<GameStats> results, SimOptions options, TimeSpan el
         lines.Add($"Bankruptcies per game: {finished.Average(r => r.Bankruptcies):0.00}");
         lines.Add($"Auction price as a share of assessed value: {finished.Where(r => r.AuctionsWon > 0).Average(r => r.AveragePriceToValue):P0}");
         lines.Add($"Jail visits per game: {finished.Average(r => r.JailVisits):0.0}");
+        var built = finished.Where(r => r.FirstBuildingRound != null).Select(r => (double)r.FirstBuildingRound!.Value).OrderBy(x => x).ToList();
+        lines.Add($"Pacing: someone built in {(double)built.Count / finished.Count:P0} of games; first building in round "
+            + (built.Count == 0 ? "-" : $"{built[built.Count / 2]:0} (median), {built.Average():0.0} (average)")
+            + $". Players who built: {finished.Average(r => r.Builders):0.0} per game. Building levels standing at the end: {finished.Average(r => r.EndBuildingLevels):0.0}"
+            + $". Games with a bankruptcy: {(double)finished.Count(r => r.Bankruptcies > 0) / finished.Count:P0}. "
+            + $"Close calls per game (cash under ${SimulationRunner.LowCash}, back to ${SimulationRunner.RecoveredCash}): {finished.Average(r => r.CloseCalls):0.0}");
+        lines.Add($"Money at the end (players still in): ${finished.Average(r => r.EndCash):0} cash, ${finished.Average(r => r.EndNetWorth):0} net worth. Average rent payment: ${finished.Average(r => r.AverageRent):0}");
         lines.Add($"Per game: {finished.Average(r => r.BuildingsBuilt):0.0} buildings built, {finished.Average(r => r.Mortgages):0.0} mortgages, "
             + $"{finished.Average(r => r.LoansTaken):0.0} loans, {finished.Average(r => r.TradesCompleted):0.0} trades, "
             + $"{finished.Average(r => r.DownPaymentWins):0.0} down-payment wins, {finished.Average(r => r.Forfeits):0.00} forfeits");
@@ -161,6 +211,7 @@ static string Summarize(List<GameStats> results, SimOptions options, TimeSpan el
         }
         AddMatchupReport(lines, finished, options);
         AddCharacterReport(lines, finished, options);
+        AddPersonalityReport(lines, finished, options);
         AddPerkReport(lines, finished, options);
     }
     foreach (var e in errors.Take(10))

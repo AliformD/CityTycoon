@@ -56,14 +56,14 @@ public class ColorPerkTests
     }
 
     [Fact]
-    public void LightBlue_PassingGo_GivesAnExtraToken_AndRaisesTheLimit()
+    public void LightBlue_PassingGo_GivesAToken_AndRaisesTheLimit()
     {
         var game = new TestGame();
         game.Give(0, LightBlue);
-        game.Player(0).Momentum = 5; // the normal limit
+        game.Player(0).Momentum = 2; // the normal limit
         PassGo(game, 0);
-        Assert.Equal(7, game.Engine.GetView(0).Me.MomentumCap);
-        Assert.Equal(7, game.Player(0).Momentum); // +1 for GO and +1 for the perk, both fit under the new limit of 7
+        Assert.Equal(3, game.Engine.GetView(0).Me.MomentumCap);
+        Assert.Equal(3, game.Player(0).Momentum); // GO itself gives none, the perk gives 1
     }
 
     [Fact]

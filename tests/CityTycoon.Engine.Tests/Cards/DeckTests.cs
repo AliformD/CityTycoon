@@ -157,8 +157,8 @@ public class CardContentTests
         Assert.Equal(19, engine.State.OpportunityDeck.Count + engine.State.MallShop.Count);
         engine.State.Player(0).Hand.Add("tax-inspector");
         Assert.True(engine.Submit(0, new PlayCard("tax-inspector", TargetPlayerId: 1)).Accepted);
-        Assert.Equal(1500, engine.State.Player(0).Cash);
-        Assert.Equal(1200, engine.State.Player(1).Cash);
+        Assert.Equal(1200, engine.State.Player(0).Cash);
+        Assert.Equal(960, engine.State.Player(1).Cash);
     }
 
     [Theory]

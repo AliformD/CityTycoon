@@ -111,6 +111,6 @@ public static class TradeRules
         from.Cash -= feesFrom;
         to.Cash -= feesTo;
 
-        ctx.Emit(new TradeCompleted(offer, feesFrom + feesTo));
+        ctx.Emit(new TradeCompleted(offer, feesFrom + feesTo, feesFrom, feesTo));
     }
 }

@@ -4,7 +4,9 @@
     {
         <article class="player-card @(p.IsActive && !View.IsOver ? "active" : "") @(p.IsBankrupt ? "bankrupt" : "")" style="--player:@UiHelpers.PlayerColor(p.Id)">
             <header>
-                <span class="token" style="background:@UiHelpers.PlayerColor(p.Id)" aria-hidden="true">@UiHelpers.Initial(p.Name)</span>
+                @{ var ledgerId = p.Id; }
+                <button class="token ledger-button" style="background:@UiHelpers.PlayerColor(p.Id)" title="Open @(p.Name)'s money ledger"
+                        aria-label="Open @(p.Name)'s money ledger" @onclick="() => OnOpenLedger.InvokeAsync(ledgerId)">@UiHelpers.Initial(p.Name)</button>
                 <div class="who">
                     <strong>@p.Name</strong>
                     <span class="seat-kind">@SeatLabel(p.Id)@(p.CharacterId != null ? " · " + Session.Content.Character(p.CharacterId).Name : "")</span>
@@ -65,6 +67,9 @@
 @code {
     [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
     [Parameter, EditorRequired] public GameSession Session { get; set; } = default!;
+
+    /// <summary>Clicking a player's letter circle opens their money ledger.</summary>
+    [Parameter] public EventCallback<int> OnOpenLedger { get; set; }
 
     private string SeatLabel(int playerId) => Session.Seats.GetValueOrDefault(playerId) switch
     {

@@ -90,4 +90,27 @@ public class SaveLoadTests
         }
         Assert.Equal(GameStateSerializer.ToJson(plain.State), GameStateSerializer.ToJson(reloaded.State));
     }
+
+    [Fact]
+    public void ASaveFromBeforeTheLedger_StillLoads()
+    {
+        // Older saves have these events without the fields the money ledger added later.
+        var engine = NewGame(5);
+        string json = GameStateSerializer.ToJson(engine.State);
+        string oldEvents = """
+            {"$type":"PlayerBankrupt","playerId":1,"creditorId":null,"cashHandedOver":40,"propertiesHandedOver":[]},
+            {"$type":"TradeCompleted","offer":{"fromId":0,"toId":1,"giveCash":50,"getCash":0,"giveProperties":[],"getProperties":[]},"mortgageFees":0},
+            {"$type":"LotteryWon","winnerId":0,"pot":60},
+            """;
+        json = json.Replace("\"log\":[", "\"log\":[" + oldEvents);
+
+        var loaded = GameStateSerializer.FromJson(json);
+        var bankrupt = Assert.IsType<Events.PlayerBankrupt>(loaded.Log[0]);
+        Assert.Equal(0, bankrupt.LoansPaidBack);
+        Assert.Equal(0, Assert.IsType<Events.TradeCompleted>(loaded.Log[1]).FromFees);
+        Assert.Null(Assert.IsType<Events.LotteryWon>(loaded.Log[2]).Entrants);
+        // And the ledger can still be worked out from it.
+        var view = new GameEngine(loaded, GameContent.Default).GetView(0);
+        Assert.NotEmpty(Events.GameHistory.Ledger(view, GameContent.Default));
+    }
 }

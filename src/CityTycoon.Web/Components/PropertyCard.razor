@@ -8,6 +8,10 @@
     <div class="card-band" style="background:@(group?.Color ?? "#444")">
         @if (group != null) { <span class="code">@group.Code</span> }
         <strong>@def.Name</strong>
+        @if (owned?.OwnerId is int bandOwner)
+        {
+            <span class="owner-tag" style="--player:@UiHelpers.PlayerColor(bandOwner)"><span class="dot" aria-hidden="true"></span>Owner: <strong>@View.Player(bandOwner).Name</strong></span>
+        }
     </div>
     <p>
         @(def.Type switch { PropertyType.Railroad => "Railroad", PropertyType.Utility => "Utility", _ => group!.Name + " group" })
@@ -93,6 +97,10 @@
             }
         </tbody>
     </table>
+    @if (ShowHistory)
+    {
+        <SpaceHistoryPanel SpaceId="@PropertyId" View="View" Content="Content" />
+    }
 </div>
 
 @code {
@@ -102,4 +110,7 @@
 
     /// <summary>How the rent is worked out right now (from the engine), shown when the property is owned.</summary>
     [Parameter] public CityTycoon.Engine.Rules.RentBreakdown? Breakdown { get; set; }
+
+    /// <summary>Show who bought it, for how much, and everything that has happened to it since.</summary>
+    [Parameter] public bool ShowHistory { get; set; } = true;
 }

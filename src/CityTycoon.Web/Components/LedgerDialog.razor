@@ -1,0 +1,147 @@
+@* The money ledger: every dollar a player got or paid, line by line, round by round, with their balance after each line. *@
+@{
+    var player = View.Player(playerId);
+    // The balance is worked out in game order first, before any filter or reordering.
+    var lines = GameHistory.Ledger(View, Content, playerId);
+    var rows = new List<(LedgerEntry Line, int Balance)>();
+    int balance = 0;
+    foreach (var line in lines)
+    {
+        balance += line.Amount;
+        rows.Add((line, balance));
+    }
+    int moneyIn = lines.Where(l => l.Kind != MoneyKind.Start && l.Amount > 0).Sum(l => l.Amount);
+    int moneyOut = -lines.Where(l => l.Amount < 0).Sum(l => l.Amount);
+    var byKind = lines.Where(l => l.Kind != MoneyKind.Start).GroupBy(l => l.Kind)
+        .Select(g => (Kind: g.Key, Net: g.Sum(l => l.Amount)))
+        .OrderByDescending(k => Math.Abs(k.Net)).ToList();
+    var shown = rows.Where(r => filter == null || r.Line.Kind == filter).ToList();
+    if (newestFirst) shown.Reverse();
+}
+<div class="ledger-overlay" @onclick="OnClose">
+    <div class="ledger-box" role="dialog" aria-modal="true" aria-labelledby="ledger-title" tabindex="-1"
+         @ref="box" @onclick:stopPropagation="true" @onkeydown="KeyDown">
+        <header class="ledger-head">
+            <h2 id="ledger-title">@player.Name's money ledger</h2>
+            <button class="small" @onclick="OnClose">Close</button>
+        </header>
+        <div class="ledger-players" role="group" aria-label="Whose ledger">
+            @foreach (var p in View.Players)
+            {
+                var id = p.Id;
+                <button class="pill" aria-pressed="@(id == playerId ? "true" : "false")" @onclick="() => Pick(id)">
+                    <span class="token" style="background:@UiHelpers.PlayerColor(id)" aria-hidden="true">@UiHelpers.Initial(p.Name)</span> @p.Name
+                </button>
+            }
+        </div>
+
+        <p class="ledger-summary">
+            <span>Cash now <strong>@UiHelpers.Money(balance)</strong></span>
+            <span>Money in <strong class="money-in">+@UiHelpers.Money(moneyIn)</strong></span>
+            <span>Money out <strong class="money-out">−@UiHelpers.Money(moneyOut)</strong></span>
+        </p>
+        @if (player.Cash != balance && !player.IsBankrupt)
+        {
+            @* Should never happen; a test checks it. Shown so a mistake is noticed instead of hidden. *@
+            <p class="small-print">The lines add up to @UiHelpers.Money(balance), but @player.Name has @UiHelpers.Money(player.Cash). Something wasn't recorded.</p>
+        }
+
+        <div class="ledger-filters" role="group" aria-label="Show only">
+            <button class="chip" aria-pressed="@(filter == null ? "true" : "false")" @onclick="() => filter = null">Everything</button>
+            @foreach (var (kind, net) in byKind)
+            {
+                var k = kind;
+                <button class="chip" aria-pressed="@(filter == k ? "true" : "false")" @onclick="() => Filter(k)">
+                    @KindName(k) <strong class="@(net >= 0 ? "money-in" : "money-out")">@Signed(net)</strong>
+                </button>
+            }
+            <label class="toggle small-print"><input type="checkbox" @bind="newestFirst" /> Newest first</label>
+        </div>
+
+        <div class="ledger-scroll">
+            <table class="scoreboard ledger">
+                <thead><tr><th scope="col">When</th><th scope="col">What</th><th scope="col" class="num">Amount</th><th scope="col" class="num">Balance</th></tr></thead>
+                <tbody>
+                    @{ string? lastWhen = null; }
+                    @foreach (var (line, after) in shown)
+                    {
+                        string when = When(line);
+                        bool first = when != lastWhen;
+                        lastWhen = when;
+                        <tr class="@(first ? "new-turn" : "")">
+                            <td class="when">@(first ? when : "")</td>
+                            <td><span class="kind">@KindName(line.Kind)</span> @line.Text</td>
+                            <td class="num @(line.Amount >= 0 ? "money-in" : "money-out")">@Signed(line.Amount)</td>
+                            <td class="num">@UiHelpers.Money(after)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            @if (shown.Count == 0)
+            {
+                <p class="small-print">Nothing to show.</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+
+    /// <summary>Whose ledger opens first. The buttons at the top switch to anyone else's.</summary>
+    [Parameter, EditorRequired] public int PlayerId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private int playerId;
+    private MoneyKind? filter;
+    private bool newestFirst;
+    private ElementReference box;
+
+    protected override void OnInitialized() => playerId = PlayerId;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Move keyboard focus into the dialog, so Escape and Tab work straight away.
+        if (firstRender)
+            await box.FocusAsync();
+    }
+
+    private void Pick(int id)
+    {
+        playerId = id;
+        filter = null;
+    }
+
+    private void Filter(MoneyKind kind) => filter = filter == kind ? null : kind;
+
+    private async Task KeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            await OnClose.InvokeAsync();
+    }
+
+    private string When(LedgerEntry line) =>
+        line.Round == 0 ? "Start"
+        : line.TurnPlayerId is int turn ? $"Round {line.Round}, {View.Player(turn).Name}'s turn"
+        : $"End of round {line.Round}";
+
+    private static string Signed(int amount) => amount >= 0 ? "+" + UiHelpers.Money(amount) : "−" + UiHelpers.Money(-amount);
+
+    private static string KindName(MoneyKind kind) => kind switch
+    {
+        MoneyKind.Start => "Start",
+        MoneyKind.Salary => "GO",
+        MoneyKind.Property => "Property",
+        MoneyKind.Building => "Buildings",
+        MoneyKind.Mortgage => "Mortgages",
+        MoneyKind.Loan => "Loans",
+        MoneyKind.Tax => "Taxes and fees",
+        MoneyKind.Card => "Cards",
+        MoneyKind.Perk => "Perks",
+        MoneyKind.Council => "City Council",
+        MoneyKind.Jail => "Jail",
+        MoneyKind.Travel => "Travel",
+        _ => kind.ToString(),
+    };
+}

@@ -508,6 +508,24 @@ button.skip { align-self: flex-end; display: inline-flex; align-items: center; g
 .property-card p { margin: 0.35rem 0.75rem; }
 .card-band { color: #fff; padding: 0.5rem 0.75rem; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); display: flex; gap: 0.5rem; align-items: center; font-family: var(--display); font-size: 1.2rem; border-bottom: 2.5px solid var(--outline); }
 .card-band .code { border: 2px solid #fff; border-radius: 6px; padding: 0 0.35rem; font-size: 0.8rem; }
+.card-band .owner-tag {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 0.35rem;
+    background: rgba(20, 26, 46, 0.78); color: #fff; border-radius: 8px; padding: 0.1rem 0.55rem;
+    font-family: var(--font); font-size: 0.9rem; text-shadow: none; white-space: nowrap;
+}
+.owner-tag .dot { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: var(--player); border: 1.5px solid #fff; }
+
+/* A space's history: who bought it and what happened to it since, oldest first. */
+.space-history { border-top: 2px solid var(--soft-line); margin-top: 0.4rem; padding: 0.3rem 0.75rem 0.5rem; }
+.detail > .space-history { padding-left: 0; padding-right: 0; }
+.space-history h3 { font-size: 1rem; margin: 0.2rem 0; }
+.space-history p { margin: 0.25rem 0; }
+.space-history .acquired { font-weight: 700; }
+.space-history .stats { color: var(--muted); font-size: 0.9rem; }
+.history-list { list-style: none; margin: 0.3rem 0 0; padding: 0; font-size: 0.9rem; max-height: 14rem; overflow-y: auto; }
+.history-list li { display: flex; gap: 0.4rem; align-items: baseline; padding: 0.2rem 0; border-bottom: 1px solid var(--soft-line); }
+.history-list .when { flex: none; min-width: 4.6rem; color: var(--muted); font-weight: 700; }
+.history-list .dot { flex: none; width: 0.65rem; height: 0.65rem; border-radius: 50%; align-self: center; }
 .rents { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 .rents th { text-align: left; font-weight: normal; padding: 0.15rem 0.75rem; }
 .rents td { text-align: right; padding: 0.15rem 0.75rem; font-weight: 700; }
@@ -660,6 +678,34 @@ button.primary small { color: inherit; }
 .council-reveal { position: fixed; inset: 0; z-index: 60; background: rgba(20, 26, 46, 0.75); display: grid; place-items: center; padding: 1rem; overflow: auto; }
 .reveal-box { background: var(--panel); border: 3px solid var(--outline); box-shadow: 0 6px 0 var(--outline); border-radius: 22px; padding: 1rem 1.4rem; max-width: 40rem; width: 100%; animation: reveal-in calc(0.4s * var(--anim-scale, 1)) ease-out; }
 .reveal-box h2 { margin-top: 0; }
+
+/* The money ledger: opened from a player's letter circle. */
+.ledger-button { padding: 0; cursor: pointer; }
+.ledger-button:hover:not(:disabled) { filter: brightness(1.1); box-shadow: 0 0 0 3px var(--highlight), 0 3px 0 rgba(43, 45, 66, 0.4); }
+.ledger-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(20, 26, 46, 0.75); display: grid; place-items: center; padding: 1rem; }
+.ledger-box {
+    background: var(--panel); border: 3px solid var(--outline); box-shadow: 0 6px 0 var(--outline); border-radius: 22px;
+    padding: 1rem 1.2rem; width: 100%; max-width: 52rem; max-height: calc(100vh - 2rem); display: flex; flex-direction: column; gap: 0.5rem;
+    animation: reveal-in calc(0.3s * var(--anim-scale, 1)) ease-out;
+}
+.ledger-box:focus { outline: none; }
+.ledger-head { display: flex; justify-content: space-between; align-items: center; }
+.ledger-head h2 { margin: 0; }
+.ledger-players, .ledger-filters { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.ledger-players .token { width: 1.5rem; height: 1.5rem; font-size: 0.8rem; border-width: 2px; box-shadow: none; }
+.ledger-filters .chip { border: 2px solid var(--outline); box-shadow: none; padding: 0.15rem 0.65rem; }
+.ledger-filters .chip[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+.ledger-filters .chip[aria-pressed="true"] strong { color: inherit; }
+.ledger-filters .toggle { margin: 0 0 0 auto; }
+.ledger-summary { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; margin: 0; font-size: 1.05rem; }
+.money-in { color: var(--good); }
+.money-out { color: var(--bad); }
+.ledger-scroll { overflow-y: auto; min-height: 8rem; border-top: 2px solid var(--soft-line); }
+.ledger th { position: sticky; top: 0; background: var(--panel); }
+.ledger .num { text-align: right; white-space: nowrap; font-weight: 700; }
+.ledger td.when { color: var(--muted); font-weight: 700; font-size: 0.85rem; width: 9rem; }
+.ledger tr.new-turn td { border-top: 2px solid var(--soft-line); }
+.ledger .kind { display: inline-block; font-size: 0.75rem; font-weight: 700; background: var(--chip-bg); border-radius: 999px; padding: 0 0.45rem; margin-right: 0.2rem; }
 .votes td, .votes th { padding: 0.25rem 0.5rem; }
 
 /* The odds meter: green is the Yes share, red is No. The marker is the roll. If it lands in the green, the ordinance passes. */

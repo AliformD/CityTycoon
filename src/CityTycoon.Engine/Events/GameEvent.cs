@@ -147,7 +147,10 @@ public sealed record LeftJail(int PlayerId, string How) : GameEvent;
 public sealed record StayedInJail(int PlayerId, int JailTurn) : GameEvent;
 
 /// <param name="CreditorId">The player who was owed, or null for the bank.</param>
-public sealed record PlayerBankrupt(int PlayerId, int? CreditorId, int CashHandedOver, IReadOnlyList<string> PropertiesHandedOver) : GameEvent;
+/// <param name="BuildingsSoldFor">What the bank paid for their buildings first. 0 in saves from before this was recorded.</param>
+/// <param name="LoansPaidBack">What went to the bank to pay back their loans. 0 in saves from before this was recorded.</param>
+public sealed record PlayerBankrupt(int PlayerId, int? CreditorId, int CashHandedOver, IReadOnlyList<string> PropertiesHandedOver,
+    int BuildingsSoldFor = 0, int LoansPaidBack = 0) : GameEvent;
 public sealed record RoundEnded(int Round) : GameEvent;
 public sealed record GameEnded(IReadOnlyList<int> WinnerIds, string Reason) : GameEvent;
 
@@ -167,7 +170,9 @@ public sealed record PropertyForfeited(int PlayerId, string PropertyId) : GameEv
 public sealed record TradeProposed(Actions.TradeOffer Offer) : GameEvent;
 
 /// <param name="MortgageFees">What the receivers paid the bank for mortgaged properties (Section 15.9).</param>
-public sealed record TradeCompleted(Actions.TradeOffer Offer, int MortgageFees) : GameEvent;
+/// <param name="FromFees">The part of the fees the player who offered paid. <paramref name="ToFees"/> is the other player's part.
+/// Both are 0 in saves from before this was recorded.</param>
+public sealed record TradeCompleted(Actions.TradeOffer Offer, int MortgageFees, int FromFees = 0, int ToFees = 0) : GameEvent;
 public sealed record TradeDeclined(Actions.TradeOffer Offer, string Reason) : GameEvent;
 
 /// <summary>Someone answered a trade offer with different terms. <paramref name="Counter"/> is written from their side.</summary>
@@ -256,7 +261,8 @@ public sealed record LotteryRoll(int PlayerId, int Die);
 
 /// <summary>One round of Lottery rolls. Ties roll again, so there can be several.</summary>
 public sealed record LotteryRolled(IReadOnlyList<LotteryRoll> Rolls) : GameEvent;
-public sealed record LotteryWon(int WinnerId, int Pot) : GameEvent;
+/// <param name="Stake">What each player in <paramref name="Entrants"/> put in. 0 and null in saves from before this was recorded.</param>
+public sealed record LotteryWon(int WinnerId, int Pot, int Stake = 0, IReadOnlyList<int>? Entrants = null) : GameEvent;
 
 public sealed record RoadWorkStarted(int PlayerId) : GameEvent;
 public sealed record RoadWorkCleared(int PlayerId, int TokensSpent) : GameEvent;

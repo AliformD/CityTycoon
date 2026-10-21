@@ -14,10 +14,13 @@ public static class Bankruptcy
         var owned = ctx.State.Properties.Values.Where(p => p.OwnerId == player.Id).ToList();
 
         // 1. Every building is sold to the bank first (this also returns their permits).
+        int buildingsSoldFor = 0;
         foreach (PropertyState p in owned.Where(p => p.Level > 0))
-            player.Cash += BuildingRules.RemoveAllBuildings(ctx, p.PropertyId);
+            buildingsSoldFor += BuildingRules.RemoveAllBuildings(ctx, p.PropertyId);
+        player.Cash += buildingsSoldFor;
 
         // 2. The bank's loans are paid back first, from whatever cash there is.
+        int beforeLoans = player.Cash;
         player.Cash = Math.Max(0, player.Cash - player.Loans * MoneyRules.LoanRepayCost(ctx, player.Id));
         player.Loans = 0;
 
@@ -63,7 +66,8 @@ public static class Bankruptcy
         player.RoadWorkCost = 0;
         player.IsBankrupt = true;
         player.InJail = false;
-        ctx.Emit(new PlayerBankrupt(player.Id, creditorId, cash, outright.Select(p => p.PropertyId).ToList()));
+        ctx.Emit(new PlayerBankrupt(player.Id, creditorId, cash, outright.Select(p => p.PropertyId).ToList(),
+            buildingsSoldFor, beforeLoans - cash));
 
         // Pushed in reverse board order, so the first property on the board is auctioned first.
         foreach (PropertyState p in toAuction.OrderByDescending(p => ctx.State.IndexOf(p.PropertyId)))

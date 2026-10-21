@@ -55,7 +55,7 @@ else if (decision.Kind == DecisionKind.ChoosePrecisionDice && decision.Dice is {
     <div class="decision precision">
         <h2>@view.Me.Name, keep two of these dice</h2>
         <div class="dice three" aria-label="Your three dice: @string.Join(", ", dice)">
-            @foreach (var die in dice) { <span class="die">@die</span> }
+            @foreach (var die in dice) { <Die Value="die" /> }
         </div>
         <div class="buttons stacked">
             @* Two dice the same (like 2, 2, 6) would give the same choice twice, so each pair of numbers is shown once. *@

@@ -1,0 +1,43 @@
+@* The notices at the top of the board: what just happened, newest on top. Older notices are faded, and each one
+   fades away by itself after a while (see .notice in app.css). "Show" points at the space a notice is about.
+   Once the replay ends, only the newest notice stays, so the question you have to answer gets the room. *@
+@if (Playback.Notices.Count > 0 || Playback.IsPlaying)
+{
+    @* The game log says the same things for screen readers, so these copies are hidden from them. *@
+    <div class="notices" aria-hidden="true">
+        @for (int i = 0; i < Shown; i++)
+        {
+            var beat = Playback.Notices[i];
+            <div class="notice tone-@beat.Tone @(i == 0 ? "newest" : "older")" @key="beat.Number">
+                <span class="notice-icon"><Icon Name="@beat.Icon" /></span>
+                <p>@beat.Text</p>
+                @if (beat.SpaceId != null)
+                {
+                    <button class="small ghost" tabindex="-1" @onclick="() => OnShow.InvokeAsync(beat.SpaceId)">Show</button>
+                }
+            </div>
+            @if (i == 0 && Playback.IsPlaying && beat.CardId != null)
+            {
+                <div class="notice-card" @key="beat.Number + 1_000_000"><CardView CardId="@beat.CardId" Content="Content" /></div>
+            }
+            else if (i == 0 && Playback.IsPlaying && beat.CardBack)
+            {
+                <div class="card-back" @key="beat.Number + 1_000_000"><Icon Name="star" /> Opportunity</div>
+            }
+        }
+    </div>
+}
+@if (Playback.IsPlaying)
+{
+    <button class="small skip" @onclick="Playback.Skip"><Icon Name="skip" /> Skip animation</button>
+}
+
+@code {
+    [Parameter, EditorRequired] public Playback Playback { get; set; } = default!;
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+
+    /// <summary>Called with a space id when someone presses "Show" on a notice.</summary>
+    [Parameter] public EventCallback<string> OnShow { get; set; }
+
+    private int Shown => Playback.IsPlaying ? Playback.Notices.Count : Math.Min(1, Playback.Notices.Count);
+}

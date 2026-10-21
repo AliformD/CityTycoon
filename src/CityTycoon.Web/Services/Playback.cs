@@ -4,10 +4,13 @@ using CityTycoon.Engine.Views;
 
 namespace CityTycoon.Web.Services;
 
-/// <summary>One moment shown in the middle of the board while the game replays what just happened.</summary>
+/// <summary>One notice shown at the top of the board while the game replays what just happened.</summary>
+/// <param name="Icon">The picture's name for the Icon component (dice, coin, jail...).</param>
+/// <param name="Tone">"good", "bad" or "" (colors the notice).</param>
 /// <param name="CardId">A face-up card to show (an Event card or a played card). Null for none.</param>
 /// <param name="CardBack">True to show a face-down card instead (a private Opportunity draw).</param>
-public sealed record Beat(int Number, string Icon, string Text, string Tone, string? CardId = null, bool CardBack = false);
+/// <param name="SpaceId">The board space the notice is about, for its "Show" button. Null for none.</param>
+public sealed record Beat(int Number, string Icon, string Text, string Tone, string? CardId = null, bool CardBack = false, string? SpaceId = null);
 
 /// <summary>A floating "+$200" or "-$50" over a player's card.</summary>
 public sealed record MoneyPop(int Number, int PlayerId, int Amount);
@@ -22,7 +25,7 @@ public sealed record MoneyPop(int Number, int PlayerId, int Amount);
 /// property owners show only what has been replayed so far. When the replay ends, the screen snaps back
 /// to the true state, so a mistake in here can never change the game, only how it is drawn.
 /// </summary>
-public sealed class Playback(SettingsService settings, GameContent content, Action changed)
+public sealed class Playback(SettingsService settings, SoundService sounds, GameContent content, Action changed)
 {
     private readonly Random cosmetic = new();   // only for the tumbling dice faces; never touches the game's own random numbers
     private PlayerView? live;
@@ -37,7 +40,14 @@ public sealed class Playback(SettingsService settings, GameContent content, Acti
     private int nextNumber;
 
     public bool IsPlaying { get; private set; }
+
+    /// <summary>The newest notice, while a replay is playing.</summary>
     public Beat? Caption { get; private set; }
+
+    /// <summary>The last few notices, newest first. They stay after a replay ends and fade away on screen by themselves.</summary>
+    public IReadOnlyList<Beat> Notices => notices;
+    private readonly List<Beat> notices = [];
+    private const int NoticesKept = 3;
     public bool Rolling { get; private set; }
     public (int, int) RollingFaces { get; private set; } = (1, 1);
 
@@ -50,12 +60,19 @@ public sealed class Playback(SettingsService settings, GameContent content, Acti
     /// <summary>True when events should be replayed at all (Off turns it off).</summary>
     public bool Enabled => settings.Current.Animation != AnimationSpeed.Off;
 
-    private double Scale => settings.Current.Animation switch
+    private double Scale => settings.AnimationScale;
+
+    /// <summary>Shows a notice. "replace" swaps out the newest one instead (the dice result replaces "rolls the dice...").</summary>
+    private void Show(Beat beat, bool replace = false)
     {
-        AnimationSpeed.Slow => 1.6,
-        AnimationSpeed.Fast => 0.45,
-        _ => 1.0,
-    };
+        Caption = beat;
+        if (replace && notices.Count > 0)
+            notices[0] = beat;
+        else
+            notices.Insert(0, beat);
+        if (notices.Count > NoticesKept)
+            notices.RemoveRange(NoticesKept, notices.Count - NoticesKept);
+    }
 
     /// <summary>Jump to the end of the replay that is playing now.</summary>
     public void Skip() => skip = true;
@@ -144,7 +161,7 @@ public sealed class Playback(SettingsService settings, GameContent content, Acti
         if (e is DiceRolled dice)
         {
             await RollDice(dice, stop);
-            Caption = new Beat(nextNumber++, "🎲", text, "", null);
+            Show(new Beat(nextNumber++, "dice", text, ""), replace: true);
             Reveal();
             changed();
             await Wait(550, stop);
@@ -152,7 +169,7 @@ public sealed class Playback(SettingsService settings, GameContent content, Acti
         }
         if (e is PlayerMoved move)
         {
-            Caption = new Beat(nextNumber++, "🚶", text, "");
+            Show(new Beat(nextNumber++, "walk", text, "", SpaceId: after.Spaces[move.To].Id));
             Reveal();   // the "moved to" line appears as the token starts walking
             changed();
             await Walk(move, stop);
@@ -171,11 +188,12 @@ public sealed class Playback(SettingsService settings, GameContent content, Acti
         int pause = PauseFor(e);
         if (text.Length == 0 && pause == 0)
             return;
+        var (icon, tone2, cardId, back, sound) = Look(e);
+        if (pops.Count > 0 && sound.Length == 0)
+            sound = pops.Any(p => p.Amount < 0) ? "coin-out" : "coin-in";
+        sounds.Play(sound);
         if (text.Length > 0)
-        {
-            var (icon, tone2, cardId, back) = Look(e);
-            Caption = new Beat(nextNumber++, icon, text, tone2, cardId, back);
-        }
+            Show(new Beat(nextNumber++, icon, text, tone2, cardId, back, flash));
         Reveal();   // the log line appears with its caption
         changed();
         await Wait(pause, stop);
@@ -183,7 +201,8 @@ public sealed class Playback(SettingsService settings, GameContent content, Acti
 
     private async Task RollDice(DiceRolled dice, CancellationToken stop)
     {
-        Caption = new Beat(nextNumber++, "🎲", $"{NameOf(dice.PlayerId)} rolls the dice…", "");
+        Show(new Beat(nextNumber++, "dice", $"{NameOf(dice.PlayerId)} rolls the dice…", ""));
+        sounds.Play("dice");
         if (!settings.Current.ReduceMotion)
         {
             Rolling = true;
@@ -215,12 +234,13 @@ public sealed class Playback(SettingsService settings, GameContent content, Acti
             await Wait(650, stop);
             return;
         }
-        int each = (int)Math.Clamp(1100.0 / steps, 70, 160);
+        int each = (int)Math.Clamp(1500.0 / steps, 110, 220);
         for (int i = 1; i <= steps; i++)
         {
             positions[move.PlayerId] = (move.From + i) % count;
             FlashSpaceId = live.Spaces[positions[move.PlayerId]].Id;
             FlashTone = "";
+            sounds.Play("step");
             changed();
             await Wait(each, stop);
         }
@@ -274,30 +294,45 @@ public sealed class Playback(SettingsService settings, GameContent content, Acti
         _ => 800,
     };
 
-    /// <summary>An icon, a tone (colors the caption), and a card to show for the caption.</summary>
-    private (string Icon, string Tone, string? CardId, bool CardBack) Look(GameEvent e) => e switch
+    /// <summary>An icon name, a tone (colors the notice), a card to show, and a sound to play. An empty sound means
+    /// "coins, if money moved" (see PlayOne).</summary>
+    private (string Icon, string Tone, string? CardId, bool CardBack, string Sound) Look(GameEvent e) => e switch
     {
-        TurnStarted => ("➡️", "", null, false),
-        PassedGo => ("💰", "good", null, false),
-        SentToJail => ("🚔", "bad", null, false),
-        LeftJail => ("🔓", "good", null, false),
-        StayedInJail => ("▦", "", null, false),
-        RentPaid or TaxPaid or BailPaid or HospitalBillPaid or TileFeePaid or CardPaymentMade or CashToBank => ("💸", "bad", null, false),
-        CashFromBank or PerkIncome or CatchUpPaid or CouncilPayout => ("💰", "good", null, false),
-        AuctionStarted or BidRaised or AuctionPassed or BidsRevealed or AuctionNoBids or DiceTieWon or BidEdgeWon => ("🔨", "", null, false),
-        AuctionWon => ("🏠", "good", null, false),
-        BuildingBuilt => ("🏗️", "good", null, false),
-        BuildingSold or BuildingBurned => ("🔥", "bad", null, false),
-        TradeProposed or TradeCompleted or TradeDeclined => ("🤝", "", null, false),
-        EventDrawn d => ("❗", "", d.CardId, false),
-        OpportunityDrawn => ("★", "", null, true),
-        CardPlayed p => ("🃏", "", p.CardId, false),
-        CardCancelled c => ("🛡️", "", c.CardId, false),
-        MallCardBought or MallCardSold => ("🛍️", "", null, false),
-        CouncilStarted or OrdinanceProposed or CouncilResolved or OrdinanceEnded => ("🏛️", "", null, false),
-        PlayerBankrupt => ("💥", "bad", null, false),
-        GameEnded => ("🏁", "good", null, false),
-        _ => ("•", "", null, false),
+        TurnStarted => ("turn", "", null, false, "turn"),
+        PassedGo => ("coin", "good", null, false, "coin-in"),
+        SentToJail => ("police", "bad", null, false, "jail"),
+        LeftJail => ("unlock", "good", null, false, "turn"),
+        StayedInJail => ("jail", "", null, false, ""),
+        RentPaid or TaxPaid or BailPaid or HospitalBillPaid or TileFeePaid or CardPaymentMade or CashToBank => ("coin", "bad", null, false, "coin-out"),
+        CashFromBank or PerkIncome or CatchUpPaid or CouncilPayout => ("coin", "good", null, false, "coin-in"),
+        AuctionStarted or BidRaised or AuctionPassed or AuctionNoBids or DiceTieWon or BidEdgeWon => ("gavel", "", null, false, ""),
+        BidsRevealed => ("gavel", "", null, false, "card"),
+        AuctionWon => ("house", "good", null, false, "gavel"),
+        BuildingBuilt => ("build", "good", null, false, "build"),
+        BuildingSold or BuildingBurned => ("fire", "bad", null, false, "bad"),
+        TradeProposed or TradeDeclined => ("trade", "", null, false, ""),
+        TradeCompleted => ("trade", "good", null, false, "coin-in"),
+        EventDrawn d => ("event", "", d.CardId, false, "card"),
+        OpportunityDrawn => ("star", "", null, true, "card"),
+        CardPlayed p => ("card", "", p.CardId, false, "card"),
+        CardCancelled c => ("shield", "", c.CardId, false, "card"),
+        MallCardBought or MallCardSold => ("shop", "", null, false, ""),
+        CouncilStarted or OrdinanceProposed or CouncilResolved or OrdinanceEnded => ("council", "", null, false, ""),
+        TileRevealed or TileRevealedByCouncil or TilePeeked => ("gov", "", null, false, "card"),
+        MomentumGained or PrecisionRolled or Nudged or Detoured => ("star", "", null, false, ""),
+        SentToHospital or InsuranceBought or InsuranceUsed or RecoverySkipped or HospitalShrugged => ("medic", "", null, false, ""),
+        CasinoHighLow or CasinoRerolled or DuelChallenged or DuelDeclined or DuelRolled or DuelWon or LotteryRolled or LotteryWon => ("dice", "", null, false, "dice"),
+        StadiumChosen or StadiumEnded => ("stadium", "", null, false, ""),
+        RoadWorkStarted or RoadWorkCleared => ("cone", "", null, false, ""),
+        RentBoostStarted or RentBoostEnded => ("party", "", null, false, ""),
+        TransitHopped or TransitRidden or ExpressLineUsed => ("train", "", null, false, ""),
+        PropertyMortgaged or PropertyForfeited or LoanTaken => ("coin", "bad", null, false, ""),
+        PropertyUnmortgaged or LoanRepaid => ("coin", "", null, false, ""),
+        ZoningChanged or PermitsAdded or CouncilCancelled => ("council", "", null, false, ""),
+        CharacterChosen => ("star", "", null, false, ""),
+        PlayerBankrupt => ("bankrupt", "bad", null, false, "bad"),
+        GameEnded => ("flag", "good", null, false, "win"),
+        _ => ("dot", "", null, false, ""),
     };
 
     /// <summary>The space to flash for this event, and whether the news is good or bad for its owner.</summary>

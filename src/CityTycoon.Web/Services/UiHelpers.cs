@@ -10,7 +10,7 @@ namespace CityTycoon.Web.Services;
 public static class UiHelpers
 {
     /// <summary>One color per seat. Tokens also show the player's initial, so color isn't the only clue.</summary>
-    private static readonly string[] PlayerColors = ["#d62839", "#1d6fb8", "#2a9d47", "#e07a10", "#7b3fbf", "#5c6670"];
+    private static readonly string[] PlayerColors = ["#FF6B4A", "#3A86FF", "#8338EC", "#F4A100", "#0FA37F", "#E5398F"];
 
     public static string PlayerColor(int playerId) => PlayerColors[playerId % PlayerColors.Length];
 
@@ -59,19 +59,29 @@ public static class UiHelpers
         _ => space.Name,
     };
 
-    public static string KindIcon(SpaceInfo space) => space.Kind switch
+    /// <summary>The Icon picture for a space that has no color band.</summary>
+    public static string KindIconName(SpaceInfo space, PropertyDefinition? property) => space.Kind switch
     {
-        SpaceKind.Go => "➜",
-        SpaceKind.Jail => "▦",
-        SpaceKind.CityPark => "♣",
-        SpaceKind.GoToJail => "⚑",
-        SpaceKind.Event => "!",
-        SpaceKind.Opportunity => "★",
-        SpaceKind.Tax => "$",
-        SpaceKind.Landmark => "◆",
-        SpaceKind.GovernmentTile => "?",
-        _ => "",
+        _ when property?.Type == PropertyType.Railroad => "train",
+        _ when property?.Type == PropertyType.Utility => "bulb",
+        SpaceKind.Go => "go",
+        SpaceKind.Jail => "jail",
+        SpaceKind.CityPark => "park",
+        SpaceKind.GoToJail => "police",
+        SpaceKind.Event => "event",
+        SpaceKind.Opportunity => "card",
+        SpaceKind.Tax => "tax",
+        SpaceKind.Landmark when space.Id == "mall" => "shop",
+        SpaceKind.Landmark when space.Id == "hospital" => "medic",
+        SpaceKind.Landmark when space.Id == "casino" => "dice",
+        SpaceKind.Landmark when space.Id == "stadium" => "stadium",
+        SpaceKind.Landmark => "landmark",
+        SpaceKind.GovernmentTile => "gov",
+        _ => "dot",
     };
+
+    public static bool IsCorner(SpaceInfo space) =>
+        space.Kind is SpaceKind.Go or SpaceKind.Jail or SpaceKind.CityPark or SpaceKind.GoToJail;
 
     /// <summary>A button label for any action, with the money it costs or brings in.</summary>
     public static string ActionLabel(GameAction action, PlayerView view, GameContent content)
@@ -152,15 +162,6 @@ public static class UiHelpers
     /// <summary>The board space a player would land on after moving this many spaces.</summary>
     public static SpaceInfo LandingSpace(PlayerView view, int playerId, int spaces) =>
         view.Spaces[(view.Player(playerId).Position + spaces) % view.Spaces.Count];
-
-    /// <summary>A short marker for a building level on the board: 1-4 houses, H for hotel, S for skyscraper.</summary>
-    public static string LevelMarker(int level) => level switch
-    {
-        0 => "",
-        <= 4 => $"⌂{level}",
-        5 => "H",
-        _ => "S",
-    };
 
     public static string ZoningName(ZoningLevel level) => level switch
     {

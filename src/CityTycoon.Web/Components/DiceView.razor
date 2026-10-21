@@ -1,19 +1,19 @@
-@* The last roll, drawn as two dice with their number as text too. While a roll is being replayed, the dice tumble first. *@
+@* The last roll, drawn as real dice with dots (and the number as text too). While a roll is being replayed, the dice tumble first. *@
 @if (Rolling)
 {
     <div class="dice rolling" aria-hidden="true">
-        <span class="die">@Faces[RollingFaces.Item1 - 1]</span>
-        <span class="die">@Faces[RollingFaces.Item2 - 1]</span>
+        <Die Value="RollingFaces.Item1" />
+        <Die Value="RollingFaces.Item2" />
     </div>
 }
 else if (Roll != null)
 {
     @* @key makes a new roll replace the old dice, so the landing animation plays again. *@
     <div class="dice" @key="Roll" aria-label="@(Roll.IsOneDie ? $"Last roll: {Roll.Die1} on one die" : $"Last roll: {Roll.Die1} and {Roll.Die2}")">
-        <span class="die">@Faces[Roll.Die1 - 1]<span class="num">@Roll.Die1</span></span>
+        <Die Value="Roll.Die1" />
         @if (!Roll.IsOneDie)
         {
-            <span class="die">@Faces[Roll.Die2 - 1]<span class="num">@Roll.Die2</span></span>
+            <Die Value="Roll.Die2" />
         }
         <span class="dice-caption">@View.Player(Roll.PlayerId).Name rolled @Roll.Total@(Roll.IsDoubles ? ", doubles!" : "")</span>
     </div>
@@ -23,6 +23,5 @@ else if (Roll != null)
     [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
     [Parameter] public bool Rolling { get; set; }
     [Parameter] public (int, int) RollingFaces { get; set; } = (1, 1);
-    private static readonly string[] Faces = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
     private DiceRolled? Roll => View.Log.OfType<DiceRolled>().LastOrDefault();
 }

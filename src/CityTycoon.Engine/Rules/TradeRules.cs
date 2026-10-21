@@ -55,6 +55,28 @@ public static class TradeRules
         return null;
     }
 
+    /// <summary>
+    /// Checks a counter-offer to <paramref name="offer"/>. Returns null if it can be
+    /// sent, or a plain-English reason if not. A counter goes back the other way
+    /// (from whoever is answering, to whoever made the offer) and must change something.
+    /// </summary>
+    public static string? WhyBadCounter(EngineContext ctx, TradeOffer offer, TradeOffer counter, int countersSoFar)
+    {
+        if (countersSoFar >= ctx.Rules.MaxTradeCounters)
+            return "This trade has had all its counter-offers. Accept or decline it.";
+        if (counter.FromId != offer.ToId || counter.ToId != offer.FromId)
+            return "A counter-offer goes back to the player who made the offer.";
+        if (IsSameTrade(offer, counter))
+            return "That's the same trade. Change something, or just accept it.";
+        return WhyInvalid(ctx, counter);
+    }
+
+    /// <summary>True if the counter swaps exactly what the offer did (just written from the other side).</summary>
+    private static bool IsSameTrade(TradeOffer offer, TradeOffer counter) =>
+        offer.GiveCash == counter.GetCash && offer.GetCash == counter.GiveCash
+        && offer.GiveProperties.ToHashSet().SetEquals(counter.GetProperties)
+        && offer.GetProperties.ToHashSet().SetEquals(counter.GiveProperties);
+
     /// <summary>Only unbuilt, non-pending properties can be traded, and only if the whole group has no buildings.</summary>
     public static string? WhyCantTradeProperty(EngineContext ctx, int ownerId, string propertyId)
     {

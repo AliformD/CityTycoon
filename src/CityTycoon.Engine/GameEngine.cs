@@ -165,6 +165,15 @@ public sealed class GameEngine
         DecisionFor(playerId) is { } decision && ManagementRules.CanProposeTrades(ctx, playerId, decision.Management);
 
     /// <summary>
+    /// Why this player can't send this counter-offer right now, or null if they can.
+    /// Like trade offers, counters can't be listed in GetLegalActions.
+    /// </summary>
+    public string? WhyCantCounter(int playerId, TradeOffer counter) =>
+        DecisionFor(playerId) is { Kind: DecisionKind.RespondToTrade } && TopStep is TradeResponseStep step
+            ? TradeRules.WhyBadCounter(ctx, step.Offer, counter, step.Counters)
+            : "There's no trade offer waiting for you.";
+
+    /// <summary>
     /// Why a management action (build, sell, mortgage...) isn't allowed right now,
     /// or null if it is. The screen uses this to explain greyed-out buttons.
     /// </summary>

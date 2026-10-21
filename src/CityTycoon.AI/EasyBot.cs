@@ -47,7 +47,7 @@ public class EasyBot : IPlayerController
         {
             DecisionKind.SubmitBid => ChooseBid(view, decision),
             DecisionKind.RaiseMoney => RaiseMoney(legalActions),
-            DecisionKind.RespondToTrade => IsGoodForMe(view, decision.Trade!) ? new AcceptTrade() : new DeclineTrade(),
+            DecisionKind.RespondToTrade => RespondToTrade(view, decision),
             DecisionKind.ChoosePrecisionDice => ChooseBestDice(view, decision),
             DecisionKind.ChooseNudge => ChooseNudge(view, decision, legalActions),
             // Insurance only when there's plenty of spare cash.
@@ -313,22 +313,85 @@ public class EasyBot : IPlayerController
     /// its own color group counts extra; handing someone else a full group
     /// counts against.
     /// </summary>
-    private bool IsGoodForMe(PlayerView view, TradeOffer offer)
+    private bool IsGoodForMe(PlayerView view, TradeOffer offer) =>
+        view.Me.Cash - offer.GetCash >= Reserve(view) / 2 && Gain(view, offer) > 0;
+
+    /// <summary>
+    /// How much better off the bot would be, in dollars, if it accepted this offer.
+    /// The offer is written from the proposer's side; this bot is the receiver.
+    /// </summary>
+    private double Gain(PlayerView view, TradeOffer offer)
     {
-        // The offer is written from the proposer's side; this bot is the receiver.
         int me = view.ViewerId;
         int them = offer.FromId;
-        if (view.Me.Cash - offer.GetCash < Reserve(view) / 2)
-            return false;
-
         double gain = offer.GiveCash - offer.GetCash
             + offer.GiveProperties.Sum(id => Value(view, id))
             - offer.GetProperties.Sum(id => Value(view, id));
 
         gain += GroupBonus(view, me, add: offer.GiveProperties, remove: offer.GetProperties);
         gain -= GroupBonus(view, them, add: offer.GetProperties, remove: offer.GiveProperties);
-        return gain > 0;
+        return gain;
     }
+
+    /// <summary>Accept a good offer. Otherwise send back terms it would take, if it can and counters are left, or decline.</summary>
+    private GameAction RespondToTrade(PlayerView view, PendingDecision decision)
+    {
+        TradeOffer offer = decision.Trade!;
+        if (IsGoodForMe(view, offer))
+            return new AcceptTrade();
+        if (decision.CountersLeft > 0 && CounterOffer(view, offer) is TradeOffer counter)
+            return new CounterTrade(counter);
+        return new DeclineTrade();
+    }
+
+    /// <summary>
+    /// A counter-offer the bot would accept itself: the same properties, with the cash
+    /// moved so it comes out ahead by a small margin. It uses the same sums as
+    /// accepting, so countering never makes a bad trade easier to get. It never
+    /// counters a trade that would hand the other player a whole color group:
+    /// those it just declines. Returns null when no counter makes sense.
+    /// </summary>
+    private TradeOffer? CounterOffer(PlayerView view, TradeOffer offer)
+    {
+        int me = view.ViewerId;
+        int them = offer.FromId;
+        if (GroupBonus(view, them, add: offer.GetProperties, remove: offer.GiveProperties) > 0)
+            return null;
+
+        // The margin: 5% of everything changing hands, at least $10, so the bot doesn't counter for a break-even trade.
+        double traded = offer.GiveCash + offer.GetCash
+            + offer.GiveProperties.Concat(offer.GetProperties).Sum(id => Value(view, id));
+        double margin = Math.Max(10, traded * 0.05);
+        int needed = (int)Math.Ceiling((margin - Gain(view, offer)) / 10) * 10;
+        if (needed <= 0)
+            return null;
+
+        // From the bot's side: it gives what it was asked for and gets what it was offered.
+        // First it pays less cash, then it asks for more.
+        int pay = offer.GetCash;
+        int ask = offer.GiveCash;
+        int cut = Math.Min(pay, needed);
+        pay -= cut;
+        ask += needed - cut;
+
+        var counter = new TradeOffer(me, them, pay, ask, offer.GetProperties, offer.GiveProperties);
+        // Cash for cash is pointless: there must be a property in it.
+        if (counter.GiveProperties.Count == 0 && counter.GetProperties.Count == 0)
+            return null;
+        var asOffer = new TradeOffer(them, me, ask, pay, offer.GiveProperties, offer.GetProperties);
+        // Both sides must be able to afford it, including the bank's fee on mortgaged properties.
+        if (view.Player(them).Cash < ask + MortgageFees(view, counter.GiveProperties)
+            || view.Me.Cash - pay + ask - MortgageFees(view, counter.GetProperties) < Reserve(view) / 2
+            || !IsGoodForMe(view, asOffer))
+        {
+            return null;
+        }
+        return counter;
+    }
+
+    private int MortgageFees(PlayerView view, IEnumerable<string> propertyIds) =>
+        propertyIds.Where(id => view.Properties[id].IsMortgaged)
+                   .Sum(id => MoneyRules.MortgageTransferFee(content, content.Property(id)));
 
     private double Value(PlayerView view, string id)
     {

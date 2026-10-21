@@ -64,6 +64,7 @@ public static class EventDescriber
             TradeCompleted t => $"{Name(t.Offer.ToId)} accepted the trade from {Name(t.Offer.FromId)}."
                 + (t.MortgageFees > 0 ? $" Mortgage fees paid: ${t.MortgageFees}." : ""),
             TradeDeclined t => $"The trade between {Name(t.Offer.FromId)} and {Name(t.Offer.ToId)} didn't happen ({t.Reason}).",
+            TradeCountered t => $"{Name(t.Counter.FromId)} turned down {Name(t.Counter.ToId)}'s offer and sent a counter-offer: {DescribeTrade(t.Counter, Space)}.",
             MomentumGained m => $"{Name(m.PlayerId)} gained {Tokens(m.Amount)} ({m.Source}).",
             PrecisionRolled p => $"{Name(p.PlayerId)} spent {Tokens(p.TokensSpent)} on a Precision Roll: {string.Join(", ", p.Dice)}.",
             Nudged n => $"{Name(n.PlayerId)} spent {Tokens(n.TokensSpent)} to move {Math.Abs(n.Spaces)} space{(Math.Abs(n.Spaces) == 1 ? "" : "s")} {(n.Spaces > 0 ? "further" : "less")}.",

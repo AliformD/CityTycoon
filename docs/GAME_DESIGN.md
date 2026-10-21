@@ -729,6 +729,7 @@ When a deck runs out, shuffle its discard pile to make a new deck. Cards held in
 - **Can be traded:** cash, unbuilt properties (the whole group must have no buildings), Opportunity cards, Momentum tokens, and Get Out of Jail Free cards.
 - **Can't be traded:** pending properties, loans, Insured markers, and buildings.
 - A mortgaged property transfers still mortgaged. The receiver pays the bank 10% of the mortgage value right away.
+- The player asked can accept, decline, or send back a **counter-offer** with different terms. A trade can have up to 3 counter-offers, then it must be accepted or declined.
 
 ### 15.10 Bankruptcy
 

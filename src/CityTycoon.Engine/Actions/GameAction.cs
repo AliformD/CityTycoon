@@ -18,6 +18,7 @@ namespace CityTycoon.Engine.Actions;
 [JsonDerivedType(typeof(PlaceBid), nameof(PlaceBid))]
 [JsonDerivedType(typeof(AcceptTrade), nameof(AcceptTrade))]
 [JsonDerivedType(typeof(DeclineTrade), nameof(DeclineTrade))]
+[JsonDerivedType(typeof(CounterTrade), nameof(CounterTrade))]
 [JsonDerivedType(typeof(ForfeitProperty), nameof(ForfeitProperty))]
 [JsonDerivedType(typeof(Build), nameof(Build))]
 [JsonDerivedType(typeof(SellBuilding), nameof(SellBuilding))]
@@ -84,6 +85,13 @@ public sealed record AcceptTrade : GameAction;
 
 /// <summary>Say no to a trade someone offered you.</summary>
 public sealed record DeclineTrade : GameAction;
+
+/// <summary>
+/// Say no to a trade, but send back different terms instead. The counter is
+/// written from the side of the player sending it (they are its FromId), and
+/// goes to whoever made the offer they are answering.
+/// </summary>
+public sealed record CounterTrade(TradeOffer Offer) : GameAction;
 
 /// <summary>Give up a pending property instead of paying its balance (Section 8.5).</summary>
 public sealed record ForfeitProperty : GameAction;
@@ -294,6 +302,7 @@ public enum DecisionKind
 /// <param name="Management">Which management actions (build, loans...) are allowed while deciding.</param>
 /// <param name="AmountOwed">For raising money: how much must be paid.</param>
 /// <param name="Trade">For trade replies: the offer.</param>
+/// <param name="CountersLeft">For trade replies: how many more counter-offers this trade can have (0 means only accept or decline).</param>
 /// <param name="Dice">For Precision Rolls: the dice rolled. For Nudges: the dice being used.</param>
 /// <param name="MaxBet">For the Casino: the most this player can bet.</param>
 /// <param name="Duel">For Dice Duel replies: the challenge.</param>
@@ -321,6 +330,7 @@ public sealed record PendingDecision(
     ManagementOptions Management = ManagementOptions.None,
     int AmountOwed = 0,
     TradeOffer? Trade = null,
+    int CountersLeft = 0,
     IReadOnlyList<int>? Dice = null,
     int MaxBet = 0,
     DuelChallenge? Duel = null,

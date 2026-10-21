@@ -13,8 +13,9 @@ namespace CityTycoon.AI;
 /// never bids more than its cash minus a safety reserve, and won't pay much
 /// over a property's assessed value.
 ///
-/// Each Easy bot gets a small random "personality" (how much it's willing to
-/// overpay), so a table of Easy bots doesn't all play the same.
+/// Each bot also gets small random amounts (how much cash it keeps back, how much it's
+/// willing to overpay), and a secret <see cref="BotPersonality"/> drawn on its own, so a table
+/// can have two Aggressive bots and no Reserved one (decision #144).
 /// </summary>
 public partial class EasyBot : IPlayerController
 {
@@ -33,12 +34,38 @@ public partial class EasyBot : IPlayerController
     /// <summary>The most it will pay, as a share of assessed value (for example 1.1 = 110%).</summary>
     public double MaxPriceRatio { get; }
 
+    /// <summary>The bot's secret style for this game. Nobody else is told it.</summary>
+    public BotPersonality Personality { get; }
+
+    /// <summary>
+    /// How much more cash it keeps back than a Balanced bot: Aggressive 0.85, Reserved 1.25.
+    /// Bigger gaps (0.7 and 1.4 with prices 1.12 and 0.9) made Aggressive bots win twice as often as Reserved ones in the Sim.
+    /// </summary>
+    protected double ReserveFactor => Personality switch
+    {
+        BotPersonality.Aggressive => 0.85,
+        BotPersonality.Reserved => 1.25,
+        _ => 1.0,
+    };
+
+    /// <summary>How much more it pays for property than a Balanced bot: Aggressive 1.06, Reserved 0.95.</summary>
+    protected double PriceFactor => Personality switch
+    {
+        BotPersonality.Aggressive => 1.06,
+        BotPersonality.Reserved => 0.95,
+        _ => 1.0,
+    };
+
     public EasyBot(ulong seed, GameContent? content = null, ulong stream = 101)
     {
         rng = new Pcg32(seed, stream);
         this.content = content ?? GameContent.Default;
-        SafetyReserve = rng.NextInt(100, 250);
-        MaxPriceRatio = 0.9 + rng.NextDouble() * 0.4; // 90% to 130%
+        int reserve = rng.NextInt(100, 250);
+        double price = 0.9 + rng.NextDouble() * 0.4; // 90% to 130%
+        // Each bot draws its own, so any mix can happen at a table.
+        Personality = (BotPersonality)rng.NextInt(3);
+        SafetyReserve = (int)(reserve * ReserveFactor);
+        MaxPriceRatio = price * PriceFactor;
     }
 
     public Task<GameAction> DecideAsync(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions)
@@ -549,3 +576,9 @@ public partial class EasyBot : IPlayerController
         return new NoThanks();
     }
 }
+
+/// <summary>
+/// A bot's secret style (decision #144). Aggressive bots pay more for property and keep less
+/// cash back, so they build sooner but go broke more often. Reserved bots do the opposite.
+/// </summary>
+public enum BotPersonality { Reserved, Balanced, Aggressive }

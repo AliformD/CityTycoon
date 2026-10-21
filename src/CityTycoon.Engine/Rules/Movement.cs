@@ -69,8 +69,9 @@ public static class Movement
             ctx.Emit(new PerkIncome(player.Id, amount, source));
         }
 
-        // Step 4: catch-up bonus. Whoever has the lowest net worth (ties all count) gets $100 (Section 16.2).
-        if (IsLowestNetWorth(ctx, player))
+        // Step 4: catch-up bonus. Whoever has the lowest net worth (ties all count) gets it (Section 16.2).
+        // It is 0 by default now (decision #143), so nothing happens unless a house rule turns it back on.
+        if (ctx.Rules.CatchUpBonus > 0 && IsLowestNetWorth(ctx, player))
         {
             player.Cash += ctx.Rules.CatchUpBonus;
             ctx.Emit(new CatchUpPaid(player.Id, ctx.Rules.CatchUpBonus));

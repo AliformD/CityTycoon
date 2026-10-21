@@ -126,6 +126,21 @@ static void AddCharacterReport(List<string> lines, List<GameStats> finished, Sim
     }
 }
 
+// Win rate by secret bot personality, counted the same way as characters.
+static void AddPersonalityReport(List<string> lines, List<GameStats> finished, SimOptions options)
+{
+    var seats = finished.SelectMany(r => r.Personalities).Where(p => p != "").ToList();
+    if (seats.Count == 0)
+        return;
+    lines.Add($"Win rate by bot personality. Even share would be {1.0 / options.Players:P1}:");
+    foreach (string personality in seats.Distinct().Order())
+    {
+        int played = seats.Count(p => p == personality);
+        double wins = finished.Sum(r => r.WinnerPersonalities.Count(p => p == personality) / (double)Math.Max(1, r.WinnerPersonalities.Count));
+        lines.Add($"  {personality,-10} {wins / played,6:P1}  (in {played} seats)");
+    }
+}
+
 // Which color perks the winners owned at the end, compared with everyone who owned them.
 static void AddPerkReport(List<string> lines, List<GameStats> finished, SimOptions options)
 {
@@ -196,6 +211,7 @@ static string Summarize(List<GameStats> results, SimOptions options, TimeSpan el
         }
         AddMatchupReport(lines, finished, options);
         AddCharacterReport(lines, finished, options);
+        AddPersonalityReport(lines, finished, options);
         AddPerkReport(lines, finished, options);
     }
     foreach (var e in errors.Take(10))

@@ -1,17 +1,19 @@
 {
   "contentVersion": 1,
 
-  "startingCash": 1500,
+  // Less cash at the start and more at GO (decision #143): a slower start, steadier money later.
+  "startingCash": 1000,
   "startingMomentum": 2,
   "momentumCap": 2,
   "nudgeMaxSpaces": 2,
   "nudgeCost": 1,
   "precisionRollCost": 2,
 
-  "goSalary": 200,
+  "goSalary": 300,
   // Passing GO gives no Momentum (decision #140). Tokens come from spaces and cards instead.
   "goMomentumGain": 0,
-  "catchUpBonus": 100,
+  // No hand-outs for being behind (decision #143). Set above 0 to bring the catch-up bonus back.
+  "catchUpBonus": 0,
   // What each Opportunity card in your hand adds to your net worth (Section 16.3).
   "handCardNetWorth": 50,
   "incomeTax": 200,
@@ -56,7 +58,7 @@
   "mallSellPrice": 50,
   "handLimit": 3,
 
-  "timedModeDefaultRounds": 30,
+  "timedModeDefaultRounds": 40,
 
   "minPlayers": 2,
   "maxPlayers": 6,

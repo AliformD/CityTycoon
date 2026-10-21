@@ -67,6 +67,25 @@ Start with 2, hold 2, none from GO, and Detour cancels a Nudge (decisions #140 a
 
 With fewer tokens players can't dodge rent as often, so rent hurts more and the better builder pulls ahead. That widens the gap between Hard and Easy bots a lot. Easy bots were not retuned: worth watching in playtests.
 
+## Money, game length and bot personalities (2026-10-21)
+$1,000 start, $300 GO, no catch-up bonus, 40 rounds (decision #143), and secret bot personalities (#144). 500 games each, 4 players, random characters, seed 1, all with the new Momentum rules.
+
+Options tried before Angel picked (4 Normal bots):
+
+| Setting | Buildings | Close calls | Bankruptcies | Cash at the end | Average rent |
+| --- | --- | --- | --- | --- | --- |
+| Old money, 30 rounds | 25 | 3.2 | 0.31 | $417 | $91 |
+| Old money, 40 rounds | 33 | 5.0 | 0.82 | $526 | $109 |
+| Old money, 50 rounds | 40 | 6.3 | 1.30 | $642 | $121 |
+| GO $250 + catch-up $200, 50 rounds | 47 | 7.7 | 1.29 | $844 | $134 |
+| GO $300, 50 rounds | 51 | 8.0 | 1.50 | $960 | $146 |
+| $2,000 start + GO $250, 50 rounds | 56 | 7.0 | 1.83 | $985 | $171 |
+| **$1,000 start, GO $300, no catch-up, 40 rounds (picked)** | 32 | 6.0 | 0.54 | $601 | $91 |
+
+A close call is cash under $150 that later climbs back to $400 without going bankrupt. More money means more buildings, so bigger rents and more bankruptcies, not fewer. The picked setting starts slower (first building around round 5 on average, not 3) and has fewer knockouts than the old money at the same length.
+
+With the picked setting and personalities: HardVsEasy 75.0% (80.4% at 30 rounds with the old money), Easy only 0.15 bankruptcies and 15 buildings per game. Win rate by personality (Normal / Easy tables): Aggressive 31% / 30%, Balanced 25% / 26%, Reserved 19% / 20%.
+
 ## How to repeat this
 `dotnet run -c Release --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots HardVsEasy --mode timed --characters random --seed 20000 --out <new folder>`
 `--set name=value` changes any rules.json number for one run (repeatable), and `--rounds` sets the Timed limit.

@@ -53,7 +53,7 @@ City Tycoon keeps what makes Monopoly fun: moving around the board, landing on o
 | **Interaction everywhere** | Auctions involve everyone. Cards target other players. City Council votes involve everyone. Some actions happen on other players' turns. |
 | **No stalling, no lockouts** | Jail isn't a safe hiding spot. Houses are unlimited. Timed games end on a clock with a score. |
 | **Every game is different** | Government tiles are hidden, random, and in different spots each game. Characters, zoning, and ordinances shift the strategy. |
-| **Catch-up without punishment** | The player in last place gets a small GO bonus and sets the City Council agenda. Lobbying lets trailing players block the leader. |
+| **Catch-up without punishment** | The player in last place sets the City Council agenda. Lobbying lets trailing players block the leader. (There is no GO hand-out for last place; see decision #143.) |
 
 ### 1.3 Platform goals
 
@@ -85,7 +85,7 @@ For reference, these are Angel's decisions that replaced parts of the first rule
 | --- | --- |
 | Board | 48 spaces: 4 corners + 4 sides × 11 spaces (10 fixed spaces + 1 Government tile per side). |
 | Dice | 2 standard six-sided dice, plus a 3rd die for Precision Rolls. |
-| Money | Starting cash $1,500 per player. The bank has unlimited money. |
+| Money | Starting cash $1,000 per player. The bank has unlimited money. |
 | Properties | 28 total: 22 color properties in 8 color groups, 4 railroads, 2 utilities. |
 | Buildings | Houses (unlimited), hotels and skyscrapers (limited by permits). |
 | Government tiles | 7 types. 4 are used each game, one per side, face-down. |
@@ -181,7 +181,7 @@ Every character ability goes through the rule-modifier system (Section 20) so ab
 ## 6. Setup
 
 1. Choose 2–6 players. Each one is Human or AI (Easy / Normal / Hard), with a name.
-2. Choose a game mode: **Classic** or **Timed** (default 30 rounds). See Section 16.
+2. Choose a game mode: **Classic** or **Timed** (default 40 rounds). See Section 16.
 3. Choose a privacy mode: **Hidden** or **Open** (Section 25).
 4. Optionally enter a game seed (for replays and testing). Otherwise a random seed is used.
 5. Decide turn order randomly.
@@ -190,7 +190,7 @@ Every character ability goes through the rule-modifier system (Section 20) so ab
 8. **Starting zoning:** every district starts at **Residential**, except one randomly chosen district that starts at **Commercial** (Section 10).
 9. **Permits:** set the hotel and skyscraper permit supply for the player count (Section 10.3).
 10. Shuffle the Opportunity, Event and Ordinance decks. Deal 3 Opportunity cards face up to the Mall shop.
-11. Each player gets $1,500 and 2 Momentum tokens (the Commuter gets 3).
+11. Each player gets $1,000 and 2 Momentum tokens (the Commuter gets 3).
 12. The City Planner takes their first secret peek.
 13. The first player starts round 1.
 
@@ -601,10 +601,10 @@ You can stay at most 2 turns. At the start of a Jail turn, choose one:
 
 Passing or landing on GO triggers these, in this order:
 
-1. Collect **$200** salary.
+1. Collect **$300** salary.
 2. **Utility Bill:** if an opponent owns both utilities, pay them $20.
 3. **Brown perk:** +$50.
-4. **Catch-up bonus:** if you have the lowest net worth (ties all count), +$100.
+4. **Catch-up bonus:** off by default (`catchUpBonus` is 0). As a house rule, the player with the lowest net worth (ties all count) gets that much.
 5. **Light Blue perk:** gain 1 Momentum token. (GO itself gives no tokens.)
 6. **Down payments due:** pay off any pending balances (Section 8.5).
 7. **City Planner:** peek at 1 still-hidden Government tile.
@@ -750,11 +750,11 @@ You're bankrupt if you owe more than you can raise by selling every building, mo
 | Mode | How it ends |
 | --- | --- |
 | **Classic** | Play until only one player isn't bankrupt. |
-| **Timed** (recommended, default) | Play a set number of rounds (default 30, adjustable). After the last round's end-of-round checks, the game is scored. If only one player is left before that, they win. |
+| **Timed** (recommended, default) | Play a set number of rounds (default 40, adjustable when you start a game; 30 to 45 suits a 90-minute game). After the last round's end-of-round checks, the game is scored. If only one player is left before that, they win. |
 
 ### 16.2 Catch-up mechanics
 
-- The player with the lowest net worth gets **+$100 when passing GO.**
+- No cash hand-out: the GO catch-up bonus is 0 by default (decision #143). You get the bonuses you earn.
 - The player with the lowest net worth **sets the agenda** at regular Council sessions.
 - Lobbying lets trailing players team up to block the leader's ordinances.
 
@@ -799,15 +799,15 @@ Every value below must live in one config file that loads at startup. The rules 
 
 | Key | Default | Section |
 | --- | --- | --- |
-| `startingCash` | 1500 | 6 |
+| `startingCash` | 1000 | 6 |
 | `startingMomentum` | 2 | 7.3 |
 | `momentumCap` | 2 | 7.3 |
 | `nudgeMaxSpaces` | 2 | 7.3 |
 | `nudgeCost` | 1 | 7.3 |
 | `precisionRollCost` | 2 | 7.3 |
-| `goSalary` | 200 | 15.1 |
+| `goSalary` | 300 | 15.1 |
 | `goMomentumGain` | 0 | 15.1 |
-| `catchUpBonus` | 100 | 16.2 |
+| `catchUpBonus` | 0 | 16.2 |
 | `incomeTax` / `luxuryTax` | 200 / 100 | 15.2 |
 | `auctionMinBidPercent` | 50 | 8.3 |
 | `forcedAuctionMinBidPercent` | 100 | 8.3 |
@@ -829,7 +829,7 @@ Every value below must live in one config file that loads at startup. The rules 
 | `hospitalBill` / `insuredMarkerCost` | 100 / 50 | 15.3 |
 | `mallPrices` / `mallSellPrice` | [50, 100, 150] / 50 | 15.3 |
 | `handLimit` | 3 | 15.4 |
-| `timedModeDefaultRounds` | 30 | 16.1 |
+| `timedModeDefaultRounds` | 40 | 16.1 |
 | Character, perk, tile, card and ordinance numbers | as listed | 5, 12, 13, 15 |
 
 Perk, character, tile, card, and ordinance numbers live in their own content files (Section 21), next to the definitions they belong to.
@@ -1121,7 +1121,7 @@ Bots only ever receive their own `PlayerView`. They **never** see hidden tiles t
 - **Vote value:** how much this ordinance would change the bot's net worth compared with each opponent's. Lobby up to a share of that difference.
 - **Nudge choice:** compare the expected value of the possible landing spots.
 
-Each bot gets a small random "personality" (for example, risk tolerance), so bots don't all play the same. Bot decisions must be quick (under about 50 ms each), so simulations stay fast.
+Each bot gets a small random "personality" (for example, risk tolerance), so bots don't all play the same. On top of that each bot secretly draws a style, Aggressive, Balanced or Reserved, on its own, so a table can have two Aggressive bots and no Reserved one (decision #144). Bot decisions must be quick (under about 50 ms each), so simulations stay fast.
 
 ---
 

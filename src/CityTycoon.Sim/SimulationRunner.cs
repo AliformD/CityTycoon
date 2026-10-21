@@ -95,6 +95,9 @@ public sealed record GameStats(
     /// <summary>Average cash and net worth of the players still in at the end.</summary>
     public double EndCash { get; init; }
     public double EndNetWorth { get; init; }
+    /// <summary>Each seat's secret bot personality (empty for Random bots), and the winners' personalities.</summary>
+    public IReadOnlyList<string> Personalities { get; init; } = [];
+    public IReadOnlyList<string> WinnerPersonalities { get; init; } = [];
     /// <summary>The average rent payment, so it can be compared with how much cash players hold.</summary>
     public double AverageRent { get; init; }
 }
@@ -157,7 +160,14 @@ public static class SimulationRunner
                         closeCalls++;
                 }
             }
-            return Summarize(game, seed, engine, error: null) with { CloseCalls = closeCalls };
+            string PersonalityOf(int id) => controllers[id] is EasyBot bot ? bot.Personality.ToString() : "";
+            var winners = engine.State.Result?.WinnerIds ?? [];
+            return Summarize(game, seed, engine, error: null) with
+            {
+                CloseCalls = closeCalls,
+                Personalities = engine.State.Players.Select(p => PersonalityOf(p.Id)).ToList(),
+                WinnerPersonalities = winners.Select(PersonalityOf).ToList(),
+            };
         }
         catch (Exception ex)
         {

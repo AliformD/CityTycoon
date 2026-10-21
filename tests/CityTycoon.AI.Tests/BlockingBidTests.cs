@@ -40,13 +40,17 @@ public class BlockingBidTests
     /// <summary>
     /// Angel's game: at $360 most Easy bots (their own limit is 90% to 130% of $300) used to drop out
     /// and hand the rival the set. Now every Easy, Normal and Hard bot with spare cash keeps going.
+    /// A Reserved bot (decision #144) pays 5% less for everything, so it gives up a little sooner, at $340.
     /// </summary>
     [Fact]
     public async Task EveryBot_KeepsBidding_ToStopARivalFinishingTheGreens()
     {
         var engine = GreenTable();
         foreach (var bot in Bots(s => new EasyBot(s)).Concat(Bots(s => new NormalBot(s))).Concat(Bots(s => new HardBot(s))))
-            Assert.True(await KeepsBidding(bot, engine, 360), bot.GetType().Name);
+        {
+            int price = ((EasyBot)bot).Personality == BotPersonality.Reserved ? 340 : 360;
+            Assert.True(await KeepsBidding(bot, engine, price), $"{bot.GetType().Name} {((EasyBot)bot).Personality}");
+        }
     }
 
     [Fact]
@@ -54,8 +58,9 @@ public class BlockingBidTests
     {
         var engine = GreenTable();
         engine.State.Properties["crown-street"].OwnerId = null;   // Cal would only have two of three after winning
+        // Even an Aggressive Easy bot stops by 130% x 1.06, about $413.
         foreach (var bot in Bots(s => new EasyBot(s)))
-            Assert.False(await KeepsBidding(bot, engine, 400));
+            Assert.False(await KeepsBidding(bot, engine, 440));
     }
 
     /// <summary>A human can't bait a bot into paying any price: blocking stops at 150% of the assessed value.</summary>
@@ -79,7 +84,7 @@ public class BlockingBidTests
         engine.State.Properties["summit-avenue"].IsMortgaged = true;
         engine.State.Properties["crown-street"].IsMortgaged = true;
         foreach (var bot in Bots(s => new EasyBot(s)))
-            Assert.False(await KeepsBidding(bot, engine, 400));
+            Assert.False(await KeepsBidding(bot, engine, 440));
     }
 
     /// <summary>Blocking never pushes a bot into its cash reserve.</summary>

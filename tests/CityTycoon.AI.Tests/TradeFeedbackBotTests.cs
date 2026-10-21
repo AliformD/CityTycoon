@@ -18,6 +18,9 @@ public class TradeFeedbackBotTests
         engine.State.Properties["fountain-square"].OwnerId = 1;
         engine.State.Properties["elm-avenue"].OwnerId = 1;
         engine.State.Properties["market-street"].OwnerId = 0;
+        // These tests were written with $1,500 each (the starting cash before decision #143).
+        engine.State.Player(0).Cash = 1500;
+        engine.State.Player(1).Cash = 1500;
         return engine;
     }
 

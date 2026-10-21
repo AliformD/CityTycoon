@@ -51,7 +51,7 @@ public static class ManagementRules
         RepayLoan => options.HasFlag(ManagementOptions.RepayLoan) && MoneyRules.CanRepayLoan(ctx, playerId) ? null : "You can't repay a loan right now.",
         ProposeTrade t => !CanProposeTrades(ctx, playerId, options) ? "You can't offer a trade right now."
             : t.Offer.FromId != playerId ? "You can only offer your own trades."
-            : TradeRules.WhyInvalid(ctx, t.Offer),
+            : TradeRules.WhyCantAskForCards(t.Offer) ?? TradeRules.WhyInvalid(ctx, t.Offer),
         _ => "Unknown action.",
     };
 

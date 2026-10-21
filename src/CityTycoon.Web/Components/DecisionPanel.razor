@@ -36,17 +36,29 @@ else if (decision.Kind == DecisionKind.RaiseMoney)
 else if (decision.Kind == DecisionKind.RespondToTrade && decision.Trade is { } offer)
 {
     <div class="decision trade-offer">
-        <h2>@view.Me.Name, @view.Player(offer.FromId).Name offers you a trade</h2>
+        <h2>@view.Me.Name, @view.Player(offer.FromId).Name @(decision.CountersLeft < Content.Rules.MaxTradeCounters ? "sent you a counter-offer" : "offers you a trade")</h2>
         <div class="trade-sides">
-            <div><h3>You get</h3>@TradeSide(offer.GiveCash, offer.GiveProperties)</div>
-            <div><h3>You give</h3>@TradeSide(offer.GetCash, offer.GetProperties)</div>
+            <div><h3>You get</h3>@TradeSide(offer.GiveCash, offer.GiveProperties, offer.GiveCards)</div>
+            <div><h3>You give</h3>@TradeSide(offer.GetCash, offer.GetProperties, offer.GetCards)</div>
         </div>
-        <div class="buttons">
-            @foreach (var action in main)
-            {
-                <button class="big @(action is AcceptTrade ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)">@UiHelpers.ActionLabel(action, view, Content)</button>
-            }
-        </div>
+        @if (showCounter)
+        {
+            <TradeBuilder Request="Request" Content="Content" Session="Session" CounterTo="offer" OnCounter="Counter" OnCancel="CloseCounter" />
+        }
+        else
+        {
+            <div class="buttons">
+                @foreach (var action in main)
+                {
+                    <button class="big @(action is AcceptTrade ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)">@UiHelpers.ActionLabel(action, view, Content)</button>
+                }
+                @if (decision.CountersLeft > 0)
+                {
+                    <button class="big" @onclick="OpenCounter">Counter-offer…</button>
+                }
+            </div>
+            <p class="hint">@CountersHint(decision.CountersLeft)</p>
+        }
     </div>
 }
 else if (decision.Kind == DecisionKind.ChoosePrecisionDice && decision.Dice is { Count: 3 } dice)
@@ -344,12 +356,13 @@ else
 
     private bool showTrade;
 
-    private RenderFragment TradeSide(int cash, IReadOnlyList<string> properties) => __builder =>
+    private RenderFragment TradeSide(int cash, IReadOnlyList<string> properties, IReadOnlyList<string> cards) => __builder =>
     {
         <ul>
             @if (cash > 0) { <li>@UiHelpers.Money(cash) cash</li> }
             @foreach (var id in properties) { <li>@Content.Property(id).Name@(Request.View.Properties[id].IsMortgaged ? " (mortgaged)" : "")</li> }
-            @if (cash == 0 && properties.Count == 0) { <li>Nothing</li> }
+            @foreach (var id in cards) { <li>@Content.Card(id).Name card <span class="hint">(@Content.Card(id).Text)</span></li> }
+            @if (cash == 0 && properties.Count == 0 && cards.Count == 0) { <li>Nothing</li> }
         </ul>
     };
 
@@ -380,4 +393,22 @@ else
         showTrade = false;
         await OnAnswer.InvokeAsync(new ProposeTrade(offer));
     }
+
+    private bool showCounter;
+
+    private void OpenCounter() => showCounter = true;
+    private void CloseCounter() => showCounter = false;
+
+    private async Task Counter(TradeOffer offer)
+    {
+        showCounter = false;
+        await OnAnswer.InvokeAsync(new CounterTrade(offer));
+    }
+
+    private static string CountersHint(int left) => left switch
+    {
+        0 => "No more counter-offers on this trade: accept or decline it.",
+        1 => "This is the last counter-offer this trade can have.",
+        _ => $"This trade can have {left} more counter-offers.",
+    };
 }

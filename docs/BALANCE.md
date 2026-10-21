@@ -25,17 +25,28 @@ Hard beats Easy most of the time, and Normal sits in between, as Section 23 want
 - **Hard bots go bankrupt more often** (0.10 per game against 0.01 for Easy). That is the smaller reserve at work and is a trade the bot makes on purpose.
 - **Turn order is fair:** positions 1 to 4 each won between 24% and 27%.
 
+## Trades (2026-10-21)
+Normal and Hard bots now judge a trade that hands over a color group by the rent it should earn (decision #134), and bots answer with counter-offers. 1000 games each, 4 players, Timed, random characters, seed 1:
+
+| Match-up | Before | After |
+| --- | --- | --- |
+| HardVsEasy (Hard seats' win rate) | 64.9% | 64.5% |
+| NormalVsEasy (Normal seats' win rate) | 60.7% | 60.3% |
+| Trades per game | 0.0 | 0.8 |
+| Buildings per game | 13 | 17 |
+
+Win rates moved less than the noise, so the new judgement doesn't make bots worse; it makes groups (and so buildings) happen more often.
+
 ## Blocking a monopoly (2026-10-21)
-Every bot now bids extra to stop one opponent finishing a color group, and Easy bots value finishing their own group (decision #135). 1000 games each, 4 players, Timed, random characters, seed 1:
+Every bot now bids extra to stop one opponent finishing a color group, and Easy bots value finishing their own group (decision #135). Measured on top of the trades change above, 1000 games each, 4 players, Timed, random characters, seed 1:
 
 | Run | Before | After |
 | --- | --- | --- |
-| NormalVsEasy (Normal seats' win rate) | 60.7% | 59.2% |
-| HardVsEasy (Hard seats' win rate) | 64.9% | 66.5% |
-| HardVsNormal (Hard seats' win rate) | 53.9% | 57.4% |
+| NormalVsEasy (Normal seats' win rate) | 60.3% | 59.1% |
+| HardVsEasy (Hard seats' win rate) | 64.5% | 66.1% |
+| HardVsNormal (Hard seats' win rate) | 54.1% | 57.4% |
 | Easy only: buildings per game | 6.5 | 9.1 |
-| Hard only: buildings per game | 20.1 | 20.7 |
-| Bankruptcies per game (Easy only / Hard only) | 0.01 / 0.11 | 0.02 / 0.12 |
+| Bankruptcies per game (Easy only / HardVsEasy) | 0.01 / 0.03 | 0.02 / 0.05 |
 
 Game length stayed at 30 rounds. What else was tried:
 - **Blocking alone, with no own-group bonus for Easy:** all-Easy tables almost never finished a set (0.1 buildings per game), because three blockers always beat one Easy bot that didn't know the set was worth more to it.

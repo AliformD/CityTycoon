@@ -277,6 +277,7 @@ public sealed class LotteryEffect : ICardEffect
         foreach (PlayerState p in players)
             p.Cash -= stake;
         int pot = stake * players.Count;
+        var entrants = players.Select(p => p.Id).ToList();
 
         while (players.Count > 1)
         {
@@ -286,7 +287,7 @@ public sealed class LotteryEffect : ICardEffect
             players = players.Where(p => rolls.Single(r => r.PlayerId == p.Id).Die == best).ToList();
         }
         players[0].Cash += pot;
-        c.Ctx.Emit(new LotteryWon(players[0].Id, pot));
+        c.Ctx.Emit(new LotteryWon(players[0].Id, pot, stake, entrants));
     }
 }
 

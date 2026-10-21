@@ -16,7 +16,7 @@ namespace CityTycoon.AI;
 /// Each Easy bot gets a small random "personality" (how much it's willing to
 /// overpay), so a table of Easy bots doesn't all play the same.
 /// </summary>
-public class EasyBot : IPlayerController
+public partial class EasyBot : IPlayerController
 {
     protected readonly Pcg32 rng;
     protected readonly GameContent content;
@@ -47,7 +47,7 @@ public class EasyBot : IPlayerController
         {
             DecisionKind.SubmitBid => ChooseBid(view, decision),
             DecisionKind.RaiseMoney => RaiseMoney(legalActions),
-            DecisionKind.RespondToTrade => IsGoodForMe(view, decision.Trade!) ? new AcceptTrade() : new DeclineTrade(),
+            DecisionKind.RespondToTrade => RespondToTrade(view, decision),
             DecisionKind.ChoosePrecisionDice => ChooseBestDice(view, decision),
             DecisionKind.ChooseNudge => ChooseNudge(view, decision, legalActions),
             // Insurance only when there's plenty of spare cash.
@@ -349,79 +349,6 @@ public class EasyBot : IPlayerController
         int steps = (max - min) / inc;
         int chosen = Math.Max(rng.NextInt(steps + 1), rng.NextInt(steps + 1));
         return min + chosen * inc;
-    }
-
-    /// <summary>
-    /// Finds a color group where it owns every property but one, and offers
-    /// cash (150% of assessed value) for the missing one.
-    /// </summary>
-    private TradeOffer? SetCompletingTrade(PlayerView view)
-    {
-        int myId = view.ViewerId;
-        foreach (var group in content.Groups.Keys)
-        {
-            var members = content.GroupMembers(group).ToList();
-            var others = members.Where(id => view.Properties[id].OwnerId != myId || view.Properties[id].IsPending).ToList();
-            if (others.Count != 1)
-                continue;
-
-            PropertyInfo target = view.Properties[others[0]];
-            if (target.OwnerId is not int ownerId || target.IsPending || target.IsMortgaged
-                || view.Player(ownerId).IsBankrupt
-                || members.Any(id => view.Properties[id].Level > 0))
-            {
-                continue;
-            }
-
-            int price = (int)(content.Property(target.Id).AssessedValue * 1.5) / 10 * 10;
-            if (view.Me.Cash - price < Reserve(view))
-                continue;
-
-            return new TradeOffer(myId, ownerId, price, 0, [], [target.Id]);
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// Accepts when what it gets is worth more than what it gives. Completing
-    /// its own color group counts extra; handing someone else a full group
-    /// counts against.
-    /// </summary>
-    private bool IsGoodForMe(PlayerView view, TradeOffer offer)
-    {
-        // The offer is written from the proposer's side; this bot is the receiver.
-        int me = view.ViewerId;
-        int them = offer.FromId;
-        if (view.Me.Cash - offer.GetCash < Reserve(view) / 2)
-            return false;
-
-        double gain = offer.GiveCash - offer.GetCash
-            + offer.GiveProperties.Sum(id => Value(view, id))
-            - offer.GetProperties.Sum(id => Value(view, id));
-
-        gain += GroupBonus(view, me, add: offer.GiveProperties, remove: offer.GetProperties);
-        gain -= GroupBonus(view, them, add: offer.GetProperties, remove: offer.GiveProperties);
-        return gain > 0;
-    }
-
-    private double Value(PlayerView view, string id)
-    {
-        int assessed = content.Property(id).AssessedValue;
-        return view.Properties[id].IsMortgaged ? assessed / 2.0 : assessed;
-    }
-
-    /// <summary>Half the group's value, for each color group this trade would complete for the player.</summary>
-    private double GroupBonus(PlayerView view, int playerId, IReadOnlyList<string> add, IReadOnlyList<string> remove)
-    {
-        bool Owns(string id) => add.Contains(id) || (view.Properties[id].OwnerId == playerId && !remove.Contains(id));
-        double bonus = 0;
-        foreach (string group in add.Select(id => content.Property(id).Group).OfType<string>().Distinct())
-        {
-            var members = content.GroupMembers(group).ToList();
-            if (members.All(Owns))
-                bonus += members.Sum(id => content.Property(id).AssessedValue) / 2.0;
-        }
-        return bonus;
     }
 
     // ----- Movement: Precision Roll and Nudge (Section 7.3) -----

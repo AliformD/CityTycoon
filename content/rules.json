@@ -76,6 +76,7 @@
   "buildingSellPercent": 50,
   "buildDiscountRoundTo": 5,
   "maxTradeProposalsPerTurn": 3,
+  "maxTradeCounters": 3,
 
   "precisionRollDice": 3,
   "casinoLowMax": 6,

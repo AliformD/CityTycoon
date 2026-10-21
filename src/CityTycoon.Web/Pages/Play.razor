@@ -79,7 +79,7 @@ else
         <aside class="sidebar">
             @if (saveMessage != null) { <p class="hint" role="status">@saveMessage</p> }
             @if (showSettings) { <SettingsPanel /> }
-            <PlayerPanels View="view" Session="Session" />
+            <PlayerPanels View="view" Session="Session" OnOpenLedger="id => ledgerPlayerId = id" />
             @if (selectedSpaceId != null && Session.Content.Properties.ContainsKey(selectedSpaceId))
             {
                 <section class="detail panel" aria-label="Property details">
@@ -94,7 +94,11 @@ else
             }
             else if (selectedSpaceId != null)
             {
-                <section class="detail panel"><p>@SpaceHelp(view) <SpeakButton Text="@SpaceHelp(view)" Label="this space" /></p><button class="small" @onclick="() => selectedSpaceId = null">Close</button></section>
+                <section class="detail panel" aria-label="Space details">
+                    <p>@SpaceHelp(view) <SpeakButton Text="@SpaceHelp(view)" Label="this space" /></p>
+                    <SpaceHistoryPanel SpaceId="@selectedSpaceId" View="view" Content="Session.Content" />
+                    <button class="small" @onclick="() => selectedSpaceId = null">Close</button>
+                </section>
             }
             <section class="city panel" aria-label="City">
                 <h2>City Hall</h2>
@@ -155,6 +159,11 @@ else
         <CouncilReveal Result="reveal" View="view" Content="Session.Content" OnClose="Session.DismissReveal" />
     }
 
+    @if (ledgerPlayerId is int ledgerId)
+    {
+        <LedgerDialog View="view" Content="Session.Content" PlayerId="ledgerId" OnClose="() => ledgerPlayerId = null" />
+    }
+
     @if (Session.ShowPassScreen && request != null)
     {
         <PassScreen Name="@request.View.Me.Name" OnReady="Session.DismissPassScreen" />
@@ -165,6 +174,9 @@ else
     private string? selectedSpaceId;
     private string? saveMessage;
     private bool showSettings;
+
+    /// <summary>Whose money ledger is open, or null when it is closed.</summary>
+    private int? ledgerPlayerId;
 
     private async Task SaveNow()
     {

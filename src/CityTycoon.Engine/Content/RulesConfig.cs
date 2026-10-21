@@ -99,6 +99,8 @@ public sealed class RulesConfig
 
     /// <summary>A limit so a player (or a bot) can't flood others with trade offers in one turn.</summary>
     public required int MaxTradeProposalsPerTurn { get; init; }
+    /// <summary>How many counter-offers one trade can go through before someone must accept or decline, so a haggle can't go on forever.</summary>
+    public required int MaxTradeCounters { get; init; }
 
     // Section 7.3 and 15.3: Precision Roll and landmarks.
     /// <summary>How many dice a Precision Roll rolls (you keep 2).</summary>

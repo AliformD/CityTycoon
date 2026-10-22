@@ -61,6 +61,8 @@ public static class ModifierTypes
         ["PeekAtStart"] = new(c => new PeekAtStartModifier(c), NeedsValue: true),
         ["PeekOnGo"] = new(c => new PeekOnGoModifier(c), NeedsValue: true),
         ["HospitalImmunity"] = new(c => new HospitalImmunityModifier(c)),
+        ["HospitalCollector"] = new(c => new HospitalCollectorModifier(c)),
+        ["Fundraising"] = new(c => new FundraisingModifier(c), NeedsValue: true),
         // "value" is the price, so 0 (free) is allowed.
         ["InsuredMarkerCost"] = new(c => new InsuredMarkerCostModifier(c)),
     };

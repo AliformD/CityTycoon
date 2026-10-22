@@ -122,6 +122,12 @@ public interface IRuleModifier
     /// <summary>True if this player is never billed or slowed by the Hospital (the Medic).</summary>
     bool ShrugsOffHospital(GameState state, int playerId) => false;
 
+    /// <summary>True if this modifier's owner is paid the Hospital bills and Insured marker money of this player (the Medic, decision #153).</summary>
+    bool CollectsHospitalMoney(GameState state, int payerId) => false;
+
+    /// <summary>Extra percent on top of cash a card gives this player, paid by the bank (the Politician's Fundraising, decision #153).</summary>
+    int CardCashBonusPercent(GameState state, int playerId) => 0;
+
     /// <summary>The price of an Insured marker for this player, or null for "no change". 0 means free (the Medic).</summary>
     int? InsuredMarkerCost(GameState state, int playerId) => null;
 

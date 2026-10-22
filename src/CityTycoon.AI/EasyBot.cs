@@ -3,6 +3,7 @@ using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Hosting;
 using CityTycoon.Engine.Randomness;
 using CityTycoon.Engine.Rules;
+using CityTycoon.Engine.State;
 using CityTycoon.Engine.Steps;
 using CityTycoon.Engine.Views;
 
@@ -80,8 +81,8 @@ public partial class EasyBot : IPlayerController
             // Insurance only when there's plenty of spare cash.
             // (A free one, for the Medic, is always worth taking: it still covers a Fire!.)
             DecisionKind.HospitalVisit => view.Me.InsuredMarkerCost == 0 || view.Me.Cash - view.Me.InsuredMarkerCost >= Reserve(view) * 2 ? new BuyInsurance() : new NoThanks(),
-            // The Casino loses money on average, so the Easy bot walks past.
-            DecisionKind.CasinoBet => new NoThanks(),
+            // The Casino loses money on average, so bots only bet when desperate.
+            DecisionKind.CasinoBet => CasinoChoice(view, decision),
             // A duel is a coin flip: fine for pocket change only.
             DecisionKind.RespondToDuel => decision.Duel!.Stake <= view.Me.Cash / 20 ? new AcceptDuel() : new DeclineDuel(),
             DecisionKind.ChooseStadiumGroup => new PickStadiumGroup(BestStadiumGroup(view)),
@@ -98,7 +99,7 @@ public partial class EasyBot : IPlayerController
             DecisionKind.ChooseCharacter => legalActions[rng.NextInt(legalActions.Count)],
             // A reroll is only offered when the roll is bad, so always take it.
             DecisionKind.ChooseReroll => new RerollDice(),
-            DecisionKind.RerollMove => ChooseMoveReroll(view, decision),
+            DecisionKind.RerollMove => ChooseMoveReroll(view, decision, legalActions),
             DecisionKind.ReverseCouncilVote => ReverseCouncilVote(view, decision),
             DecisionKind.KeepCard => new KeepCard(decision.Cards!.MaxBy(CardValue)!),
             DecisionKind.PeekTile => legalActions[rng.NextInt(legalActions.Count)],
@@ -423,12 +424,14 @@ public partial class EasyBot : IPlayerController
     protected virtual double RerollMargin => 60;
 
     /// <summary>
-    /// The Hustler's movement reroll (decision #152): compare this roll (with the best Nudge the bot
-    /// could add) against the average of every roll it could get instead. Doubles count a little extra.
+    /// The Hustler's movement reroll (decisions #152 and #153): it rolls one die again. For each die it could
+    /// reroll, average every result it could get (with the best Nudge the bot could add), and compare the best
+    /// of those with keeping this roll. Doubles count a little extra.
     /// </summary>
-    private GameAction ChooseMoveReroll(PlayerView view, PendingDecision decision)
+    private GameAction ChooseMoveReroll(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions)
     {
         var dice = decision.Dice!;
+        int first = dice[0], second = dice.Count > 1 ? dice[1] : 0;
         int tokens = Math.Min(view.Me.Momentum / Math.Max(1, content.Rules.NudgeCost), view.Me.NudgeMaxSpaces);
         double Value(int a, int b)
         {
@@ -438,11 +441,36 @@ public partial class EasyBot : IPlayerController
                 .Max(n => LandingScore(view, total + n) - NudgeThreshold * Math.Abs(n));
             return best + (b != 0 && a == b ? 20 : 0);
         }
-        double now = Value(dice[0], dice.Count > 1 ? dice[1] : 0);
-        double average = dice.Count > 1
-            ? Enumerable.Range(1, 6).SelectMany(a => Enumerable.Range(1, 6).Select(b => Value(a, b))).Average()
-            : Enumerable.Range(1, 6).Average(a => Value(a, 0));
-        return now < average - RerollMargin ? new RerollDice() : new NoThanks();
+        double now = Value(first, second);
+        var best = legalActions.OfType<RerollDice>()
+            .Select(r => (Action: r, Average: Enumerable.Range(1, 6).Average(v => r.Die == 1 ? Value(first, v) : Value(v, second))))
+            .OrderByDescending(x => x.Average)
+            .FirstOrDefault();
+        return best.Action != null && now < best.Average - RerollMargin ? best.Action : new NoThanks();
+    }
+
+    // ----- The Casino (decision #153) -----
+
+    /// <summary>
+    /// High/Low loses a little on average, so a bot only bets when it is desperate: far behind with the
+    /// end in sight, a gamble is its best hope of catching up. It bets a third of its cash.
+    /// </summary>
+    private GameAction CasinoChoice(PlayerView view, PendingDecision decision)
+    {
+        if (!IsDesperate(view))
+            return new NoThanks();
+        int bet = Math.Min(decision.MaxBet, view.Me.Cash / 3) / 10 * 10;
+        return bet >= 10 ? new BetHighLow(bet, High: true) : new NoThanks();
+    }
+
+    /// <summary>True late in the game (the last 10 rounds of a Timed game, or from round 30 in Classic) when the bot is worth under 60% of the richest opponent.</summary>
+    protected static bool IsDesperate(PlayerView view)
+    {
+        var others = view.Players.Where(p => p.Id != view.ViewerId && !p.IsBankrupt).ToList();
+        if (others.Count == 0)
+            return false;
+        bool late = view.Mode == GameMode.Timed ? view.MaxRounds - view.Round < 10 : view.Round >= 30;
+        return late && view.Player(view.ViewerId).NetWorth < others.Max(p => p.NetWorth) * 0.6;
     }
 
     /// <summary>

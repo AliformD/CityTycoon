@@ -74,6 +74,30 @@ public class MomentumAndLandmarkBotTests
     }
 
     [Fact]
+    public async Task Bots_GambleAtTheCasino_WhenFarBehindNearTheEnd()
+    {
+        // Decision #153: a desperate bot (last 10 rounds, worth under 60% of the leader) bets a third of its cash.
+        var engine = NewGame();
+        engine.State.Round = engine.State.Settings.MaxRounds - 3;
+        engine.State.Player(0).Cash = 300;
+        engine.State.Player(1).Cash = 3000;
+        var decision = new PendingDecision(0, DecisionKind.CasinoBet, "", MaxBet: 300);
+        var choice = await new HardBot(1).DecideAsync(engine.GetView(0), decision, [new NoThanks(), new BetHighLow(10, true)]);
+        Assert.Equal(new BetHighLow(100, true), choice);
+    }
+
+    [Fact]
+    public async Task Bots_DontGamble_WhenTheGameIsStillYoung()
+    {
+        var engine = NewGame();
+        engine.State.Player(0).Cash = 300;
+        engine.State.Player(1).Cash = 3000;
+        var decision = new PendingDecision(0, DecisionKind.CasinoBet, "", MaxBet: 300);
+        var choice = await new HardBot(1).DecideAsync(engine.GetView(0), decision, [new NoThanks(), new BetHighLow(10, true)]);
+        Assert.Equal(new NoThanks(), choice);
+    }
+
+    [Fact]
     public async Task EasyBot_PicksItsOwnGroupAtTheStadium()
     {
         var engine = NewGame();

@@ -15,7 +15,8 @@ public sealed class TestGame
     public ScriptedDice Dice { get; } = new();
     public GameState State => Engine.State;
 
-    public TestGame(int players = 2, GameMode mode = GameMode.Timed, int maxRounds = 30, ulong seed = 12345, string[]? characters = null)
+    public TestGame(int players = 2, GameMode mode = GameMode.Timed, int maxRounds = 30, ulong seed = 12345, string[]? characters = null,
+        CityTycoon.Engine.Content.GameContent? content = null)
     {
         var setup = new GameSetup
         {
@@ -27,7 +28,7 @@ public sealed class TestGame
         };
         if (characters != null)
             setup.Players = setup.Players.Select((p, i) => i < characters.Length ? p with { CharacterId = characters[i] } : p).ToList();
-        Engine = GameEngine.NewGame(setup, TestContent.ClassicMoney, Dice);
+        Engine = GameEngine.NewGame(setup, content ?? TestContent.ClassicMoney, Dice);
     }
 
     /// <summary>Gives a player a character straight away (the pick step has its own tests).</summary>

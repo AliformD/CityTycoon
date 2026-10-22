@@ -7,14 +7,14 @@
     {
       "id": "mogul",
       "name": "The Mogul",
-      "text": "In secret-bid auctions, your bid counts as $20 higher than it is when bids are compared, and you win ties. You still pay your real bid. When two players roll dice against each other and tie, you win the tie.",
-      "modifiers": [ { "type": "BidBonus", "value": 20 }, { "type": "DiceTieBreaker" } ]
+      "text": "In secret-bid auctions, your bid counts as $10 higher than it is when bids are compared, and you win ties. You still pay your real bid. When two players roll dice against each other and tie, you win the tie.",
+      "modifiers": [ { "type": "BidBonus", "value": 10 }, { "type": "DiceTieBreaker" } ]
     },
     {
       "id": "hustler",
       "name": "The Hustler",
-      "text": "Once per Casino visit, you may reroll your dice (High/Low) or your duel roll (Dice Duel). Once per lap, you may reroll your dice when you roll to move. Your Stadium pick triples rent instead of doubling it.",
-      "modifiers": [ { "type": "CasinoReroll" }, { "type": "MoveReroll" }, { "type": "StadiumMultiplier", "value": 3 } ]
+      "text": "Once per lap, when you roll to move, you may roll one of your dice again. Your Stadium pick triples rent instead of doubling it.",
+      "modifiers": [ { "type": "MoveReroll" }, { "type": "StadiumMultiplier", "value": 3 } ]
     },
     {
       "id": "commuter",
@@ -37,8 +37,8 @@
     {
       "id": "politician",
       "name": "The Politician",
-      "text": "Your City Council vote is worth 250 influence instead of 100, and each dollar you spend lobbying buys 2 influence instead of 1.",
-      "modifiers": [ { "type": "VoteInfluence", "value": 250 }, { "type": "LobbyBonus", "value": 100 } ]
+      "text": "Your City Council vote is worth 250 influence instead of 100, and each dollar you spend lobbying buys 2 influence instead of 1. Fundraising: when an Event or Opportunity card gives you money, the bank gives you the same again.",
+      "modifiers": [ { "type": "VoteInfluence", "value": 250 }, { "type": "LobbyBonus", "value": 100 }, { "type": "Fundraising", "value": 100 } ]
     },
     {
       "id": "city-planner",
@@ -49,8 +49,8 @@
     {
       "id": "medic",
       "name": "The Medic",
-      "text": "If you're sent to the Hospital, you pay no bill and roll normally on your next turn. Insured markers are free for you (others pay $50).",
-      "modifiers": [ { "type": "HospitalImmunity" }, { "type": "InsuredMarkerCost", "value": 0 } ]
+      "text": "If you're sent to the Hospital, you pay no bill and roll normally on your next turn. Insured markers are free for you. When anyone else pays a Hospital bill or buys an Insured marker, the money goes to you instead of the bank.",
+      "modifiers": [ { "type": "HospitalImmunity" }, { "type": "InsuredMarkerCost", "value": 0 }, { "type": "HospitalCollector" } ]
     }
   ]
 }

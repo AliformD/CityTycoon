@@ -163,14 +163,14 @@ Each player picks a **different** character. Each one has a single small ability
 
 | Character | Ability | Design note |
 | --- | --- | --- |
-| **The Mogul** | In silent (sealed-bid) auctions, your bid counts as $20 higher than it is when bids are compared. You still pay your real bid. You win ties and any silent auction where you're within $20 of the top bid. You also win dice ties. | Small edge in the main buying system. |
-| **The Hustler** | Once per Casino visit, you may reroll your dice (High/Low) or your duel roll (Dice Duel). Once per lap, you may reroll your dice when you roll to move (not a Precision Roll). Your Stadium pick triples rent instead of doubling it. | For risk-takers. |
+| **The Mogul** | In silent (sealed-bid) auctions, your bid counts as $10 higher than it is when bids are compared. You still pay your real bid. You win ties and any silent auction where you're within $10 of the top bid. You also win dice ties. | Small edge in the main buying system. |
+| **The Hustler** | Once per lap, when you roll to move (not a Precision Roll), you may roll **one** of your dice again. Your Stadium pick triples rent instead of doubling it. | For risk-takers. |
 | **The Commuter** | Start the game with 3 Momentum tokens instead of 2. Your token limit is 4 instead of 2, and you can Nudge up to 4 spaces instead of 2. | More control over movement. |
 | **The Lawyer** | You never pay Jail bail (leaving early is free). When you're sent to Jail, you still collect half the GO salary. You can't be targeted by Audit. | Jail still halves your rent. |
 | **The Contractor** | Your building costs are 25% lower. | Stacks with other discounts (Section 9.4). |
-| **The Politician** | Your City Council vote is worth 250 influence instead of 100, and each lobbying dollar adds 2 influence instead of 1. | Stronger voice in zoning. |
+| **The Politician** | Your City Council vote is worth 250 influence instead of 100, and each lobbying dollar adds 2 influence instead of 1. **Fundraising:** when an Event or Opportunity card gives you money, the bank gives you the same amount again. | Stronger voice in zoning. |
 | **The City Planner** | At game start, secretly look at 1 hidden Government tile of your choice. Each time you pass GO, secretly look at 1 more that is still hidden. Once per game, after a City Council roll, you may reverse the result. | Information advantage. |
-| **The Medic** | If you're sent to the Hospital, you pay no bill and roll normally on your next turn. Insured markers are free for you. | Shrugs off bad luck. |
+| **The Medic** | If you're sent to the Hospital, you pay no bill and roll normally on your next turn. Insured markers are free for you. When anyone else pays a Hospital bill or buys an Insured marker, the money goes to you instead of the bank. | Shrugs off bad luck. |
 
 **Selection:** turn order is decided randomly first. Then players pick characters in **reverse** turn order (the last player picks first), so the first player's advantage is balanced by picking last. AI players pick randomly from what's left. There's also a "Random characters" setup option.
 
@@ -272,7 +272,7 @@ Sealed bids are used because they work the same way for humans on one screen, AI
    - **Pass**, or
    - **A bid** of at least the minimum bid, in steps of $10, plus a payment choice: **Pay in full** or **Down payment** (Section 8.5).
 3. All bids are revealed at the same moment.
-4. The highest bid wins. The Mogul's bid counts $20 higher when bids are compared.
+4. The highest bid wins. The Mogul's bid counts $10 higher when bids are compared.
 5. **Ties:** the Mogul wins first, then the player who landed there, then the next player in turn order after the lander.
 6. The winner pays **their own bid** to the bank (or to the owner, in forced auctions).
 7. **If nobody bids,** the property stays unowned. The next player to land there starts a new auction.
@@ -622,7 +622,7 @@ Nobody owns landmarks. Each one gives the player who lands there a choice.
 
 **Hospital (end of Old Town)**
 
-- **If an Event sends you here:** move straight here without passing GO, and pay a **$100 medical bill**. On your next turn you roll **only 1 die** while you recover.
+- **If an Event sends you here:** move straight here without passing GO, and pay a **$100 medical bill** (to the Medic, if someone is playing the Medic; otherwise to the bank). On your next turn you roll **only 1 die** while you recover.
   - If you have an **Insured** marker, the bill is $0, you roll normally next turn, and the marker is used up.
   - The **Medic** pays nothing and rolls normally.
 - **If you just land here:** you're visiting. You may buy an **Insured** marker for $50 (free for the Medic). You can hold only 1.
@@ -630,15 +630,14 @@ Nobody owns landmarks. Each one gives the player who lands there a choice.
 
 **Casino (end of Midtown)**
 
-When you land here, you may make **one** bet. There's **no maximum**: you can bet any amount up to your cash (unless the Casino Regulation ordinance is active).
+When you land here, a coin is flipped first: you win or lose **$20** (heads or tails, from the bank; you never lose more than the cash you have). Then you may make **one** bet. There's **no maximum**: you can bet any amount up to your cash (unless the Casino Regulation ordinance is active).
 
 - **High / Low:** call High (8–12) or Low (2–6), then roll 2 dice.
   - If you're right, you win your bet.
   - If you roll a 7 or call it wrong, you lose your bet.
   - If you're right **and** rolled doubles, you win 2 × your bet.
-  - The Hustler may reroll once.
   - Over many bets, this game loses about 8% of the amount bet, so it's a real risk.
-- **Dice Duel:** challenge another player. Both put in the same amount, up to whichever player has less cash. Each rolls 2 dice, and the higher total takes everything. Reroll ties. The challenged player may say no. The Hustler may reroll their own roll once.
+- **Dice Duel:** challenge another player. Both put in the same amount, up to whichever player has less cash. Each rolls 2 dice, and the higher total takes everything. Reroll ties. The challenged player may say no.
 
 **Mall (end of Harbor)**
 
@@ -790,7 +789,7 @@ These rulings settle common conflicts. Add new ones to `docs/DECISIONS.md` as th
 9. **Lobbying and bids are paid in cash.** You may take loans before you submit.
 10. **When net worth is checked** for the catch-up bonus and the agenda setter, it's calculated at that exact moment.
 11. **Ordinance durations** count down during the end-of-round checks. "3 rounds" means it ends at the end of the 3rd round after it passes.
-12. **Mogul +$20:** only used when comparing bids. Payment is always the real bid.
+12. **Mogul +$10:** only used when comparing bids. Payment is always the real bid.
 
 ---
 

@@ -29,10 +29,14 @@ public class StrongerAbilityTests
         Assert.Equal(DecisionKind.RerollMove, ask.Kind);
         Assert.Equal([3, 4], ask.Dice!);
 
-        game.Dice.Add(1, 4);
-        game.Do(0, new RerollDice());
-        Assert.Equal(game.State.IndexOf("jail"), game.Player(0).Position); // moved 5, not 7
-        Assert.Contains(game.State.Log, e => e is MoveRerolled { PlayerId: 0, Die1: 3, Die2: 4 });
+        Assert.Contains(new RerollDice(0), game.Engine.GetLegalActions(0));
+        Assert.Contains(new RerollDice(1), game.Engine.GetLegalActions(0));
+
+        // Only one die is rolled again (decision #153): the 4 becomes a 2, and the 3 stays.
+        game.Dice.Add(2);
+        game.Do(0, new RerollDice(1));
+        Assert.Equal(game.State.IndexOf("jail"), game.Player(0).Position); // moved 3 + 2 = 5, not 7
+        Assert.Contains(game.State.Log, e => e is MoveRerolled { PlayerId: 0, Die1: 3, Die2: 4, Die: 1 });
         Assert.False(game.Engine.GetView(0).Me.MoveRerollReady);
     }
 
@@ -53,9 +57,9 @@ public class StrongerAbilityTests
     {
         var game = Hustler();
         game.PlaceBefore(0, "jail", 5);
-        game.Dice.Add(3, 4, 1, 4);
+        game.Dice.Add(3, 4, 2);
         game.Do(0, new RollDice());
-        game.Do(0, new RerollDice());
+        game.Do(0, new RerollDice(1)); // 3 + 2
         game.EndTurn(0);
         game.SkipTurn(1);
 
@@ -78,10 +82,13 @@ public class StrongerAbilityTests
     {
         var game = Hustler();
         game.PlaceBefore(0, "jail", 5);
-        game.Dice.Add(3, 3, 1, 4);
+        game.Dice.Add(3, 3, 2);
         game.Do(0, new RollDice());
-        game.Do(0, new RerollDice());
-        // Only the kept roll counts: 1 + 4 is not doubles, so no extra turn.
+        // With doubles both dice are the same, so there is only one die to choose.
+        Assert.DoesNotContain(new RerollDice(1), game.Engine.GetLegalActions(0));
+        game.Do(0, new RerollDice(0));
+        // Only the new roll counts: 2 + 3 is not doubles, so no extra turn.
+        Assert.Equal(game.State.IndexOf("jail"), game.Player(0).Position);
         Assert.Equal(DecisionKind.PostMoveActions, game.DecisionFor(0)!.Kind);
     }
 

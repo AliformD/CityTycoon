@@ -51,6 +51,7 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(SentToHospital), nameof(SentToHospital))]
 [JsonDerivedType(typeof(HospitalBillPaid), nameof(HospitalBillPaid))]
 [JsonDerivedType(typeof(CasinoHighLow), nameof(CasinoHighLow))]
+[JsonDerivedType(typeof(CasinoCoinFlip), nameof(CasinoCoinFlip))]
 [JsonDerivedType(typeof(DuelChallenged), nameof(DuelChallenged))]
 [JsonDerivedType(typeof(DuelDeclined), nameof(DuelDeclined))]
 [JsonDerivedType(typeof(DuelRolled), nameof(DuelRolled))]
@@ -194,13 +195,18 @@ public sealed record PrecisionRolled(int PlayerId, int TokensSpent, IReadOnlyLis
 /// <summary>A Nudge: moved <paramref name="Spaces"/> more (or fewer, if negative) than rolled.</summary>
 public sealed record Nudged(int PlayerId, int Spaces, int TokensSpent) : GameEvent;
 
-public sealed record InsuranceBought(int PlayerId, int Cost) : GameEvent;
+/// <summary>An Insured marker was bought. <paramref name="ToId"/> is who got the money: the Medic (decision #153), or null for the bank.</summary>
+public sealed record InsuranceBought(int PlayerId, int Cost, int? ToId = null) : GameEvent;
 
 /// <summary>An Insured marker was used up to cancel a Hospital bill.</summary>
 public sealed record InsuranceUsed(int PlayerId) : GameEvent;
 
 public sealed record SentToHospital(int PlayerId, string Reason) : GameEvent;
-public sealed record HospitalBillPaid(int PlayerId, int Amount) : GameEvent;
+/// <summary>A Hospital bill was paid. <paramref name="ToId"/> is who got the money: the Medic (decision #153), or null for the bank.</summary>
+public sealed record HospitalBillPaid(int PlayerId, int Amount, int? ToId = null) : GameEvent;
+
+/// <summary>Landing on the Casino flips a coin (decision #153): the player wins or loses a little. <paramref name="Net"/> is plus or minus.</summary>
+public sealed record CasinoCoinFlip(int PlayerId, int Net) : GameEvent;
 
 /// <summary>A High/Low bet at the Casino. <paramref name="Net"/> is what the player won (or lost, if negative).</summary>
 public sealed record CasinoHighLow(int PlayerId, int Bet, bool CalledHigh, int Die1, int Die2, int Net) : GameEvent
@@ -319,8 +325,12 @@ public sealed record PerkPaid(int FromId, int ToId, int Amount, string Perk) : G
 /// <summary>The Hustler used their one reroll. <paramref name="What"/> says what was rerolled.</summary>
 public sealed record CasinoRerolled(int PlayerId, string What) : GameEvent;
 
-/// <summary>The Hustler threw away this movement roll and rolled again (once per lap, decision #152).</summary>
-public sealed record MoveRerolled(int PlayerId, int Die1, int Die2) : GameEvent;
+/// <summary>
+/// The Hustler rerolled one die of this movement roll (once per lap, decisions #152 and #153).
+/// <paramref name="Die1"/> and <paramref name="Die2"/> are the old dice; <paramref name="Die"/> is which one (0 or 1) was rolled again.
+/// Saves from before decision #153 have no Die: then the whole roll was thrown again.
+/// </summary>
+public sealed record MoveRerolled(int PlayerId, int Die1, int Die2, int? Die = null) : GameEvent;
 
 /// <summary>The City Planner reversed a City Council result (once per game). <paramref name="NowPassed"/> is the new result.</summary>
 public sealed record CouncilReversed(int PlayerId, string OrdinanceId, string? DistrictId, bool NowPassed) : GameEvent;

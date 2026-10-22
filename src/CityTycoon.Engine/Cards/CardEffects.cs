@@ -66,6 +66,21 @@ public static class CardEffects
     /// <summary>Everyone still in the game, in turn order starting with this player.</summary>
     internal static List<PlayerState> EveryoneFrom(GameState state, int playerId) =>
         [state.Player(playerId), .. OthersInTurnOrder(state, playerId)];
+
+    /// <summary>
+    /// Fundraising (decision #153): when a card has just given this player <paramref name="amount"/> in cash,
+    /// the bank pays them the bonus on top (the Politician gets the same again). Logged as perk income.
+    /// </summary>
+    public static void Fundraise(EngineContext ctx, PlayerState player, int amount)
+    {
+        if (amount <= 0 || player.IsBankrupt)
+            return;
+        foreach (var (bonus, source) in RuleModifiers.CardCashBonuses(ctx.State, ctx.Content, player.Id, amount))
+        {
+            player.Cash += bonus;
+            ctx.Emit(new PerkIncome(player.Id, bonus, source));
+        }
+    }
 }
 
 // ---------------------------------------------------------------- Event effects
@@ -200,6 +215,7 @@ public sealed class PerBuildingEffect : ICardEffect
             {
                 p.Cash += amount;
                 c.Ctx.Emit(new CashFromBank(p.Id, amount, c.Card.Id));
+                CardEffects.Fundraise(c.Ctx, p, amount);
             }
         }
     }
@@ -243,6 +259,7 @@ public sealed class CollectFromBankEffect : ICardEffect
             return;
         p.Cash += amount;
         c.Ctx.Emit(new CashFromBank(p.Id, amount, c.Card.Id));
+        CardEffects.Fundraise(c.Ctx, p, amount);
     }
 }
 

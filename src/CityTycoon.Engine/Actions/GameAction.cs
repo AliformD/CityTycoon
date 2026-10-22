@@ -328,6 +328,8 @@ public enum DecisionKind
 /// <param name="OpenAuction">True when this is a turn in an open (ascending) auction rather than a secret bid.</param>
 /// <param name="HighBidderId">In an open auction: who holds the highest bid so far (null before the first bid).</param>
 /// <param name="HighBid">In an open auction: the highest bid so far.</param>
+/// <param name="Bidders">In an open auction: everyone in it, in bidding order.</param>
+/// <param name="DroppedOut">In an open auction: the bidders who have dropped out.</param>
 /// <param name="Ordinances">City Council: the ordinance IDs the agenda setter can pick from.</param>
 /// <param name="OrdinanceId">City Council: the ordinance being voted on.</param>
 /// <param name="DistrictId">City Council: the district the ordinance is about, if it has one.</param>
@@ -356,6 +358,8 @@ public sealed record PendingDecision(
     bool OpenAuction = false,
     int? HighBidderId = null,
     int HighBid = 0,
+    IReadOnlyList<int>? Bidders = null,
+    IReadOnlyList<int>? DroppedOut = null,
     IReadOnlyList<string>? Ordinances = null,
     string? OrdinanceId = null,
     string? DistrictId = null,

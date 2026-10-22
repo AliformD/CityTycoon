@@ -24,7 +24,7 @@ public partial class EasyBot
 
     /// <summary>
     /// How much finishing its own color group is worth to the bot, compared with a Balanced bot:
-    /// Aggressive bots want sets more and pay more for them (decision #145).
+    /// Aggressive bots want sets more and pay more for them (decision #148).
     /// </summary>
     protected double SetAppetite => Personality switch
     {
@@ -66,7 +66,7 @@ public partial class EasyBot
     /// <summary>
     /// Finds a color group where it owns every property but one, and offers
     /// cash for the missing one. It works out the most it would pay (its limit, see <see cref="Limit"/>)
-    /// and opens below that, so there is room to haggle (decision #145).
+    /// and opens below that, so there is room to haggle (decision #148).
     /// </summary>
     private TradeOffer? SetCompletingTrade(PlayerView view)
     {
@@ -289,7 +289,7 @@ public partial class EasyBot
         && a.GiveCards.ToHashSet().SetEquals(b.GiveCards) && a.GetCards.ToHashSet().SetEquals(b.GetCards);
 
     /// <summary>
-    /// A counter-offer that meets the other player partway (decision #145). The bot works out its
+    /// A counter-offer that meets the other player partway (decision #148). The bot works out its
     /// limit, then offers halfway between its last offer and what they asked, never past its limit.
     /// With one counter left it goes straight to its limit, its final offer.
     /// If the trade can't work as asked (for example the bot can't afford it), it tries again
@@ -409,7 +409,7 @@ public partial class EasyBot
 
     /// <summary>
     /// A rough guess at what a whole color group earns its owner from now until the game ends
-    /// (decision #145): rent, plus the group's perk (see <see cref="PerkWorth"/>).
+    /// (decision #148): rent, plus the group's perk (see <see cref="PerkWorth"/>).
     /// For rent it looks at how many houses the owner could build with the cash they'd have left
     /// (plus a GO salary if they're about to pass GO), the most the zoning allows, a Building
     /// Moratorium, Rent Control, and who is left to land there. After the first

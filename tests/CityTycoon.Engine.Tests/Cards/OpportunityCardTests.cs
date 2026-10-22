@@ -16,7 +16,7 @@ public class OpportunityCardTests
         game.Do(0, new PlayCard("audit", TargetPlayerId: 1));
         Assert.Equal(1350, game.Player(1).Cash);
         Assert.Empty(game.Player(0).Hand);
-        Assert.Contains("audit", game.State.OpportunityDiscard);
+        Assert.Equal("audit", game.State.OpportunityDeck[^1]);
         // The same question comes back: you can still roll.
         Assert.Equal(DecisionKind.ChooseMoveMethod, game.DecisionFor(0)!.Kind);
     }

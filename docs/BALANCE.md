@@ -87,7 +87,7 @@ A close call is cash under $150 that later climbs back to $400 without going ban
 With the picked setting and personalities: HardVsEasy 75.0% (80.4% at 30 rounds with the old money), Easy only 0.15 bankruptcies and 15 buildings per game. Win rate by personality (Normal / Easy tables): Aggressive 31% / 30%, Balanced 25% / 26%, Reserved 19% / 20%.
 
 ## Bots value whole color groups and haggle (2026-10-21)
-Decision #145. 1000 games each, 4 players, Timed, random characters:
+Decision #148. 1000 games each, 4 players, Timed, random characters:
 
 | Run | Before | After |
 | --- | --- | --- |

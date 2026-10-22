@@ -707,7 +707,7 @@ You draw one when you land on an Event space.
 
 ### 15.6 Decks running out
 
-When a deck runs out, shuffle its discard pile to make a new deck. Cards held in players' hands or in the Mall shop stay where they are.
+A used Opportunity or Event card goes to the bottom of its deck, so the decks are shuffled only once, at the start, and keep their order all game. Players who remember what was drawn can guess what comes next (decision #146). Cards held in players' hands or in the Mall shop stay where they are. (City Council ordinances still use a discard pile that is shuffled when the deck runs low.)
 
 ### 15.7 Loans
 

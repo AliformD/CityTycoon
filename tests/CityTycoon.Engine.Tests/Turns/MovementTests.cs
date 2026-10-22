@@ -53,8 +53,12 @@ public class MovementTests
         var game = new TestGame();
         game.PlaceBefore(0, "jail", 4);
         game.Roll(0, 2, 2);
-        game.EndTurn(0);
-        Assert.Equal(DecisionKind.ChooseMoveMethod, game.DecisionFor(0)!.Kind);
+
+        // Straight back to "roll", with no "End turn" question in between (decision #145).
+        var d = game.DecisionFor(0)!;
+        Assert.Equal(DecisionKind.ChooseMoveMethod, d.Kind);
+        Assert.Contains("doubles", d.Prompt);
+        Assert.DoesNotContain(new EndTurn(), game.Engine.GetLegalActions(0));
     }
 
     [Fact]
@@ -71,8 +75,8 @@ public class MovementTests
     {
         var game = new TestGame();
         game.Player(0).Position = 1; // lands on Cobble Lane, then an Opportunity space: no questions on the way
-        game.Roll(0, 1, 1); game.EveryonePasses(); game.EndTurn(0);
-        game.Roll(0, 2, 2); game.EveryonePasses(); game.EndTurn(0);
+        game.Roll(0, 1, 1); game.EveryonePasses();
+        game.Roll(0, 2, 2); game.EveryonePasses();
         int before = game.Player(0).Position;
         var result = game.Roll(0, 3, 3);
 

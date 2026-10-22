@@ -34,7 +34,7 @@ public static class RulesReference
                 $"You earn more at City Park, the Fire Station, the Fast Track card and the Momentum Surge event. A Detour card played on you cancels your Nudge (the token stays spent) and moves you 1 space from your roll.",
             ]),
             new("auctions", "Buying property and auctions", [
-                "When you land on a property nobody owns, it goes to auction. The first property of a color group, the first railroad and the first utility are sealed-bid auctions: everyone secretly bids, and the highest bid wins.",
+                "When you land on a property nobody owns, it goes to auction. The first property of a color group, the first railroad and the first utility are silent auctions (sealed bids): everyone secretly bids, and the highest bid wins.",
                 $"After that, the rest of the group, the railroads and the utilities are open auctions. Players take turns to raise by at least {money(r.BidIncrement)} or drop out. Once you drop out, you are out for good. The last player left pays their bid.",
                 $"You can pay with a down payment: {r.DownPaymentPercent}% now and the rest when you next pass GO. Until it is paid, the property collects no rent and can't be built on. The minimum bid is {r.AuctionMinBidPercent}% of the property's assessed value.",
             ]),
@@ -57,7 +57,7 @@ public static class RulesReference
             ]),
             new("spaces", "Other spaces", [
                 $"Tax spaces cost {money(r.IncomeTax)} (Income Tax) and {money(r.LuxuryTax)} (Luxury Tax). The Hospital sells an Insured marker for {money(r.InsuredMarkerCost)}. At the Casino you can make one High or Low bet, or challenge another player to a Dice Duel. At the Stadium you double a color group's rent until your next turn. At City Park you take a Momentum token or draw an Opportunity card. At the Mall you can buy a face-up Opportunity card or sell one of yours.",
-                "Opportunity cards are kept in your hand, secret, and played later. You can hold three. Event cards happen as soon as they are drawn. Hidden Government tiles on the board are a surprise: the first player to land on one reveals it for everybody.",
+                "Opportunity cards are kept in your hand, secret, and played later. You can hold three. Event cards happen as soon as they are drawn. A used card goes to the bottom of its deck, never reshuffled, so remembering what was drawn tells you what comes back around. Hidden Government tiles on the board are a surprise: the first player to land on one reveals it for everybody.",
             ]),
             new("money", "Loans, mortgages and bankruptcy", [
                 $"You can take a {money(r.LoanAmount)} loan from the bank, and repaying it costs {money(r.LoanRepay)}. You can hold {r.MaxLoans} loans at once. Mortgaging a property pays {r.MortgagePercent}% of its value, and unmortgaging costs that plus {r.UnmortgageFeePercent}%.",

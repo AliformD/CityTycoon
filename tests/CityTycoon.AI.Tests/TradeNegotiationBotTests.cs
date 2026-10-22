@@ -8,7 +8,7 @@ namespace CityTycoon.AI.Tests;
 
 /// <summary>
 /// Bots value a color group by what it earns for the rest of the game (rent and its perk),
-/// and haggle toward the other player instead of repeating themselves (decision #145).
+/// and haggle toward the other player instead of repeating themselves (decision #148).
 /// </summary>
 public class TradeNegotiationBotTests
 {

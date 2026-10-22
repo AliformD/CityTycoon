@@ -114,6 +114,7 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(CardKept), nameof(CardKept))]
 [JsonDerivedType(typeof(HospitalShrugged), nameof(HospitalShrugged))]
 [JsonDerivedType(typeof(BidEdgeWon), nameof(BidEdgeWon))]
+[JsonDerivedType(typeof(TableTalk), nameof(TableTalk))]
 public abstract record GameEvent;
 
 public sealed record GameStarted(ulong Seed, IReadOnlyList<int> TurnOrder) : GameEvent;
@@ -400,3 +401,12 @@ public sealed record TileRevealedByCouncil(string SpaceId, string TileId) : Game
 
 /// <summary>The catch-up bonus: the player with the lowest net worth was paid extra for passing GO (Section 16.2).</summary>
 public sealed record CatchUpPaid(int PlayerId, int Amount) : GameEvent;
+
+/// <summary>How a remark at the table sounds (decision #160). The screen picks a color and icon from it.</summary>
+public enum TalkTone { Friendly, Sassy, Scold, Warning, Threat }
+
+/// <summary>
+/// Something a player said out loud (decision #160): bots comment on trades they watch and on how others treat them.
+/// Words only: nothing in the game changes. <paramref name="AboutId"/> is the player the remark is aimed at, if any.
+/// </summary>
+public sealed record TableTalk(int SpeakerId, int? AboutId, string Text, TalkTone Tone) : GameEvent;

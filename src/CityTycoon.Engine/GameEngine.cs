@@ -216,6 +216,28 @@ public sealed class GameEngine
     }
 
     /// <summary>What one player is allowed to see (Section 20.1).</summary>
+    /// <summary>The longest remark <see cref="Say"/> takes.</summary>
+    public const int MaxTalkLength = 200;
+
+    /// <summary>
+    /// A player says something to the table (decision #160). It goes in the log for everyone to see,
+    /// and changes nothing else, so it needs no question from the engine: anyone still in the game may talk.
+    /// </summary>
+    public ActionResult Say(int playerId, string text, int? aboutId = null, TalkTone tone = TalkTone.Friendly)
+    {
+        if (State.IsOver)
+            return ActionResult.Rejected("The game is over.");
+        if (State.Players.FirstOrDefault(p => p.Id == playerId) is not { IsBankrupt: false })
+            return ActionResult.Rejected($"Player {playerId} isn't in the game.");
+        if (string.IsNullOrWhiteSpace(text) || text.Length > MaxTalkLength)
+            return ActionResult.Rejected($"A remark must be 1 to {MaxTalkLength} characters.");
+        if (aboutId is int about && (about == playerId || State.Players.All(p => p.Id != about)))
+            return ActionResult.Rejected("That remark is aimed at nobody at the table.");
+        var said = new TableTalk(playerId, aboutId, text.Trim(), tone);
+        State.Log.Add(said);
+        return new ActionResult(true, null, [said]);
+    }
+
     public PlayerView GetView(int viewerId) => PlayerView.Create(State, Content, viewerId);
 
     /// <summary>

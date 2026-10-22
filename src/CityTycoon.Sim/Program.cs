@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CityTycoon.Engine;
 using CityTycoon.Engine.Content;
+using CityTycoon.Engine.Events;
 using CityTycoon.Engine.State;
 using CityTycoon.Sim;
 
@@ -243,6 +244,8 @@ static void AddPerkReport(List<string> lines, List<GameStats> finished, SimOptio
         + $"${finished.Average(r => r.LobbyingSpent):0} spent lobbying (Politician ${finished.Average(r => r.PoliticianLobbying):0}), "
         + $"{finished.Average(r => r.CouncilCancelled):0.00} sessions cancelled, "
         + $"{finished.Average(r => r.VoteDeals):0.0} vote deals worth ${finished.Average(r => r.VoteDealMoney):0}.");
+    lines.Add("Table talk per game: " + string.Join(", ", Enum.GetValues<TalkTone>()
+        .Select(t => $"{finished.Average(r => r.Remarks.GetValueOrDefault(t)):0.0} {t.ToString().ToLowerInvariant()}")) + ".");
     var passedByOrdinance = finished.SelectMany(r => r.OrdinanceCounts).GroupBy(kv => kv.Key).ToDictionary(g => g.Key, g => g.Sum(kv => kv.Value));
     foreach (var ordinance in content.Ordinances)
         lines.Add($"  {ordinance.Name,-28} passed {(double)passedByOrdinance.GetValueOrDefault(ordinance.Id) / finished.Count:0.00} times per game");

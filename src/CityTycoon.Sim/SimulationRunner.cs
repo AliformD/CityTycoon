@@ -87,6 +87,8 @@ public sealed record GameStats(
     /// <summary>Vote deals taken and the money they moved (decision #159).</summary>
     public int VoteDeals { get; init; }
     public int VoteDealMoney { get; init; }
+    /// <summary>Remarks bots made at the table, by tone (decision #160).</summary>
+    public Dictionary<TalkTone, int> Remarks { get; init; } = [];
     public Dictionary<string, int> OrdinanceCounts { get; init; } = [];
     public int PerkPayments { get; init; }
     // Pacing numbers (how soon building starts, close calls, how much money is around).
@@ -311,6 +313,7 @@ public static class SimulationRunner
                 .Where(v => state.Player(v.PlayerId).CharacterId == "politician").Sum(v => v.Lobby),
             VoteDeals = log.OfType<VoteDealMade>().Count(),
             VoteDealMoney = log.OfType<VoteDealMade>().Sum(d => d.Deal.Amount),
+            Remarks = log.OfType<TableTalk>().GroupBy(t => t.Tone).ToDictionary(g => g.Key, g => g.Count()),
             OrdinanceCounts = log.OfType<CouncilResolved>().Where(r => r.Passed).GroupBy(r => r.OrdinanceId).ToDictionary(g => g.Key, g => g.Count()),
             PerkPayments = log.OfType<PerkPaid>().Count() + log.OfType<PerkIncome>().Count(),
             FirstBuildingRound = FirstBuildingRound(log),

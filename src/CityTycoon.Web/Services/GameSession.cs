@@ -97,6 +97,10 @@ public sealed class GameSession(SettingsService settings, SoundService sounds, I
     /// <summary>What everyone at the table can see (no secrets), for drawing the board. While a replay is playing it shows only what has been replayed so far.</summary>
     public PlayerView PublicView => Playback.Apply(Engine!.GetView(viewerId: -1));
 
+    /// <summary>How a bot feels about a player (decision #160), or null if that seat isn't a bot.</summary>
+    public Mood? BotMood(int botId, int playerId) =>
+        Engine != null && bots.TryGetValue(botId, out var bot) ? bot.MoodToward(Engine.GetView(botId), playerId) : null;
+
     public bool IsHuman(int playerId) => Seats.TryGetValue(playerId, out var kind) && kind == SeatKind.Human;
 
     public void Start(IReadOnlyList<SeatSetup> seats, GameMode mode, int rounds, PrivacyMode privacy, ulong? seed, CharacterMode characters = CharacterMode.None)

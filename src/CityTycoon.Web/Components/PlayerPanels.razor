@@ -1,3 +1,4 @@
+@using CityTycoon.AI
 @* One card per player: cash (big), then net worth, properties and anything special going on. *@
 <section class="players" aria-label="Players">
     @foreach (var p in View.Players)
@@ -40,6 +41,10 @@
                     @if (p.IsInsured) { <span class="chip good"><Icon Name="medic" /> Insured</span> }
                     @if (p.IsRecovering) { <span class="chip"><Icon Name="medic" /> Recovering: rolls 1 die next turn</span> }
                     @if (p.HasRoadWork) { <span class="chip"><Icon Name="cone" /> Road Work: rolls 1 die next turn</span> }
+                    @foreach (var (humanId, mood) in MoodsTowardPeople(p.Id))
+                    {
+                        <span class="chip @(mood == Mood.Friendly ? "good" : "bad")" title="How @p.Name feels about @View.Player(humanId).Name, from trades, rent and remarks"><Icon Name="talk" /> @MoodText(mood) @View.Player(humanId).Name</span>
+                    }
                     @if (p.ExtraBuildsThisTurn > 0) { <span class="chip good"><Icon Name="permit" /> Construction Permit: +@p.ExtraBuildsThisTurn builds, @p.BuildDiscountThisTurn% off this turn</span> }
                     @foreach (var perk in p.Perks)
                     {
@@ -78,6 +83,21 @@
 @code {
     [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
     [Parameter, EditorRequired] public GameSession Session { get; set; } = default!;
+
+    /// <summary>A bot's feelings toward each person at the table, when they aren't neutral (decision #160).</summary>
+    private IEnumerable<(int HumanId, Mood Mood)> MoodsTowardPeople(int botId)
+    {
+        foreach (var other in View.Players.Where(x => x.Id != botId && !x.IsBankrupt && Session.IsHuman(x.Id)))
+            if (Session.BotMood(botId, other.Id) is Mood mood && mood != Mood.Neutral)
+                yield return (other.Id, mood);
+    }
+
+    private static string MoodText(Mood mood) => mood switch
+    {
+        Mood.Friendly => "Friendly with",
+        Mood.Wary => "Wary of",
+        _ => "Hostile toward",
+    };
 
     /// <summary>Clicking a player's letter circle opens their money ledger.</summary>
     [Parameter] public EventCallback<int> OnOpenLedger { get; set; }

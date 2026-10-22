@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CityTycoon.AI;
 using CityTycoon.Engine.State;
 
 namespace CityTycoon.Web.Services;
@@ -8,8 +9,11 @@ namespace CityTycoon.Web.Services;
 /// A save file (Phase 9): the whole game state as JSON, plus who is a person and who is a bot.
 /// The game state alone is enough to carry on exactly where it stopped, because the random
 /// generator's position is part of it.
+/// <see cref="Notes"/> holds each bot's private notebook (decision #150), so the game log download
+/// still has the bots' thinking after a game is loaded. Older saves have none, which is fine.
 /// </summary>
-public sealed record SavedGame(int Version, string SavedAt, Dictionary<int, SeatKind> Seats, List<int> AutoPassReactions, string State)
+public sealed record SavedGame(int Version, string SavedAt, Dictionary<int, SeatKind> Seats, List<int> AutoPassReactions, string State,
+    Dictionary<int, List<BotNote>>? Notes = null)
 {
     public const int CurrentVersion = 1;
 

@@ -100,6 +100,18 @@ public sealed record GameStats(
     public IReadOnlyList<string> WinnerPersonalities { get; init; } = [];
     /// <summary>The average rent payment, so it can be compared with how much cash players hold.</summary>
     public double AverageRent { get; init; }
+
+    /// <summary>Every finished trade and how it worked out afterwards (decision #150).</summary>
+    public IReadOnlyList<TradeOutcome> Trades { get; init; } = [];
+    /// <summary>Trade offers made, including ones that were declined.</summary>
+    public int TradeOffers { get; init; }
+    /// <summary>Each seat's bot level ("Easy", "Normal", "Hard", or "Random").</summary>
+    public IReadOnlyList<string> Levels { get; init; } = [];
+    /// <summary>Every bot's private trade notes from this game (see <see cref="BotNote"/>).</summary>
+    public IReadOnlyList<BotNote> Notes { get; init; } = [];
+    /// <summary>How many times a turn ended on each space, and how many turns were played, for the landing odds.</summary>
+    public IReadOnlyDictionary<string, int> Landings { get; init; } = new Dictionary<string, int>();
+    public int Turns { get; init; }
 }
 
 /// <summary>Plays many bot-vs-bot games and gathers statistics (Section 26.3).</summary>
@@ -165,6 +177,8 @@ public static class SimulationRunner
             return Summarize(game, seed, engine, error: null) with
             {
                 CloseCalls = closeCalls,
+                Levels = engine.State.Players.Select(p => controllers[p.Id].GetType().Name.Replace("Bot", "")).ToList(),
+                Notes = controllers.Values.OfType<EasyBot>().SelectMany(b => b.Notebook).OrderBy(n => n.LogIndex).ToList(),
                 Personalities = engine.State.Players.Select(p => PersonalityOf(p.Id)).ToList(),
                 WinnerPersonalities = winners.Select(PersonalityOf).ToList(),
             };
@@ -294,6 +308,10 @@ public static class SimulationRunner
             EndCash = state.Players.Where(p => !p.IsBankrupt).Select(p => (double)p.Cash).DefaultIfEmpty(0).Average(),
             EndNetWorth = state.Players.Where(p => !p.IsBankrupt).Select(p => (double)NetWorth.Calculate(state, engine.Content, p.Id)).DefaultIfEmpty(0).Average(),
             AverageRent = log.OfType<RentPaid>().Select(r => (double)r.Amount).DefaultIfEmpty(0).Average(),
+            Trades = TradeReport.Trades(log, engine.Content),
+            TradeOffers = log.OfType<TradeProposed>().Count(),
+            Landings = log.OfType<LandedOn>().GroupBy(l => l.SpaceId).ToDictionary(g => g.Key, g => g.Count()),
+            Turns = log.OfType<TurnStarted>().Count(),
         };
     }
 }

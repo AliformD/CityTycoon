@@ -21,6 +21,9 @@ timer.Stop();
 Directory.CreateDirectory(options.OutputFolder);
 string csvPath = Path.Combine(options.OutputFolder, "games.csv");
 File.WriteAllLines(csvPath, ToCsv(results));
+File.WriteAllLines(Path.Combine(options.OutputFolder, "trades.csv"), TradesCsv(results));
+File.WriteAllLines(Path.Combine(options.OutputFolder, "bot-notes.csv"), NotesCsv(results));
+File.WriteAllLines(Path.Combine(options.OutputFolder, "landing.csv"), LandingCsv(results));
 string summary = Summarize(results, options, timer.Elapsed);
 File.WriteAllText(Path.Combine(options.OutputFolder, "summary.txt"), summary);
 Console.WriteLine(summary);
@@ -90,6 +93,82 @@ static IEnumerable<string> ToCsv(List<GameStats> results)
             string.Join(" ", r.WinnerSeats), string.Join(" ", r.WinnerTurnPositions), string.Join(" ", r.WinnerCharacters),
             r.Bankruptcies, r.AuctionsWon, r.AveragePriceToValue.ToString("0.000", CultureInfo.InvariantCulture),
             r.JailVisits, "\"" + (r.Error ?? "").Replace("\"", "'") + "\"");
+    }
+}
+
+// One row per finished trade (decision #150): who made the final terms ("from"), what changed hands,
+// the rent each side collected afterwards on what it got (whole color groups), and who won the game.
+static IEnumerable<string> TradesCsv(List<GameStats> results)
+{
+    yield return "game,round,from_seat,from_level,to_seat,to_level,from_gives_cash,from_gets_cash,from_gives,from_gets,counters,from_rent_after,to_rent_after,from_won,to_won";
+    foreach (var r in results)
+    {
+        foreach (var t in r.Trades)
+        {
+            string Level(int id) => id < r.Levels.Count ? r.Levels[id] : "";
+            yield return string.Join(",", r.Game, t.Round, t.Offer.FromId, Level(t.Offer.FromId), t.Offer.ToId, Level(t.Offer.ToId),
+                t.Offer.GiveCash, t.Offer.GetCash, string.Join(" ", t.Offer.GiveProperties), string.Join(" ", t.Offer.GetProperties),
+                t.Counters, t.FromRent, t.ToRent, r.WinnerSeats.Contains(t.Offer.FromId), r.WinnerSeats.Contains(t.Offer.ToId));
+        }
+    }
+}
+
+// Every bot's private trade notes (see BotNote): one row per choice, with the sums behind it.
+static IEnumerable<string> NotesCsv(List<GameStats> results)
+{
+    yield return "game,round,bot_seat,level,personality,kind,choice,from_seat,to_seat,give_cash,get_cash,gives,gets,cash,basic,mine,theirs,gain,limit,counter_give_cash,counter_get_cash,won,why";
+    static string N(double x) => x.ToString("0", CultureInfo.InvariantCulture);
+    foreach (var r in results)
+    {
+        foreach (var n in r.Notes)
+        {
+            yield return string.Join(",", r.Game, n.Round, n.BotId, n.Level, n.Personality, n.Kind, n.Choice, n.Offer.FromId, n.Offer.ToId,
+                n.Offer.GiveCash, n.Offer.GetCash, string.Join(" ", n.Offer.GiveProperties), string.Join(" ", n.Offer.GetProperties),
+                n.Cash, N(n.Basic), N(n.Mine), N(n.Theirs), N(n.Gain), n.Limit, n.Counter?.GiveCash.ToString() ?? "", n.Counter?.GetCash.ToString() ?? "",
+                r.WinnerSeats.Contains(n.BotId), "\"" + (n.Why ?? "").Replace("\"", "'") + "\"");
+        }
+    }
+}
+
+// How often a turn ended on each space, as a share of all turns (decision #150). Bots spend Nudges to dodge
+// big rents, so these are the odds with bots playing, not the pure dice odds.
+static IEnumerable<string> LandingCsv(List<GameStats> results)
+{
+    var content = CityTycoon.Engine.Content.GameContent.Default;
+    double turns = Math.Max(1, results.Sum(r => r.Turns));
+    yield return "space,group,landing_percent_of_turns";
+    foreach (string id in results.SelectMany(r => r.Landings.Keys).Distinct().OrderByDescending(id => results.Sum(r => r.Landings.GetValueOrDefault(id))))
+    {
+        string group = content.Properties.TryGetValue(id, out var p) ? p.Group ?? p.Type.ToString() : "";
+        yield return string.Join(",", id, group, (results.Sum(r => r.Landings.GetValueOrDefault(id)) / turns * 100).ToString("0.000", CultureInfo.InvariantCulture));
+    }
+}
+
+// The trade report card in the summary: how many trades, and whether they paid off for each side.
+static void AddTradeReport(List<string> lines, List<GameStats> finished)
+{
+    var trades = finished.SelectMany(r => r.Trades.Select(t => (Game: r, Trade: t))).ToList();
+    int offers = finished.Sum(r => r.TradeOffers);
+    lines.Add($"Trade report card: {offers} offers, {trades.Count} finished ({(offers == 0 ? 0 : (double)trades.Count / offers):P0}), "
+        + $"{(trades.Count == 0 ? 0 : trades.Average(x => x.Trade.Counters)):0.0} counter-offers per finished trade.");
+    if (trades.Count == 0)
+        return;
+    lines.Add($"  Rent collected afterwards on what each side got (whole groups): final-terms side ${trades.Average(x => x.Trade.FromRent):0}, "
+        + $"other side ${trades.Average(x => x.Trade.ToRent):0} per trade.");
+    lines.Add($"  Who won the game: final-terms side {trades.Count(x => x.Game.WinnerSeats.Contains(x.Trade.Offer.FromId)) / (double)trades.Count:P1}, "
+        + $"other side {trades.Count(x => x.Game.WinnerSeats.Contains(x.Trade.Offer.ToId)) / (double)trades.Count:P1}. Details in trades.csv and bot-notes.csv.");
+}
+
+// How often each color group was landed on, as a share of all turns.
+static void AddLandingReport(List<string> lines, List<GameStats> finished)
+{
+    var content = CityTycoon.Engine.Content.GameContent.Default;
+    double turns = Math.Max(1, finished.Sum(r => r.Turns));
+    lines.Add("Landing odds by color group (share of turns that end on one of its spaces; per space in landing.csv):");
+    foreach (var group in content.Groups.Values)
+    {
+        int landings = content.GroupMembers(group.Id).Sum(id => finished.Sum(r => r.Landings.GetValueOrDefault(id)));
+        lines.Add($"  {group.Name,-10} {landings / turns,6:P1}");
     }
 }
 
@@ -213,6 +292,8 @@ static string Summarize(List<GameStats> results, SimOptions options, TimeSpan el
         AddCharacterReport(lines, finished, options);
         AddPersonalityReport(lines, finished, options);
         AddPerkReport(lines, finished, options);
+        AddTradeReport(lines, finished);
+        AddLandingReport(lines, finished);
     }
     foreach (var e in errors.Take(10))
         lines.Add($"ERROR in game {e.Game} (seed {e.Seed}): {e.Error}");

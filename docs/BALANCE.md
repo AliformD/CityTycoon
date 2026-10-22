@@ -192,3 +192,23 @@ Counting the dividend and cheap skyscrapers alone changed almost nothing, becaus
 | Contractor win rate | 26.0 % | 27.2 % |
 
 Bankruptcies 1.02 to 1.06 per game. Other characters moved by 1 point or less. Green is still held rarely (about 1 in 4 games) and its $200 houses are dear, so its dividend stays small; making it bigger would be a rules change (for example cheaper Green hotels), not a bot change.
+
+## Bids that count the set bonus and the character, trades that count the time left (2026-10-22)
+Decision #156. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, seed 1. "Before" is decision #155.
+
+| Character | before | character bump at full strength | at 30 % (chosen) |
+| --- | --- | --- | --- |
+| Mogul | 31.9 % | 25.8 % | 28.0 % |
+| Hustler | 30.7 % | 27.5 % | 29.9 % |
+| Commuter | 24.2 % | 38.4 % | 27.8 % |
+| Lawyer | 24.2 % | 18.6 % | 24.0 % |
+| Contractor | 27.2 % | 37.6 % | 29.7 % |
+| Politician | 20.3 % | 16.8 % | 19.1 % |
+| City Planner | 19.3 % | 16.5 % | 19.2 % |
+| Medic | 22.6 % | 19.5 % | 22.8 % |
+
+This is the backfire Angel warned about: at full strength the bump made the Commuter and the Contractor win far more (a Commuter that buys Light Blue does well, so it's a real strength, not a mistake). At 30 % no character is over the 30 % target. Counting the set's perk in bids alone (bump off) moved no character by more than 1 point.
+
+Hard against Easy: Hard seats won 77.0 % before, 76.9 % after, so bidding didn't get worse.
+
+Trades near the end: before this change, 21 trades (in 1,000 games) finished in the last 8 rounds, and the player who paid cash won only 3 of the 19 where someone paid. Now bots don't overpay rivals that late, and no trades finished in the last 8 rounds. Trades in all: 180 to 153 (in 1,000 games).

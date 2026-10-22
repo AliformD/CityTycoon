@@ -32,8 +32,55 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
     {
         string id = decision.PropertyId!;
         PropertyDefinition def = content.Property(id);
-        double worth = def.AssessedValue * MaxPriceRatio + SetBonus(view, id) * TimeLeftFactor(view);
+        double worth = def.AssessedValue * MaxPriceRatio + (SetBonus(view, id) + CharacterFit(view, id)) * TimeLeftFactor(view)
+            + PerkBonus(view, id);
         return WithBlocking(view, id, worth * WorthScale);
+    }
+
+    /// <summary>
+    /// The share of a color group's perk (what trades count, see <c>PerkWorth</c>) a bot adds to its bid for the
+    /// last piece of the group; a smaller share for each piece it already has when the group is still open (decision #156).
+    /// </summary>
+    protected virtual double BidPerkShare => 0.5;
+
+    /// <summary>How much of <see cref="CharacterFit"/> the bot adds to a bid (decision #156).</summary>
+    protected virtual double CharacterFitShare => 0.3;
+
+    /// <summary>Part of the group's perk, for winning the last piece, or for a piece of a group it could still finish.</summary>
+    protected double PerkBonus(PlayerView view, string id)
+    {
+        string? group = content.Property(id).Group;
+        if (group == null || BidPerkShare <= 0)
+            return 0;
+        var others = content.GroupMembers(group).Where(m => m != id).ToList();
+        bool Mine(string m) => view.Properties[m].OwnerId == view.ViewerId && !view.Properties[m].IsPending;
+        double perk = PerkWorthFor(view, view.ViewerId, group);
+        if (others.All(Mine))
+            return perk * BidPerkShare;
+        if (others.Any(Mine) && others.All(m => Mine(m) || view.Properties[m].OwnerId == null))
+            return perk * BidPerkShare * 0.2 * others.Count(Mine);
+        return 0;
+    }
+
+    /// <summary>
+    /// Extra a property is worth because it suits the bot's character, while its group can still be finished:
+    /// the Contractor saves on every house, so groups with dear houses suit it; the Commuter
+    /// (longer Nudges) likes the extra token room Light Blue's Commuter Belt gives.
+    /// </summary>
+    protected double CharacterFit(PlayerView view, string id)
+    {
+        PropertyDefinition def = content.Property(id);
+        if (def.Group == null || CharacterFitShare <= 0
+            || content.GroupMembers(def.Group).Any(m => view.Properties[m].OwnerId is int o && o != view.ViewerId))
+        {
+            return 0;
+        }
+        double fit = 0;
+        // About 3 levels on this property, at the discount, and half of that because the set isn't sure yet.
+        fit += CharacterModifier(view, view.ViewerId, "BuildDiscount") / 100.0 * def.HouseCost * 3 * 0.5;
+        if (CharacterModifier(view, view.ViewerId, "NudgeRange") > 0 && PerkModifier(def.Group, "MomentumCap") > 0)
+            fit += def.AssessedValue * 0.25;
+        return fit * CharacterFitShare;
     }
 
     /// <summary>Extra dollars a property is worth because of the color group (or railroads and utilities) it belongs to.</summary>

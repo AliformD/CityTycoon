@@ -86,6 +86,8 @@
   "casinoLowMax": 6,
   "casinoHighMin": 8,
   "casinoDoublesPayout": 2,
+  // Landing on the Casino flips a coin: win or lose this much (decision #153).
+  "casinoLandingFlip": 20,
   "stadiumRentMultiplier": 2,
   "cityParkMomentum": 1
 }

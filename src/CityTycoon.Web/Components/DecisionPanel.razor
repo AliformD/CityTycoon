@@ -278,7 +278,7 @@ else if (decision.Kind is DecisionKind.ChooseReroll or DecisionKind.RerollMove)
         <div class="buttons">
             @foreach (var action in main)
             {
-                <button class="big @(action is RerollDice ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)">@(action is RerollDice ? UiHelpers.ActionLabel(action, view, Content) : "Keep it")</button>
+                <button class="big @(action is RerollDice ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)">@RerollLabel(action, decision)</button>
             }
         </div>
     </div>
@@ -382,6 +382,14 @@ else
             @foreach (var id in cards) { <li>@Content.Card(id).Name card <span class="hint">(@Content.Card(id).Text)</span></li> }
             @if (cash == 0 && properties.Count == 0 && cards.Count == 0) { <li>Nothing</li> }
         </ul>
+    };
+
+    /// <summary>"Roll the 2 again" for the Hustler's one-die reroll (decision #153), "Roll again" for a whole roll, "Keep it" otherwise.</summary>
+    private string RerollLabel(GameAction action, PendingDecision decision) => action switch
+    {
+        RerollDice { Die: int die } when decision.Dice is { } dice && die < dice.Count => $"🔁 Roll the {dice[die]} again",
+        RerollDice => UiHelpers.ActionLabel(action, Request.View, Content),
+        _ => "Keep it",
     };
 
     // "Angel, " + "Anything else?" reads better as "Angel, anything else?".

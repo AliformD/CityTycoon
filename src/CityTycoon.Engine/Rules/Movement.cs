@@ -133,7 +133,14 @@ public static class Movement
         }
 
         player.IsRecovering = true;
-        ctx.Push(new PaymentStep { FromId = player.Id, Amount = ctx.Rules.HospitalBill, Reason = PaymentReason.Hospital });
+        // The bill goes to the Medic, if one is playing (decision #153), or else to the bank.
+        ctx.Push(new PaymentStep
+        {
+            FromId = player.Id,
+            ToId = RuleModifiers.HospitalCollector(ctx.State, ctx.Content, player.Id),
+            Amount = ctx.Rules.HospitalBill,
+            Reason = PaymentReason.Hospital,
+        });
     }
 
     /// <summary>Sends a player straight to Jail without passing GO (Section 14.1).</summary>

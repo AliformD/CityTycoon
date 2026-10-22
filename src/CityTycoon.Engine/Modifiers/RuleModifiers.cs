@@ -293,6 +293,14 @@ public static class RuleModifiers
         return cheaper.Count == 0 ? content.Rules.InsuredMarkerCost : cheaper.Min();
     }
 
+    /// <summary>Who is paid this player's Hospital bills and Insured marker money (the Medic, decision #153), or null for the bank.</summary>
+    public static int? HospitalCollector(GameState state, GameContent content, int payerId) =>
+        Active(state, content).FirstOrDefault(m => m.CollectsHospitalMoney(state, payerId))?.OwnerId;
+
+    /// <summary>The extra cash this player gets from the bank when a card gives them <paramref name="amount"/>, each with its name (Fundraising).</summary>
+    public static List<(int Amount, string Source)> CardCashBonuses(GameState state, GameContent content, int playerId, int amount) =>
+        Amounts(Active(state, content), m => amount * m.CardCashBonusPercent(state, playerId) / 100);
+
     /// <summary>What this player collects when sent to Jail, each with its name (the Lawyer: half the GO salary).</summary>
     public static List<(int Amount, string Source)> JailIncomes(GameState state, GameContent content, int playerId) =>
         Amounts(Active(state, content), m => content.Rules.GoSalary * m.JailGoSharePercent(state, playerId) / 100);

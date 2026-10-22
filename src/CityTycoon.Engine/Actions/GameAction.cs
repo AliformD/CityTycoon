@@ -168,8 +168,12 @@ public sealed record ExpressLine(string RailroadId) : GameAction;
 /// <summary>The Red perk: force an auction on this opponent's property, once per lap (Section 8.6).</summary>
 public sealed record HostileTakeover(string PropertyId) : GameAction;
 
-/// <summary>The Hustler: roll again instead of keeping a bad Casino roll, or (once per lap) a movement roll.</summary>
-public sealed record RerollDice : GameAction;
+/// <summary>
+/// The Hustler: roll again instead of keeping a bad roll. For a movement roll (once per lap) only one die
+/// is rolled again, and <paramref name="Die"/> says which (0 for the first, 1 for the second; decision #153).
+/// Null rolls all the dice again (a Dice Duel roll).
+/// </summary>
+public sealed record RerollDice(int? Die = null) : GameAction;
 
 /// <summary>The City Planner: turn this City Council result around (passed becomes failed, and failed becomes passed). Once per game.</summary>
 public sealed record ReverseVote : GameAction;

@@ -122,3 +122,15 @@ public sealed class InsuredMarkerCostModifier(ModifierContext c) : OwnedModifier
 {
     public int? InsuredMarkerCost(GameState s, int playerId) => Mine(playerId) ? Value : null;
 }
+
+/// <summary>The Medic: Hospital bills and Insured markers other players pay go to the Medic, not the bank (decision #153).</summary>
+public sealed class HospitalCollectorModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+{
+    public bool CollectsHospitalMoney(GameState s, int payerId) => !Mine(payerId) && !s.Player(Owner).IsBankrupt;
+}
+
+/// <summary>The Politician's Fundraising: cards that give them cash give this much more, in percent, from the bank (decision #153).</summary>
+public sealed class FundraisingModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+{
+    public int CardCashBonusPercent(GameState s, int playerId) => Mine(playerId) ? Value : 0;
+}

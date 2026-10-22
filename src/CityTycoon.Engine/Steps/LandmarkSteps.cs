@@ -39,7 +39,11 @@ public sealed class HospitalVisitStep : Step
         int cost = RuleModifiers.InsuredMarkerCost(ctx.State, ctx.Content, PlayerId);
         player.Cash -= cost;
         player.IsInsured = true;
-        ctx.Emit(new InsuranceBought(PlayerId, cost));
+        // The money goes to the Medic, if one is playing (decision #153).
+        int? medic = cost > 0 ? RuleModifiers.HospitalCollector(ctx.State, ctx.Content, PlayerId) : null;
+        if (medic is int medicId)
+            ctx.Player(medicId).Cash += cost;
+        ctx.Emit(new InsuranceBought(PlayerId, cost, medic));
     }
 }
 
@@ -61,12 +65,20 @@ public sealed class CasinoStep : Step
     public int Die1 { get; set; }
     public int Die2 { get; set; }
 
+    /// <summary>True once the coin has been flipped for landing here (decision #153).</summary>
+    public bool Flipped { get; set; }
+
     /// <summary>True once the Hustler has been asked about a reroll, so they are asked at most once per visit.</summary>
     public bool RerollOffered { get; set; }
 
     public override StepResult Run(EngineContext ctx)
     {
         PlayerState player = ctx.Player(PlayerId);
+        if (!Flipped)
+        {
+            Flipped = true;
+            FlipCoin(ctx, player);
+        }
         if (!Answered)
         {
             if (player.Cash <= 0)
@@ -97,6 +109,22 @@ public sealed class CasinoStep : Step
             ctx.Push(new DiceDuelStep { ChallengerId = PlayerId, OpponentId = duel.OpponentId, Stake = duel.Amount });
         }
         return StepResult.Done;
+    }
+
+    /// <summary>
+    /// Landing on the Casino flips a coin (decision #153): an even die wins the player a little from the bank,
+    /// an odd one loses it. A player with less cash than that loses only what they have, so it never forces a sale.
+    /// </summary>
+    private static void FlipCoin(EngineContext ctx, PlayerState player)
+    {
+        int amount = ctx.Rules.CasinoLandingFlip;
+        if (amount <= 0)
+            return;
+        int net = ctx.Dice.RollDie() % 2 == 0 ? amount : -Math.Min(amount, player.Cash);
+        if (net == 0)
+            return;
+        player.Cash += net;
+        ctx.Emit(new CasinoCoinFlip(player.Id, net));
     }
 
     /// <summary>The most this player can stake: their cash, or the Casino Regulation cap if one is in force.</summary>

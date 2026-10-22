@@ -54,9 +54,25 @@ public class StrongerAbilityBotTests
         PlaceBefore(engine, "platinum-row", 7);
         var decision = new PendingDecision(0, DecisionKind.RerollMove, "", Dice: [3, 4]);
 
-        var choice = await new EasyBot(1).DecideAsync(engine.GetView(0), decision, [new RerollDice(), new NoThanks()]);
+        var choice = await new EasyBot(1).DecideAsync(engine.GetView(0), decision, [new RerollDice(0), new RerollDice(1), new NoThanks()]);
 
-        Assert.Equal(new RerollDice(), choice);
+        Assert.IsType<RerollDice>(choice); // one die (decision #153); either one moves it off the rent
+    }
+
+    [Fact]
+    public async Task Hustler_RerollsTheDieThatHelpsMost()
+    {
+        // A 6 + 1 lands on Platinum Row. Rerolling the 1 keeps the 6 and moves 7 to 12 spaces, past the danger.
+        // Rerolling the 6 could land on it again (1 + 6), so the 1 is the better die to throw.
+        var engine = NewGame("hustler");
+        engine.State.Player(0).Momentum = 0;
+        BigRent(engine);
+        PlaceBefore(engine, "platinum-row", 7);
+        var decision = new PendingDecision(0, DecisionKind.RerollMove, "", Dice: [6, 1]);
+
+        var choice = await new HardBot(1).DecideAsync(engine.GetView(0), decision, [new RerollDice(0), new RerollDice(1), new NoThanks()]);
+
+        Assert.Equal(new RerollDice(1), choice);
     }
 
     [Fact]
@@ -67,7 +83,7 @@ public class StrongerAbilityBotTests
         PlaceBefore(engine, "jail", 7);
         var decision = new PendingDecision(0, DecisionKind.RerollMove, "", Dice: [3, 4]);
 
-        var choice = await new HardBot(1).DecideAsync(engine.GetView(0), decision, [new RerollDice(), new NoThanks()]);
+        var choice = await new HardBot(1).DecideAsync(engine.GetView(0), decision, [new RerollDice(0), new RerollDice(1), new NoThanks()]);
 
         Assert.Equal(new NoThanks(), choice);
     }

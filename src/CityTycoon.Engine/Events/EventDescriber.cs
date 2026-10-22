@@ -70,10 +70,11 @@ public static class EventDescriber
             MomentumGained m => $"{Name(m.PlayerId)} gained {Tokens(m.Amount)} ({m.Source}).",
             PrecisionRolled p => $"{Name(p.PlayerId)} spent {Tokens(p.TokensSpent)} on a Precision Roll: {string.Join(", ", p.Dice)}.",
             Nudged n => $"{Name(n.PlayerId)} spent {Tokens(n.TokensSpent)} to move {Math.Abs(n.Spaces)} space{(Math.Abs(n.Spaces) == 1 ? "" : "s")} {(n.Spaces > 0 ? "further" : "less")}.",
-            InsuranceBought i => $"{Name(i.PlayerId)} bought an Insured marker for ${i.Cost}.",
+            InsuranceBought i => $"{Name(i.PlayerId)} bought an Insured marker for ${i.Cost}" + (i.ToId is int seller ? $", paid to {Name(seller)}." : "."),
             InsuranceUsed i => $"{Name(i.PlayerId)}'s Insured marker was used up.",
             SentToHospital h => $"{Name(h.PlayerId)} went to the Hospital ({h.Reason}).",
-            HospitalBillPaid h => $"{Name(h.PlayerId)} paid a ${h.Amount} Hospital bill and rolls 1 die next turn.",
+            HospitalBillPaid h => $"{Name(h.PlayerId)} paid a ${h.Amount} Hospital bill" + (h.ToId is int medic ? $" to {Name(medic)}" : "") + " and rolls 1 die next turn.",
+            CasinoCoinFlip f => f.Net > 0 ? $"{Name(f.PlayerId)} won ${f.Net} on the Casino coin flip." : $"{Name(f.PlayerId)} lost ${-f.Net} on the Casino coin flip.",
             CasinoHighLow c => $"{Name(c.PlayerId)} bet ${c.Bet} on {(c.CalledHigh ? "High" : "Low")} and rolled {c.Die1} + {c.Die2} = {c.Total}: "
                 + (c.Net > 0 ? $"won ${c.Net}!" : $"lost ${-c.Net}."),
             DuelChallenged d => $"{Name(d.ChallengerId)} challenged {Name(d.OpponentId)} to a ${d.Stake} Dice Duel.",
@@ -129,7 +130,9 @@ public static class EventDescriber
             PerkIncome p => $"{Name(p.PlayerId)} collected ${p.Amount} ({p.Perk}).",
             PerkPaid p => $"{Name(p.FromId)} paid ${p.Amount} to {Name(p.ToId)} ({p.Perk}).",
             CasinoRerolled r => $"{Name(r.PlayerId)} used their Hustler reroll on the {r.What}.",
-            MoveRerolled r => $"{Name(r.PlayerId)} didn't like {(r.Die2 == 0 ? $"a {r.Die1}" : $"{r.Die1} + {r.Die2}")} and used their Hustler reroll (once per lap).",
+            MoveRerolled r => r.Die is int die
+                ? $"{Name(r.PlayerId)} didn't like {(r.Die2 == 0 ? $"a {r.Die1}" : $"{r.Die1} + {r.Die2}")} and used their Hustler reroll on the {(die == 0 ? r.Die1 : r.Die2)} (once per lap)."
+                : $"{Name(r.PlayerId)} didn't like {(r.Die2 == 0 ? $"a {r.Die1}" : $"{r.Die1} + {r.Die2}")} and used their Hustler reroll (once per lap).",
             CouncilReversed r => $"{Name(r.PlayerId)} reversed the City Council result as the City Planner: {content.Ordinance(r.OrdinanceId).Name} now {(r.NowPassed ? "passes" : "fails")}.",
             CardKept k => $"{Name(k.PlayerId)} drew two Opportunity cards and kept one.",
             HospitalShrugged h => $"{Name(h.PlayerId)} shrugged off the Hospital: no bill, and they roll normally next turn.",

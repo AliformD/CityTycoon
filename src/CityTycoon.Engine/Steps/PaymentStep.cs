@@ -84,13 +84,17 @@ public sealed class PaymentStep : Step
             {
                 PaymentReason.Rent => new RentPaid(FromId, ToId!.Value, SpaceId!, Amount),
                 PaymentReason.Tax => new TaxPaid(FromId, SpaceId!, Amount),
-                PaymentReason.Hospital => new HospitalBillPaid(FromId, Amount),
+                PaymentReason.Hospital => new HospitalBillPaid(FromId, Amount, ToId),
                 PaymentReason.Card => new CardPaymentMade(FromId, ToId, Amount, CardId!),
                 PaymentReason.Tile => new TileFeePaid(FromId, ToId, Amount, TileId!),
                 PaymentReason.Perk => new PerkPaid(FromId, ToId!.Value, Amount, PerkName!),
                 PaymentReason.Council => new CouncilPaymentMade(FromId, Amount, OrdinanceId!),
                 _ => new BailPaid(FromId, Amount),
             });
+
+            // Fundraising: a card that pays the Politician pays them extra from the bank (decision #153).
+            if (Reason == PaymentReason.Card && ToId is int cardPayee)
+                CardEffects.Fundraise(ctx, ctx.Player(cardPayee), Amount);
 
             // Toll Collector: the owner of 3 or more railroads gains a Momentum token for each railroad rent they are paid.
             if (Reason == PaymentReason.Rent && ToId is int ownerId && !ctx.Player(ownerId).IsBankrupt)

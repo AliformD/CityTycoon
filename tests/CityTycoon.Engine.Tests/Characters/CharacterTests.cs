@@ -26,23 +26,23 @@ public class CharacterTests
     // ----- The Mogul -----
 
     [Fact]
-    public void Mogul_WinsATieAgainstABidTwentyDollarsHigher()
+    public void Mogul_WinsATieAgainstABidTenDollarsHigher()
     {
         var game = With("mogul", seat: 0);
         game.RollOnto(0, "market-street");
         game.Do(0, new PlaceBid(100));
-        game.Do(1, new PlaceBid(120)); // 100 + the Mogul's 20 ties it, and the Mogul wins ties
+        game.Do(1, new PlaceBid(110)); // 100 + the Mogul's 10 (decision #153) ties it, and the Mogul wins ties
         Assert.Equal(0, game.Property("market-street").OwnerId);
-        Assert.Contains(game.State.Log, e => e is BidEdgeWon { PlayerId: 0, Bid: 100, TopBid: 120 });
+        Assert.Contains(game.State.Log, e => e is BidEdgeWon { PlayerId: 0, Bid: 100, TopBid: 110 });
     }
 
     [Fact]
-    public void Mogul_StillLosesToABidMoreThanTwentyHigher()
+    public void Mogul_StillLosesToABidMoreThanTenHigher()
     {
         var game = With("mogul", seat: 0);
         game.RollOnto(0, "market-street");
         game.Do(0, new PlaceBid(100));
-        game.Do(1, new PlaceBid(130));
+        game.Do(1, new PlaceBid(120));
         Assert.Equal(1, game.Property("market-street").OwnerId);
     }
 
@@ -58,56 +58,26 @@ public class CharacterTests
     }
 
     [Fact]
-    public void Hustler_LosingBet_CanRerollTheDice()
+    public void Hustler_HasNoCasinoReroll_ALosingBetJustLoses()
     {
-        var game = HustlerAtTheCasino();
-        game.Dice.Add(1, 2, 6, 5); // 3 loses a High bet, then 11 wins
-        game.Do(0, new BetHighLow(300, High: true));
-
-        var ask = game.DecisionFor(0)!;
-        Assert.Equal(DecisionKind.ChooseReroll, ask.Kind);
-        Assert.Equal([1, 2], ask.Dice);
-
-        game.Do(0, new RerollDice());
-        Assert.Equal(1800, game.Player(0).Cash);
-        Assert.Contains(game.State.Log, e => e is CasinoRerolled { PlayerId: 0 });
-    }
-
-    [Fact]
-    public void Hustler_MayKeepTheLosingRoll_AndOnlyGetsOneReroll()
-    {
+        // Decision #153: a reroll made Casino bets win money on average, so the Hustler lost it.
         var game = HustlerAtTheCasino();
         game.Dice.Add(1, 2);
         game.Do(0, new BetHighLow(300, High: true));
-        game.Do(0, new NoThanks());
         Assert.Equal(1200, game.Player(0).Cash);
-    }
-
-    [Fact]
-    public void Hustler_WinningBet_IsNotAskedToReroll()
-    {
-        var game = HustlerAtTheCasino();
-        game.Dice.Add(6, 5);
-        game.Do(0, new BetHighLow(300, High: true));
-        Assert.Equal(1800, game.Player(0).Cash);
         Assert.DoesNotContain(game.State.Log, e => e is CasinoRerolled);
     }
 
     [Fact]
-    public void Hustler_LosingADiceDuel_CanRollTheirOwnDiceAgain()
+    public void Hustler_LosingADiceDuel_IsNotOfferedAReroll()
     {
         var game = With("hustler", seat: 1);
         game.GiveCard(0, "dice-duel");
         game.Do(0, new PlayCard("dice-duel", TargetPlayerId: 1, Number: 100));
         game.Dice.Add(6, 5, 1, 2); // challenger 11, Hustler 3
         game.Do(1, new AcceptDuel());
-
-        Assert.Equal(DecisionKind.ChooseReroll, game.DecisionFor(1)!.Kind);
-        game.Dice.Add(6, 6); // the Hustler's new total: 12
-        game.Do(1, new RerollDice());
-
-        Assert.Equal(1600, game.Player(1).Cash);
-        Assert.Equal(1400, game.Player(0).Cash);
+        Assert.Equal(1400, game.Player(1).Cash);
+        Assert.Equal(1600, game.Player(0).Cash);
     }
 
     [Fact]
@@ -118,7 +88,6 @@ public class CharacterTests
         game.Do(0, new PlayCard("dice-duel", TargetPlayerId: 1, Number: 100));
         game.Dice.Add(3, 4, 5, 2); // 7 against 7: a tie
         game.Do(1, new AcceptDuel());
-        game.Do(0, new NoThanks()); // player 0 is a Hustler here, and may keep the tie-losing roll
 
         Assert.Equal(1600, game.Player(1).Cash);
         Assert.Equal(1400, game.Player(0).Cash);
@@ -134,7 +103,6 @@ public class CharacterTests
         game.Do(0, new PlayCard("dice-duel", TargetPlayerId: 1, Number: 100));
         game.Dice.Add(6, 1, 3, 4);
         game.Do(1, new AcceptDuel());
-        game.Do(1, new NoThanks()); // player 1 is a Hustler here, and may keep the tie-losing roll
         Assert.Equal(1600, game.Player(0).Cash);
     }
 

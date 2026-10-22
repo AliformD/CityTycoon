@@ -29,6 +29,8 @@ public enum TurnStage
     PostMove,
     AfterPostMove,
     EndOfTurn,
+    /// <summary>The Hustler rerolls one die of the roll (decision #153).</summary>
+    RerollOne,
 }
 
 /// <summary>
@@ -55,6 +57,9 @@ public sealed class TurnStep : Step
 
     /// <summary>Recovering from the Hospital: this turn rolls only 1 die (Section 15.3).</summary>
     public bool RecoveringThisTurn { get; set; }
+
+    /// <summary>Which die (0 or 1) the Hustler is rolling again.</summary>
+    public int RerolledDie { get; set; }
 
     /// <summary>Road Work: this turn rolls only 1 die, unless this many tokens are spent. 0 means no Road Work.</summary>
     public int RoadWorkCost { get; set; }
@@ -133,11 +138,17 @@ public sealed class TurnStep : Step
 
             case TurnStage.MoveReroll:
                 return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.RerollMove,
-                    $"You rolled {(Die2 == 0 ? $"{Die1}" : $"{Die1} + {Die2} = {Die1 + Die2}")}. Use your Hustler reroll? You get one each lap.",
+                    $"You rolled {(Die2 == 0 ? $"{Die1}" : $"{Die1} + {Die2} = {Die1 + Die2}")}. Use your Hustler reroll on one die? You get one each lap.",
                     Dice: Die2 == 0 ? [Die1] : [Die1, Die2]));
 
             case TurnStage.DiceKept:
                 return ResolveDice(ctx, player);
+
+            case TurnStage.RerollOne:
+            {
+                int again = ctx.Dice.RollDie();
+                return AfterDice(ctx, player, RerolledDie == 0 ? again : Die1, RerolledDie == 1 ? again : Die2);
+            }
 
             case TurnStage.PrecisionRoll:
                 return PrecisionRollStage(ctx, player);
@@ -222,7 +233,8 @@ public sealed class TurnStep : Step
             DecisionKind.ChooseMoveMethod => MoveChoices(ctx, player),
             DecisionKind.ChoosePrecisionDice => [new ChooseDice(0, 1), new ChooseDice(0, 2), new ChooseDice(1, 2)],
             DecisionKind.ChooseNudge => MomentumRules.NudgeOptions(ctx, player, Die1 + Die2).Select(n => (GameAction)new Nudge(n)).ToList(),
-            DecisionKind.RerollMove => [new RerollDice(), new NoThanks()],
+            // One die at a time (decision #153): pick which one to roll again (with doubles, either is the same).
+            DecisionKind.RerollMove => Die2 == 0 || Die1 == Die2 ? [new RerollDice(0), new NoThanks()] : [new RerollDice(0), new RerollDice(1), new NoThanks()],
             DecisionKind.PostMoveActions => [new EndTurn(), .. HostileTakeovers(ctx, player)],
             // Bail is paid with cash on hand. Short? Take a loan or mortgage something first. (The Lawyer pays $0.)
             DecisionKind.JailChoice => player.Cash >= RuleModifiers.Bail(ctx.State, ctx.Content, PlayerId)
@@ -344,11 +356,12 @@ public sealed class TurnStep : Step
                 });
                 break;
 
-            case RerollDice:
-                // The Hustler throws this roll away and rolls again (decision #152). It's used up until the next GO.
+            case RerollDice reroll:
+                // The Hustler rolls one die of this roll again (decisions #152 and #153). It's used up until the next GO.
                 player.MoveRerollUsed = true;
-                ctx.Emit(new MoveRerolled(PlayerId, Die1, Die2));
-                Stage = TurnStage.Roll;
+                RerolledDie = reroll.Die ?? 0;
+                ctx.Emit(new MoveRerolled(PlayerId, Die1, Die2, RerolledDie));
+                Stage = TurnStage.RerollOne;
                 break;
 
             case NoThanks when decision.Kind == DecisionKind.RerollMove:

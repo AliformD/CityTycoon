@@ -145,10 +145,13 @@ public static class GameHistory
                     break;
                 }
                 case InsuranceBought i:
-                    Add(i.PlayerId, -i.Cost, MoneyKind.Hospital, "Bought an Insured marker");
+                    Move(i.PlayerId, i.ToId, i.Cost, MoneyKind.Hospital, "Bought an Insured marker" + (i.ToId is int seller ? $" from {Name(seller)}" : ""), $"Insured marker sold to {Name(i.PlayerId)}");
                     break;
                 case HospitalBillPaid h:
-                    Add(h.PlayerId, -h.Amount, MoneyKind.Hospital, "Hospital bill");
+                    Move(h.PlayerId, h.ToId, h.Amount, MoneyKind.Hospital, "Hospital bill" + (h.ToId is int medic ? $" to {Name(medic)}" : ""), $"Hospital bill from {Name(h.PlayerId)}");
+                    break;
+                case CasinoCoinFlip f:
+                    Add(f.PlayerId, f.Net, MoneyKind.Casino, $"Casino coin flip: {(f.Net > 0 ? "won" : "lost")}");
                     break;
                 case CasinoHighLow c:
                     Add(c.PlayerId, c.Net, MoneyKind.Casino, $"Casino bet on {(c.CalledHigh ? "High" : "Low")}: rolled {c.Total}, {(c.Net > 0 ? "won" : "lost")}");

@@ -323,7 +323,7 @@ public sealed class Playback(SettingsService settings, SoundService sounds, Game
         TileRevealed or TileRevealedByCouncil or TilePeeked => ("gov", "", null, false, "card"),
         MomentumGained or PrecisionRolled or Nudged or Detoured => ("star", "", null, false, ""),
         SentToHospital or InsuranceBought or InsuranceUsed or RecoverySkipped or HospitalShrugged => ("medic", "", null, false, ""),
-        CasinoHighLow or CasinoRerolled or MoveRerolled or DuelChallenged or DuelDeclined or DuelRolled or DuelWon or LotteryRolled or LotteryWon => ("dice", "", null, false, "dice"),
+        CasinoHighLow or CasinoCoinFlip or CasinoRerolled or MoveRerolled or DuelChallenged or DuelDeclined or DuelRolled or DuelWon or LotteryRolled or LotteryWon => ("dice", "", null, false, "dice"),
         StadiumChosen or StadiumEnded => ("stadium", "", null, false, ""),
         RoadWorkStarted or RoadWorkCleared => ("cone", "", null, false, ""),
         RentBoostStarted or RentBoostEnded => ("party", "", null, false, ""),
@@ -365,7 +365,10 @@ public sealed class Playback(SettingsService settings, SoundService sounds, Game
             case RentPaid r: yield return (r.FromId, -r.Amount); yield return (r.ToId, r.Amount); break;
             case TaxPaid t: yield return (t.PlayerId, -t.Amount); break;
             case BailPaid b: yield return (b.PlayerId, -b.Amount); break;
-            case HospitalBillPaid h: yield return (h.PlayerId, -h.Amount); break;
+            case HospitalBillPaid h:
+                yield return (h.PlayerId, -h.Amount);
+                if (h.ToId is int doctor) yield return (doctor, h.Amount);
+                break;
             case AuctionWon w:
                 if (w.PaidNow > 0) yield return (w.PlayerId, -w.PaidNow);
                 if (w.PaidToId is int seller && w.PaidNow > 0) yield return (seller, w.PaidNow);
@@ -377,7 +380,11 @@ public sealed class Playback(SettingsService settings, SoundService sounds, Game
             case PropertyUnmortgaged u: yield return (u.PlayerId, -u.Cost); break;
             case LoanTaken l: yield return (l.PlayerId, l.Amount); break;
             case LoanRepaid l: yield return (l.PlayerId, -l.Amount); break;
-            case InsuranceBought i: yield return (i.PlayerId, -i.Cost); break;
+            case InsuranceBought i:
+                yield return (i.PlayerId, -i.Cost);
+                if (i.ToId is int medic && i.Cost > 0) yield return (medic, i.Cost);
+                break;
+            case CasinoCoinFlip f: yield return (f.PlayerId, f.Net); break;
             case CasinoHighLow c when c.Net != 0: yield return (c.PlayerId, c.Net); break;
             case DuelWon d: yield return (d.WinnerId, d.Stake); yield return (d.LoserId, -d.Stake); break;
             case CashFromBank c: yield return (c.PlayerId, c.Amount); break;

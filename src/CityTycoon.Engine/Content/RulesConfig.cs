@@ -112,6 +112,8 @@ public sealed class RulesConfig
     public required int CasinoHighMin { get; init; }
     /// <summary>A right High/Low call with doubles wins this many times the bet.</summary>
     public required int CasinoDoublesPayout { get; init; }
+    /// <summary>Landing on the Casino flips a coin: win or lose this much (decision #153). 0 turns it off.</summary>
+    public int CasinoLandingFlip { get; init; }
     public required int StadiumRentMultiplier { get; init; }
     /// <summary>Momentum tokens gained at City Park.</summary>
     public required int CityParkMomentum { get; init; }

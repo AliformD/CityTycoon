@@ -144,3 +144,19 @@ Even share is 25 %. Other numbers barely moved: Nudges per game 19.3 to 18.4 (No
 - **The Mogul got stronger** (it was already the only character over the target). The $20 edge is what was asked for.
 - **The Hustler is now one of the strongest.** The lap reroll and the ×3 Stadium both help.
 - **The Commuter and the Politician got weaker** even though neither lost anything on paper. The Commuter's tokens now buy fewer spaces (a 2-space Nudge used to cost 1 token, now 2). The Politician drop showed in both runs; it may be that a stronger lobby still costs real cash, and bots that lobby lose games (see "Blocking a monopoly" above). Not investigated further.
+
+## Balance pass after the Hard bot report (2026-10-22)
+Decision #153. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, seed 1. "Before" is main with decisions #151 and #152.
+
+| Character | before | after |
+| --- | --- | --- |
+| Mogul | 43.8 % | 33.9 % |
+| Hustler | 31.3 % | 29.5 % |
+| Commuter | 21.2 % | 22.2 % |
+| Lawyer | 22.8 % | 24.4 % |
+| Contractor | 23.7 % | 26.4 % |
+| Politician | 19.9 % | 20.1 % |
+| City Planner | 18.8 % | 20.7 % |
+| Medic | 19.3 % | 23.2 % |
+
+Even share is 25 %. The Mogul is still a little over the 30 % target, mostly from winning tied sealed bids (about 1 in 6 sealed auctions tie, because bots bid in $10 steps). Desperate bots now bet at the Casino: 0.3 bets per game, players lost $2,100 in total over 1,000 games. Game length is unchanged (39.8 rounds).

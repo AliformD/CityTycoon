@@ -66,7 +66,10 @@ public interface IRuleModifier
     /// <summary>Extra room for Momentum tokens (Commuter, Commuter Belt).</summary>
     int MomentumCapBonus(GameState state, int playerId) => 0;
 
-    /// <summary>How many tokens this player starts the game with, if more than the normal 1 (the Commuter).</summary>
+    /// <summary>Extra spaces this player's Nudge can reach, past the normal 2 (the Commuter).</summary>
+    int NudgeRangeBonus(GameState state, int playerId) => 0;
+
+    /// <summary>How many tokens this player starts the game with, if more than the normal 2 (the Commuter).</summary>
     int StartingMomentum(GameState state, int playerId) => 0;
 
     /// <summary>Tokens taken off the Precision Roll price (Rail Baron).</summary>
@@ -119,8 +122,14 @@ public interface IRuleModifier
     /// <summary>True if this player is never billed or slowed by the Hospital (the Medic).</summary>
     bool ShrugsOffHospital(GameState state, int playerId) => false;
 
-    /// <summary>The price of an Insured marker for this player, or 0 for "no change" (the Medic).</summary>
-    int InsuredMarkerCost(GameState state, int playerId) => 0;
+    /// <summary>The price of an Insured marker for this player, or null for "no change". 0 means free (the Medic).</summary>
+    int? InsuredMarkerCost(GameState state, int playerId) => null;
+
+    /// <summary>The share of the GO salary (in percent) this player collects when they are sent to Jail (the Lawyer).</summary>
+    int JailGoSharePercent(GameState state, int playerId) => 0;
+
+    /// <summary>True if this player may reroll their movement dice once per lap (the Hustler).</summary>
+    bool MoveReroll(GameState state, int playerId) => false;
 
     // ----- Auctions, the Casino and the Council -----
 
@@ -133,8 +142,17 @@ public interface IRuleModifier
     /// <summary>True if this player may reroll once at the Casino (the Hustler).</summary>
     bool CasinoReroll(GameState state, int playerId) => false;
 
+    /// <summary>The Stadium rent multiplier when this player picks the group, or 0 for "no change" (the Hustler).</summary>
+    int StadiumMultiplier(GameState state, int playerId) => 0;
+
     /// <summary>This player's City Council influence, if this modifier changes it (the Politician). Return 0 for "no change".</summary>
     int VoteInfluence(GameState state, int playerId) => 0;
+
+    /// <summary>Extra influence, in percent, each lobbying dollar buys this player (the Politician: 100 means double).</summary>
+    int LobbyBonusPercent(GameState state, int playerId) => 0;
+
+    /// <summary>True if this player may reverse one City Council result per game (the City Planner).</summary>
+    bool CanReverseVote(GameState state, int playerId) => false;
 
     /// <summary>How many hidden Government tiles this player may secretly peek at when the game starts (the City Planner).</summary>
     int StartPeeks(GameState state, int playerId) => 0;

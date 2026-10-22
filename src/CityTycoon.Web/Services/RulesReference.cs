@@ -30,7 +30,7 @@ public static class RulesReference
                 $"Rolling doubles gives you another turn. Three doubles in a row sends you to Jail. Passing or landing on GO pays {money(r.GoSalary)}{(r.GoMomentumGain > 0 ? $" and gives you {r.GoMomentumGain} Momentum token" : "")}.{(r.CatchUpBonus > 0 ? $" If you have the lowest net worth when you pass GO, you also get a {money(r.CatchUpBonus)} catch-up bonus." : "")}",
             ]),
             new("momentum", "Momentum tokens", [
-                $"Momentum tokens let you bend the dice. After rolling, a Nudge costs {r.NudgeCost} token and moves you up to {r.NudgeMaxSpaces} spaces further or back. A Precision Roll costs {r.PrecisionRollCost} tokens: you roll {r.PrecisionRollDice} dice and keep the two you like. You start with {r.StartingMomentum} and can hold up to {r.MomentumCap} (the Commuter more).",
+                $"Momentum tokens let you bend the dice. After rolling, a Nudge moves you further or back, {r.NudgeCost} token for each space: 1 token moves you 1 space, 2 tokens 2 spaces (up to {r.NudgeMaxSpaces}, or 4 for the Commuter). A Precision Roll costs {r.PrecisionRollCost} tokens: you roll {r.PrecisionRollDice} dice and keep the two you like. You start with {r.StartingMomentum} and can hold up to {r.MomentumCap} (the Commuter more).",
                 $"You earn more at City Park, the Fire Station, the Fast Track card and the Momentum Surge event. A Detour card played on you cancels your Nudge (the token stays spent) and moves you 1 space from your roll.",
             ]),
             new("auctions", "Buying property and auctions", [

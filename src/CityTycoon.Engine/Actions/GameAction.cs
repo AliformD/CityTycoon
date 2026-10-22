@@ -57,6 +57,7 @@ namespace CityTycoon.Engine.Actions;
 [JsonDerivedType(typeof(ChooseOrdinance), nameof(ChooseOrdinance))]
 [JsonDerivedType(typeof(ChooseDistrict), nameof(ChooseDistrict))]
 [JsonDerivedType(typeof(CastVote), nameof(CastVote))]
+[JsonDerivedType(typeof(ReverseVote), nameof(ReverseVote))]
 public abstract record GameAction;
 
 /// <summary>Roll the normal 2 dice.</summary>
@@ -167,8 +168,11 @@ public sealed record ExpressLine(string RailroadId) : GameAction;
 /// <summary>The Red perk: force an auction on this opponent's property, once per lap (Section 8.6).</summary>
 public sealed record HostileTakeover(string PropertyId) : GameAction;
 
-/// <summary>The Hustler: roll again instead of keeping a bad Casino roll.</summary>
+/// <summary>The Hustler: roll again instead of keeping a bad Casino roll, or (once per lap) a movement roll.</summary>
 public sealed record RerollDice : GameAction;
+
+/// <summary>The City Planner: turn this City Council result around (passed becomes failed, and failed becomes passed). Once per game.</summary>
+public sealed record ReverseVote : GameAction;
 
 /// <summary>The Arts District perk: keep this one of the two Opportunity cards you drew.</summary>
 public sealed record KeepCard(string CardId) : GameAction;
@@ -303,6 +307,8 @@ public enum DecisionKind
     ChooseOrdinance,
     ChooseDistrict,
     CouncilVote,
+    RerollMove,
+    ReverseCouncilVote,
 }
 
 /// <summary>
@@ -316,7 +322,7 @@ public enum DecisionKind
 /// <param name="BidIncrement">For auctions: bids must be a multiple of this.</param>
 /// <param name="MaxDownPaymentBid">For auctions: the highest bid this player can make with a down payment (0 if they can't).</param>
 /// <param name="Management">Which management actions (build, loans...) are allowed while deciding.</param>
-/// <param name="AmountOwed">For raising money: how much must be paid.</param>
+/// <param name="AmountOwed">For raising money: how much must be paid. For the Hospital: what an Insured marker costs.</param>
 /// <param name="Trade">For trade replies: the offer.</param>
 /// <param name="CountersLeft">For trade replies: how many more counter-offers this trade can have (0 means only accept or decline).</param>
 /// <param name="Dice">For Precision Rolls: the dice rolled. For Nudges: the dice being used.</param>
@@ -336,6 +342,7 @@ public enum DecisionKind
 /// <param name="Districts">City Council: the districts that can be picked.</param>
 /// <param name="MaxLobby">City Council: the most this player can lobby (their cash).</param>
 /// <param name="HasLobbyist">City Council: true if this player holds a Lobbyist card.</param>
+/// <param name="Passed">City Council, for the City Planner's reversal: true if the ordinance passed.</param>
 public sealed record PendingDecision(
     int PlayerId,
     DecisionKind Kind,
@@ -365,4 +372,5 @@ public sealed record PendingDecision(
     string? DistrictId = null,
     IReadOnlyList<string>? Districts = null,
     int MaxLobby = 0,
-    bool HasLobbyist = false);
+    bool HasLobbyist = false,
+    bool Passed = false);

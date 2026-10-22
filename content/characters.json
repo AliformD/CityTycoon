@@ -7,50 +7,50 @@
     {
       "id": "mogul",
       "name": "The Mogul",
-      "text": "In secret-bid auctions, your bid counts as $10 higher than it is when bids are compared, and you win ties. You still pay your real bid. When two players roll dice against each other and tie, you win the tie.",
-      "modifiers": [ { "type": "BidBonus", "value": 10 }, { "type": "DiceTieBreaker" } ]
+      "text": "In secret-bid auctions, your bid counts as $20 higher than it is when bids are compared, and you win ties. You still pay your real bid. When two players roll dice against each other and tie, you win the tie.",
+      "modifiers": [ { "type": "BidBonus", "value": 20 }, { "type": "DiceTieBreaker" } ]
     },
     {
       "id": "hustler",
       "name": "The Hustler",
-      "text": "Once per Casino visit, you may reroll your dice (High/Low) or your duel roll (Dice Duel).",
-      "modifiers": [ { "type": "CasinoReroll" } ]
+      "text": "Once per Casino visit, you may reroll your dice (High/Low) or your duel roll (Dice Duel). Once per lap, you may reroll your dice when you roll to move. Your Stadium pick triples rent instead of doubling it.",
+      "modifiers": [ { "type": "CasinoReroll" }, { "type": "MoveReroll" }, { "type": "StadiumMultiplier", "value": 3 } ]
     },
     {
       "id": "commuter",
       "name": "The Commuter",
-      "text": "Start the game with 3 Momentum tokens instead of 2. Your token limit is 4 instead of 2.",
-      "modifiers": [ { "type": "StartingMomentum", "value": 3 }, { "type": "MomentumCap", "value": 2 } ]
+      "text": "Start the game with 3 Momentum tokens instead of 2. Your token limit is 4 instead of 2, and you can Nudge up to 4 spaces (1 token per space).",
+      "modifiers": [ { "type": "StartingMomentum", "value": 3 }, { "type": "MomentumCap", "value": 2 }, { "type": "NudgeRange", "value": 2 } ]
     },
     {
       "id": "lawyer",
       "name": "The Lawyer",
-      "text": "You never pay Jail bail (leaving early is free). You can't be targeted by Audit.",
-      "modifiers": [ { "type": "FreeBail" }, { "type": "ImmuneToCard", "card": "audit" } ]
+      "text": "You never pay Jail bail (leaving early is free). When you're sent to Jail, you still collect half the GO salary. You can't be targeted by Audit.",
+      "modifiers": [ { "type": "FreeBail" }, { "type": "JailGoShare", "value": 50 }, { "type": "ImmuneToCard", "card": "audit" } ]
     },
     {
       "id": "contractor",
       "name": "The Contractor",
-      "text": "Your building costs are 10% lower.",
-      "modifiers": [ { "type": "BuildDiscount", "value": 10 } ]
+      "text": "Your building costs are 25% lower.",
+      "modifiers": [ { "type": "BuildDiscount", "value": 25 } ]
     },
     {
       "id": "politician",
       "name": "The Politician",
-      "text": "Your City Council vote is worth 200 influence instead of 100.",
-      "modifiers": [ { "type": "VoteInfluence", "value": 200 } ]
+      "text": "Your City Council vote is worth 250 influence instead of 100, and each dollar you spend lobbying buys 2 influence instead of 1.",
+      "modifiers": [ { "type": "VoteInfluence", "value": 250 }, { "type": "LobbyBonus", "value": 100 } ]
     },
     {
       "id": "city-planner",
       "name": "The City Planner",
-      "text": "At game start, secretly look at 1 hidden Government tile of your choice. Each time you pass GO, secretly look at 1 more that is still hidden.",
-      "modifiers": [ { "type": "PeekAtStart", "value": 1 }, { "type": "PeekOnGo", "value": 1 } ]
+      "text": "At game start, secretly look at 1 hidden Government tile of your choice. Each time you pass GO, secretly look at 1 more that is still hidden. Once per game, after a City Council vote is rolled, you may reverse the result.",
+      "modifiers": [ { "type": "PeekAtStart", "value": 1 }, { "type": "PeekOnGo", "value": 1 }, { "type": "ReverseVote" } ]
     },
     {
       "id": "medic",
       "name": "The Medic",
-      "text": "If you're sent to the Hospital, you pay no bill and roll normally on your next turn. Insured markers cost you $25 instead of $50.",
-      "modifiers": [ { "type": "HospitalImmunity" }, { "type": "InsuredMarkerCost", "value": 25 } ]
+      "text": "If you're sent to the Hospital, you pay no bill and roll normally on your next turn. Insured markers are free for you (others pay $50).",
+      "modifiers": [ { "type": "HospitalImmunity" }, { "type": "InsuredMarkerCost", "value": 0 } ]
     }
   ]
 }

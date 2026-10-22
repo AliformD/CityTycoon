@@ -16,7 +16,9 @@ public sealed class RulesConfig
     public required int StartingCash { get; init; }
     public required int StartingMomentum { get; init; }
     public required int MomentumCap { get; init; }
+    /// <summary>The furthest a Nudge can move you, either way (the Commuter adds more).</summary>
     public required int NudgeMaxSpaces { get; init; }
+    /// <summary>Momentum tokens a Nudge costs for each space it moves you (decision #151).</summary>
     public required int NudgeCost { get; init; }
     public required int PrecisionRollCost { get; init; }
 

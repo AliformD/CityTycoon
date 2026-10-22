@@ -5,6 +5,7 @@
   "startingCash": 1200,
   "startingMomentum": 2,
   "momentumCap": 2,
+  // A Nudge costs 1 token per space moved, up to 2 spaces (the Commuter 4). Decision #151.
   "nudgeMaxSpaces": 2,
   "nudgeCost": 1,
   "precisionRollCost": 2,

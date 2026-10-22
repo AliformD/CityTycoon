@@ -30,13 +30,21 @@ public static class MomentumRules
     /// <summary>You can't spend tokens in Jail (Section 14.2).</summary>
     public static bool CanSpend(PlayerState player, int cost) => !player.InJail && player.Momentum >= cost;
 
+    /// <summary>The furthest this player can Nudge: 2 spaces, or 4 for the Commuter (decision #151).</summary>
+    public static int NudgeMaxSpaces(EngineContext ctx, PlayerState player) => RuleModifiers.NudgeMaxSpaces(ctx.State, ctx.Content, player.Id);
+
+    /// <summary>What a Nudge of this many spaces costs: 1 token for each space, either way (decision #151).</summary>
+    public static int NudgeCost(EngineContext ctx, int spaces) => Math.Abs(spaces) * ctx.Rules.NudgeCost;
+
     /// <summary>
-    /// The Nudges allowed after rolling this total: up to 2 spaces either way,
-    /// but you must still move at least 1 space forward. 0 (no Nudge) is always allowed.
+    /// The Nudges allowed after rolling this total. Each space costs a token, so 1 token moves you
+    /// 1 space either way and 2 tokens 2 spaces, up to the player's limit (2, the Commuter 4).
+    /// You must still move at least 1 space forward. 0 (no Nudge) is always allowed.
     /// </summary>
     public static IEnumerable<int> NudgeOptions(EngineContext ctx, PlayerState player, int rolled)
     {
-        int max = CanSpend(player, ctx.Rules.NudgeCost) ? ctx.Rules.NudgeMaxSpaces : 0;
+        int affordable = player.InJail || ctx.Rules.NudgeCost <= 0 ? 0 : player.Momentum / ctx.Rules.NudgeCost;
+        int max = Math.Min(NudgeMaxSpaces(ctx, player), affordable);
         for (int spaces = -max; spaces <= max; spaces++)
         {
             if (rolled + spaces >= 1)

@@ -20,6 +20,7 @@ public sealed class HardBot(ulong seed, GameContent? content = null) : NormalBot
     protected override double LobbyShare => 0.1;
     protected override int LobbyReserveFactor => 1;
     protected override double NudgeThreshold => TokenValue * 0.6;
+    protected override double RerollMargin => 40;
 
     /// <summary>Half of what the next 12 spaces could cost (rent or tax), plus a small cushion. Spare cash goes into buildings.</summary>
     protected override int Reserve(PlayerView view)

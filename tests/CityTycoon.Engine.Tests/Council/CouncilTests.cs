@@ -75,7 +75,7 @@ public class CouncilTests
     }
 
     [Fact]
-    public void ThePolitician_VoteIsWorth200()
+    public void ThePolitician_VoteIsWorth250()
     {
         var game = new TestGame(2, characters: ["politician", "lawyer"]);
         game.ConveneAndPropose("public-works");
@@ -83,7 +83,7 @@ public class CouncilTests
         game.Vote(0, VoteChoice.Yes);
         game.Vote(1, VoteChoice.No);
         CouncilResolved result = game.LastResolved();
-        Assert.Equal(300, result.YesInfluence);   // 200 + 100 public opinion
+        Assert.Equal(350, result.YesInfluence);   // 250 + 100 public opinion
         Assert.Equal(200, result.NoInfluence);    // 100 + 100 public opinion
     }
 

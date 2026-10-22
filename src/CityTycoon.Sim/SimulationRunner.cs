@@ -297,7 +297,9 @@ public static class SimulationRunner
             MogulEdgeWins = SealedAuctionOutcomes(state).Count(o => o.MogulWonOnEdgeOrTie),
             HostileTakeovers = log.OfType<HostileTakeoverUsed>().Count(),
             CouncilSessions = log.OfType<CouncilResolved>().Count(),
-            OrdinancesPassed = log.OfType<CouncilResolved>().Count(r => r.Passed),
+            // The City Planner's reversal (decision #152) can turn a result around after the roll.
+            OrdinancesPassed = log.OfType<CouncilResolved>().Count(r => r.Passed)
+                + log.OfType<CouncilReversed>().Sum(r => r.NowPassed ? 1 : -1),
             LobbyingSpent = log.OfType<CouncilResolved>().Sum(r => r.Votes.Sum(v => v.Lobby)),
             CouncilCancelled = log.OfType<CouncilCancelled>().Count(),
             OrdinanceCounts = log.OfType<CouncilResolved>().Where(r => r.Passed).GroupBy(r => r.OrdinanceId).ToDictionary(g => g.Key, g => g.Count()),

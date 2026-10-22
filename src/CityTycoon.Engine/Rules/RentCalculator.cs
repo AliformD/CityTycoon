@@ -60,12 +60,14 @@ public static class RentCalculator
             total = total * (100 + RuleModifiers.NetRentPercent(state, content, propertyId, active)) / 100;
         }
 
-        // Step 3: multipliers. A Stadium boost doubles a color group's rent.
-        // Two boosts on the same group still only double it (docs/DECISIONS.md).
-        if (def.Group != null && state.StadiumBoosts.Any(b => b.GroupId == def.Group))
+        // Step 3: multipliers. A Stadium boost doubles a color group's rent (the Hustler's triples it).
+        // Two boosts on the same group don't stack: the biggest one counts (docs/DECISIONS.md).
+        var stadium = state.StadiumBoosts.Where(b => def.Group != null && b.GroupId == def.Group).ToList();
+        if (stadium.Count > 0)
         {
-            total *= content.Rules.StadiumRentMultiplier;
-            lines.Add(new RentLine("Stadium boost", $"×{content.Rules.StadiumRentMultiplier}"));
+            int times = stadium.Max(b => b.Multiplier > 0 ? b.Multiplier : content.Rules.StadiumRentMultiplier);
+            total *= times;
+            lines.Add(new RentLine("Stadium boost", $"×{times}"));
         }
 
         // A Grand Opening multiplies one property's rent. It adds to a Stadium boost.

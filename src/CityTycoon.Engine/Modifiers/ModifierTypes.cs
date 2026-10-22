@@ -47,15 +47,22 @@ public static class ModifierTypes
         ["BidBonus"] = new(c => new BidBonusModifier(c), NeedsValue: true),
         ["DiceTieBreaker"] = new(c => new DiceTieBreakerModifier(c)),
         ["CasinoReroll"] = new(c => new CasinoRerollModifier(c)),
+        ["MoveReroll"] = new(c => new MoveRerollModifier(c)),
+        ["StadiumMultiplier"] = new(c => new StadiumMultiplierModifier(c), NeedsValue: true),
+        ["NudgeRange"] = new(c => new NudgeRangeModifier(c), NeedsValue: true),
         ["StartingMomentum"] = new(c => new StartingMomentumModifier(c), NeedsValue: true),
         ["FreeBail"] = new(c => new FreeBailModifier(c)),
+        ["JailGoShare"] = new(c => new JailGoShareModifier(c), NeedsValue: true),
         ["ImmuneToCard"] = new(c => new ImmuneToCardModifier(c), NeedsCard: true),
         ["BuildDiscount"] = new(c => new BuildDiscountModifier(c), NeedsValue: true),
         ["VoteInfluence"] = new(c => new VoteInfluenceModifier(c), NeedsValue: true),
+        ["LobbyBonus"] = new(c => new LobbyBonusModifier(c), NeedsValue: true),
+        ["ReverseVote"] = new(c => new ReverseVoteModifier(c)),
         ["PeekAtStart"] = new(c => new PeekAtStartModifier(c), NeedsValue: true),
         ["PeekOnGo"] = new(c => new PeekOnGoModifier(c), NeedsValue: true),
         ["HospitalImmunity"] = new(c => new HospitalImmunityModifier(c)),
-        ["InsuredMarkerCost"] = new(c => new InsuredMarkerCostModifier(c), NeedsValue: true),
+        // "value" is the price, so 0 (free) is allowed.
+        ["InsuredMarkerCost"] = new(c => new InsuredMarkerCostModifier(c)),
     };
 
     public static IReadOnlyCollection<string> Types => All.Keys;

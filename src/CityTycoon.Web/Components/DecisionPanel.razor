@@ -91,7 +91,7 @@ else if (decision.Kind == DecisionKind.ChoosePrecisionDice && decision.Dice is {
 }
 else if (decision.Kind == DecisionKind.ChooseNudge)
 {
-    @* Nudge (Section 10.2): spend a Momentum token to move up to 2 spaces more or less. The board lights up where each choice lands. *@
+    @* Nudge (Section 7.3): 1 Momentum token per space, up to 2 spaces more or less (the Commuter 4). The board lights up where each choice lands. *@
     var rolled = decision.Dice?.Sum() ?? 0;
     <div class="decision nudge">
         <h2>@view.Me.Name, you rolled @rolled. Nudge it?</h2>
@@ -271,7 +271,7 @@ else if (decision.Kind == DecisionKind.ChooseCharacter)
         </div>
     </div>
 }
-else if (decision.Kind == DecisionKind.ChooseReroll)
+else if (decision.Kind is DecisionKind.ChooseReroll or DecisionKind.RerollMove)
 {
     <div class="decision reroll">
         <h2>@view.Me.Name, @AfterName(decision.Prompt)</h2>
@@ -279,6 +279,19 @@ else if (decision.Kind == DecisionKind.ChooseReroll)
             @foreach (var action in main)
             {
                 <button class="big @(action is RerollDice ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)">@(action is RerollDice ? UiHelpers.ActionLabel(action, view, Content) : "Keep it")</button>
+            }
+        </div>
+    </div>
+}
+else if (decision.Kind == DecisionKind.ReverseCouncilVote)
+{
+    @* City Planner: once per game, turn a City Council result around. *@
+    <div class="decision reverse-vote">
+        <h2>@view.Me.Name, @AfterName(decision.Prompt)</h2>
+        <div class="buttons">
+            @foreach (var action in main)
+            {
+                <button class="big @(action is NoThanks ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)">@(action is NoThanks ? "Let it stand" : UiHelpers.ActionLabel(action, view, Content))</button>
             }
         </div>
     </div>

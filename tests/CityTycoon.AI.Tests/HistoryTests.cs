@@ -70,7 +70,7 @@ public class HistoryTests
     [Fact]
     public async Task EverySpace_CountsItsLandings()
     {
-        var engine = await PlayAsync(3, 4, smartBots: true);
+        var engine = await PlayAsync(4, 4, smartBots: true); // a game where somebody lands on Income Tax
         var view = engine.GetView(0);
         foreach (var space in engine.State.Board)
         {

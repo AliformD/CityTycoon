@@ -123,3 +123,24 @@ Decision #150 added a trade report card and landing odds to every Sim summary. 3
 - Landing odds by color group (share of all turns that end on one of its spaces): Orange 8.5%, Pink 8.1%, Light Blue 7.9%, Yellow 7.9%, Red 7.3%, Green 6.9%, Brown 4.9%, Dark Blue 4.0%. Per space in `landing.csv`.
 
 Bots almost never agree with each other, because both sides use the same sums: the buyer's limit is usually below the seller's. Making more trades happen is step E of the trading plan.
+
+## Nudge per space and stronger characters (2026-10-22)
+Decisions #151 and #152. 1000 games each, 4 players, Timed, 40 rounds, random characters, seed 1. "Before" is main just before this change.
+
+| Character | 4 Normal bots before | after | Hard vs Easy before | after |
+| --- | --- | --- | --- | --- |
+| Mogul | 43.4 % | 48.9 % | 38.9 % | 36.6 % |
+| Hustler | 20.8 % | 28.1 % | 19.4 % | 30.5 % |
+| Commuter | 26.2 % | 20.2 % | 27.0 % | 20.0 % |
+| Lawyer | 25.0 % | 25.3 % | 21.8 % | 24.2 % |
+| Contractor | 23.3 % | 24.7 % | 27.6 % | 30.5 % |
+| Politician | 23.4 % | 18.9 % | 24.6 % | 18.5 % |
+| City Planner | 19.7 % | 18.0 % | 21.1 % | 19.7 % |
+| Medic | 19.0 % | 16.8 % | 20.3 % | 20.7 % |
+
+Even share is 25 %. Other numbers barely moved: Nudges per game 19.3 to 18.4 (Normal), bankruptcies 0.77 to 0.69, first building round 4.1 to 5.5 on average, Hard seats won 79.3 % to 74.2 % against Easy.
+
+### Flags for Angel (not changed)
+- **The Mogul got stronger** (it was already the only character over the target). The $20 edge is what was asked for.
+- **The Hustler is now one of the strongest.** The lap reroll and the ×3 Stadium both help.
+- **The Commuter and the Politician got weaker** even though neither lost anything on paper. The Commuter's tokens now buy fewer spaces (a 2-space Nudge used to cost 1 token, now 2). The Politician drop showed in both runs; it may be that a stronger lobby still costs real cash, and bots that lobby lose games (see "Blocking a monopoly" above). Not investigated further.

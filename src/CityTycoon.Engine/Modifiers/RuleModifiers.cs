@@ -206,6 +206,11 @@ public static class RuleModifiers
         IReadOnlyList<IRuleModifier>? active = null) =>
         content.Rules.MomentumCap + (active ?? Active(state, content)).Sum(m => m.MomentumCapBonus(state, playerId));
 
+    /// <summary>The furthest this player can Nudge, either way (decision #151).</summary>
+    public static int NudgeMaxSpaces(GameState state, GameContent content, int playerId,
+        IReadOnlyList<IRuleModifier>? active = null) =>
+        content.Rules.NudgeMaxSpaces + (active ?? Active(state, content)).Sum(m => m.NudgeRangeBonus(state, playerId));
+
     /// <summary>How many tokens this player starts the game with.</summary>
     public static int StartingMomentum(GameState state, GameContent content, int playerId) =>
         Math.Max(content.Rules.StartingMomentum, Active(state, content).Select(m => m.StartingMomentum(state, playerId)).DefaultIfEmpty(0).Max());
@@ -281,11 +286,21 @@ public static class RuleModifiers
     public static bool ShrugsOffHospital(GameState state, GameContent content, int playerId) =>
         Active(state, content).Any(m => m.ShrugsOffHospital(state, playerId));
 
-    public static int InsuredMarkerCost(GameState state, GameContent content, int playerId)
+    public static int InsuredMarkerCost(GameState state, GameContent content, int playerId,
+        IReadOnlyList<IRuleModifier>? active = null)
     {
-        var cheaper = Active(state, content).Select(m => m.InsuredMarkerCost(state, playerId)).Where(c => c > 0).ToList();
+        var cheaper = (active ?? Active(state, content)).Select(m => m.InsuredMarkerCost(state, playerId)).OfType<int>().ToList();
         return cheaper.Count == 0 ? content.Rules.InsuredMarkerCost : cheaper.Min();
     }
+
+    /// <summary>What this player collects when sent to Jail, each with its name (the Lawyer: half the GO salary).</summary>
+    public static List<(int Amount, string Source)> JailIncomes(GameState state, GameContent content, int playerId) =>
+        Amounts(Active(state, content), m => content.Rules.GoSalary * m.JailGoSharePercent(state, playerId) / 100);
+
+    /// <summary>The name of the modifier that lets this player reroll their move once per lap, or null (the Hustler).</summary>
+    public static string? MoveReroll(GameState state, GameContent content, int playerId,
+        IReadOnlyList<IRuleModifier>? active = null) =>
+        (active ?? Active(state, content)).FirstOrDefault(m => m.MoveReroll(state, playerId))?.Source;
 
     // ----- Auctions, the Casino and the Council -----
 
@@ -299,6 +314,20 @@ public static class RuleModifiers
 
     public static bool CasinoReroll(GameState state, GameContent content, int playerId) =>
         Active(state, content).Any(m => m.CasinoReroll(state, playerId));
+
+    /// <summary>How many times over a Stadium boost picked by this player multiplies rent (2, the Hustler 3).</summary>
+    public static int StadiumMultiplier(GameState state, GameContent content, int playerId) =>
+        Math.Max(content.Rules.StadiumRentMultiplier, Active(state, content).Select(m => m.StadiumMultiplier(state, playerId)).DefaultIfEmpty(0).Max());
+
+    /// <summary>Influence one lobbying dollar buys this player, in percent (100 normally, the Politician 200).</summary>
+    public static int LobbyPercent(GameState state, GameContent content, int playerId,
+        IReadOnlyList<IRuleModifier>? active = null) =>
+        100 + (active ?? Active(state, content)).Sum(m => m.LobbyBonusPercent(state, playerId));
+
+    /// <summary>The name of the modifier that lets this player reverse a Council result, or null (the City Planner).</summary>
+    public static string? VoteReversal(GameState state, GameContent content, int playerId,
+        IReadOnlyList<IRuleModifier>? active = null) =>
+        (active ?? Active(state, content)).FirstOrDefault(m => m.CanReverseVote(state, playerId))?.Source;
 
     /// <summary>This player's City Council influence (Section 11.3).</summary>
     public static int VoteInfluence(GameState state, GameContent content, int playerId) =>

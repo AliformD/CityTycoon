@@ -26,23 +26,23 @@ public class CharacterTests
     // ----- The Mogul -----
 
     [Fact]
-    public void Mogul_WinsATieAgainstABidTenDollarsHigher()
+    public void Mogul_WinsATieAgainstABidTwentyDollarsHigher()
     {
         var game = With("mogul", seat: 0);
         game.RollOnto(0, "market-street");
         game.Do(0, new PlaceBid(100));
-        game.Do(1, new PlaceBid(110)); // 100 + the Mogul's 10 ties it, and the Mogul wins ties
+        game.Do(1, new PlaceBid(120)); // 100 + the Mogul's 20 ties it, and the Mogul wins ties
         Assert.Equal(0, game.Property("market-street").OwnerId);
-        Assert.Contains(game.State.Log, e => e is BidEdgeWon { PlayerId: 0, Bid: 100, TopBid: 110 });
+        Assert.Contains(game.State.Log, e => e is BidEdgeWon { PlayerId: 0, Bid: 100, TopBid: 120 });
     }
 
     [Fact]
-    public void Mogul_StillLosesToABidMoreThanTenHigher()
+    public void Mogul_StillLosesToABidMoreThanTwentyHigher()
     {
         var game = With("mogul", seat: 0);
         game.RollOnto(0, "market-street");
         game.Do(0, new PlaceBid(100));
-        game.Do(1, new PlaceBid(120));
+        game.Do(1, new PlaceBid(130));
         Assert.Equal(1, game.Property("market-street").OwnerId);
     }
 
@@ -194,13 +194,13 @@ public class CharacterTests
     // ----- The Contractor -----
 
     [Fact]
-    public void Contractor_BuildsTenPercentCheaper()
+    public void Contractor_BuildsAQuarterCheaper()
     {
         var game = With("contractor");
         game.Give(0, "mill-street", "cobble-lane");
-        Assert.Equal(45, game.Engine.GetView(0).Properties["mill-street"].NextLevelCost); // $50 less 10%
+        Assert.Equal(35, game.Engine.GetView(0).Properties["mill-street"].NextLevelCost); // $50 less 25% is $37.50, rounded down to $35
         game.Do(0, new Build("mill-street"));
-        Assert.Equal(1500 - 45, game.Player(0).Cash);
+        Assert.Equal(1500 - 35, game.Player(0).Cash);
     }
 
     // ----- The Politician -----
@@ -209,7 +209,7 @@ public class CharacterTests
     public void Politician_HasABiggerVote()
     {
         var game = With("politician");
-        Assert.Equal(200, RuleModifiers.VoteInfluence(game.State, game.Engine.Content, 0));
+        Assert.Equal(250, RuleModifiers.VoteInfluence(game.State, game.Engine.Content, 0));
         Assert.Equal(100, RuleModifiers.VoteInfluence(game.State, game.Engine.Content, 1));
     }
 
@@ -271,14 +271,28 @@ public class CharacterTests
     }
 
     [Fact]
-    public void Medic_InsuredMarkersCostHalf()
+    public void Medic_InsuredMarkersAreFree()
     {
         var game = With("medic");
         game.Player(0).Momentum = 0;
         game.RollOnto(0, "hospital");
-        Assert.Equal(DecisionKind.HospitalVisit, game.DecisionFor(0)!.Kind);
+        var ask = game.DecisionFor(0)!;
+        Assert.Equal(DecisionKind.HospitalVisit, ask.Kind);
+        Assert.Equal(0, ask.AmountOwed);
+        Assert.Equal(0, game.Engine.GetView(0).Me.InsuredMarkerCost);
         game.Do(0, new BuyInsurance());
-        Assert.Equal(1500 - 25, game.Player(0).Cash);
+        Assert.Equal(1500, game.Player(0).Cash);
+        Assert.True(game.Player(0).IsInsured);
+    }
+
+    [Fact]
+    public void OtherPlayers_StillPayFullPriceForInsuredMarkers()
+    {
+        var game = With("medic", seat: 1);
+        game.Player(0).Momentum = 0;
+        game.RollOnto(0, "hospital");
+        game.Do(0, new BuyInsurance());
+        Assert.Equal(1500 - 50, game.Player(0).Cash);
     }
 
     // ----- Picking characters (Section 5) -----

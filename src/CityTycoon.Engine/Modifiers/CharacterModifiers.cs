@@ -25,6 +25,24 @@ public sealed class CasinoRerollModifier(ModifierContext c) : OwnedModifier(c), 
     public bool CasinoReroll(GameState s, int playerId) => Mine(playerId);
 }
 
+/// <summary>The Hustler: one reroll of their movement dice per lap (decision #152).</summary>
+public sealed class MoveRerollModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+{
+    public bool MoveReroll(GameState s, int playerId) => Mine(playerId);
+}
+
+/// <summary>The Hustler: a bigger Stadium multiplier on the group they pick.</summary>
+public sealed class StadiumMultiplierModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+{
+    public int StadiumMultiplier(GameState s, int playerId) => Mine(playerId) ? Value : 0;
+}
+
+/// <summary>The Commuter: a Nudge can reach further.</summary>
+public sealed class NudgeRangeModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+{
+    public int NudgeRangeBonus(GameState s, int playerId) => Mine(playerId) ? Value : 0;
+}
+
 /// <summary>The Commuter (and Commuter Belt): room for more Momentum tokens.</summary>
 public sealed class MomentumCapModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
 {
@@ -41,6 +59,12 @@ public sealed class StartingMomentumModifier(ModifierContext c) : OwnedModifier(
 public sealed class FreeBailModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
 {
     public bool FreeBail(GameState s, int playerId) => Mine(playerId);
+}
+
+/// <summary>The Lawyer: collects part of the GO salary when sent to Jail ("value" is the percent).</summary>
+public sealed class JailGoShareModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+{
+    public int JailGoSharePercent(GameState s, int playerId) => Mine(playerId) ? Value : 0;
 }
 
 /// <summary>The Lawyer: one named card (Audit) can't be played against them.</summary>
@@ -63,6 +87,18 @@ public sealed class VoteInfluenceModifier(ModifierContext c) : OwnedModifier(c),
     public int VoteInfluence(GameState s, int playerId) => Mine(playerId) ? Value : 0;
 }
 
+/// <summary>The Politician: each lobbying dollar buys more influence ("value" is the extra percent).</summary>
+public sealed class LobbyBonusModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+{
+    public int LobbyBonusPercent(GameState s, int playerId) => Mine(playerId) ? Value : 0;
+}
+
+/// <summary>The City Planner: may reverse the result of one City Council vote per game (decision #152).</summary>
+public sealed class ReverseVoteModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+{
+    public bool CanReverseVote(GameState s, int playerId) => Mine(playerId);
+}
+
 /// <summary>The City Planner: peeks at hidden Government tiles when the game starts.</summary>
 public sealed class PeekAtStartModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
 {
@@ -81,8 +117,8 @@ public sealed class HospitalImmunityModifier(ModifierContext c) : OwnedModifier(
     public bool ShrugsOffHospital(GameState s, int playerId) => Mine(playerId);
 }
 
-/// <summary>The Medic: Insured markers cost less.</summary>
+/// <summary>The Medic: Insured markers cost less ("value" is the price, and 0 means free).</summary>
 public sealed class InsuredMarkerCostModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
 {
-    public int InsuredMarkerCost(GameState s, int playerId) => Mine(playerId) ? Value : 0;
+    public int? InsuredMarkerCost(GameState s, int playerId) => Mine(playerId) ? Value : null;
 }

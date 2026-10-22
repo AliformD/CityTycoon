@@ -89,12 +89,14 @@ public sealed class TestGame
 
     /// <summary>
     /// Scripts the next two dice, then rolls them. If the player could Nudge,
-    /// they choose not to, so the move is exactly the dice total.
+    /// they choose not to, so the move is exactly the dice total. A Hustler keeps the roll.
     /// </summary>
     public ActionResult Roll(int playerId, int die1, int die2)
     {
         Dice.Add(die1, die2);
         ActionResult result = Do(playerId, new RollDice());
+        if (DecisionFor(playerId)?.Kind == DecisionKind.RerollMove)
+            result = Do(playerId, new NoThanks());
         if (DecisionFor(playerId)?.Kind == DecisionKind.ChooseNudge)
             result = Do(playerId, new Nudge(0));
         return result;

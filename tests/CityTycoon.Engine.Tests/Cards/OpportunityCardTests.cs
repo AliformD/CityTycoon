@@ -132,7 +132,7 @@ public class OpportunityCardTests
         Assert.Equal([new NoThanks(), new PlayCard("detour", 0, null, -3), new PlayCard("detour", 0, null, -1)], game.Engine.GetLegalActions(1));
         game.Do(1, new PlayCard("detour", TargetPlayerId: 0, Number: -3));
         Assert.Equal(game.State.IndexOf("jail") - 1, game.Player(0).Position);
-        Assert.Equal(1, game.Player(0).Momentum); // the token stays spent
+        Assert.Equal(0, game.Player(0).Momentum); // both tokens stay spent
         Assert.Contains(game.State.Log, e => e is Detoured { Spaces: -3, CancelledNudge: true });
     }
 
@@ -141,7 +141,7 @@ public class OpportunityCardTests
     {
         var game = new TestGame();
         game.GiveCard(1, "detour");
-        game.Player(0).Momentum = 1;
+        game.Player(0).Momentum = 2;
         game.PlaceBefore(0, "jail", 2);
         game.Dice.Add(1, 2);
         game.Do(0, new RollDice());

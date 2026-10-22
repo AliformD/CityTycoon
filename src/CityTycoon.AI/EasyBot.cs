@@ -78,7 +78,8 @@ public partial class EasyBot : IPlayerController
             DecisionKind.ChoosePrecisionDice => ChooseBestDice(view, decision),
             DecisionKind.ChooseNudge => ChooseNudge(view, decision, legalActions),
             // Insurance only when there's plenty of spare cash.
-            DecisionKind.HospitalVisit => view.Me.Cash - content.Rules.InsuredMarkerCost >= Reserve(view) * 2 ? new BuyInsurance() : new NoThanks(),
+            // (A free one, for the Medic, is always worth taking: it still covers a Fire!.)
+            DecisionKind.HospitalVisit => view.Me.InsuredMarkerCost == 0 || view.Me.Cash - view.Me.InsuredMarkerCost >= Reserve(view) * 2 ? new BuyInsurance() : new NoThanks(),
             // The Casino loses money on average, so the Easy bot walks past.
             DecisionKind.CasinoBet => new NoThanks(),
             // A duel is a coin flip: fine for pocket change only.
@@ -97,6 +98,8 @@ public partial class EasyBot : IPlayerController
             DecisionKind.ChooseCharacter => legalActions[rng.NextInt(legalActions.Count)],
             // A reroll is only offered when the roll is bad, so always take it.
             DecisionKind.ChooseReroll => new RerollDice(),
+            DecisionKind.RerollMove => ChooseMoveReroll(view, decision),
+            DecisionKind.ReverseCouncilVote => ReverseCouncilVote(view, decision),
             DecisionKind.KeepCard => new KeepCard(decision.Cards!.MaxBy(CardValue)!),
             DecisionKind.PeekTile => legalActions[rng.NextInt(legalActions.Count)],
             DecisionKind.ChooseOrdinance => ChooseOrdinance(view, decision),
@@ -399,16 +402,58 @@ public partial class EasyBot : IPlayerController
         return new ChooseDice(best.Item1, best.Item2);
     }
 
+    /// <summary>
+    /// Each space of a Nudge costs a token (decision #151), so a Nudge must beat staying put by
+    /// <see cref="NudgeThreshold"/> for every token it spends. The best of those wins.
+    /// </summary>
     private GameAction ChooseNudge(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions)
     {
         int rolled = decision.Dice!.Sum();
         double stay = LandingScore(view, rolled);
         var best = legalActions.OfType<Nudge>()
             .Where(n => n.Spaces != 0)
-            .Select(n => (Nudge: n, Score: LandingScore(view, rolled + n.Spaces)))
-            .OrderByDescending(x => x.Score)
+            .Select(n => (Nudge: n, Gain: LandingScore(view, rolled + n.Spaces) - stay - NudgeThreshold * Math.Abs(n.Spaces) * content.Rules.NudgeCost))
+            .OrderByDescending(x => x.Gain)
+            .ThenBy(x => Math.Abs(x.Nudge.Spaces))
             .FirstOrDefault();
-        return best.Nudge != null && best.Score - stay > NudgeThreshold ? best.Nudge : new Nudge(0);
+        return best.Nudge != null && best.Gain > 0 ? best.Nudge : new Nudge(0);
+    }
+
+    /// <summary>How much worse than an average roll this roll must be before the Hustler spends their once-a-lap reroll.</summary>
+    protected virtual double RerollMargin => 60;
+
+    /// <summary>
+    /// The Hustler's movement reroll (decision #152): compare this roll (with the best Nudge the bot
+    /// could add) against the average of every roll it could get instead. Doubles count a little extra.
+    /// </summary>
+    private GameAction ChooseMoveReroll(PlayerView view, PendingDecision decision)
+    {
+        var dice = decision.Dice!;
+        int tokens = Math.Min(view.Me.Momentum / Math.Max(1, content.Rules.NudgeCost), view.Me.NudgeMaxSpaces);
+        double Value(int a, int b)
+        {
+            int total = a + b;
+            double best = Enumerable.Range(-tokens, 2 * tokens + 1)
+                .Where(n => total + n >= 1)
+                .Max(n => LandingScore(view, total + n) - NudgeThreshold * Math.Abs(n));
+            return best + (b != 0 && a == b ? 20 : 0);
+        }
+        double now = Value(dice[0], dice.Count > 1 ? dice[1] : 0);
+        double average = dice.Count > 1
+            ? Enumerable.Range(1, 6).SelectMany(a => Enumerable.Range(1, 6).Select(b => Value(a, b))).Average()
+            : Enumerable.Range(1, 6).Average(a => Value(a, 0));
+        return now < average - RerollMargin ? new RerollDice() : new NoThanks();
+    }
+
+    /// <summary>
+    /// The City Planner's once-a-game reversal: used on the first result that goes against the bot
+    /// (an ordinance that hurts it passed, or one that helps it failed).
+    /// </summary>
+    protected virtual GameAction ReverseCouncilVote(PlayerView view, PendingDecision decision)
+    {
+        int benefit = Benefit(view, decision.OrdinanceId!, decision.DistrictId);
+        bool against = decision.Passed ? benefit < 0 : benefit > 0;
+        return against ? new ReverseVote() : new NoThanks();
     }
 
     /// <summary>
@@ -453,8 +498,9 @@ public partial class EasyBot : IPlayerController
             PropertyType.Railroad => content.Rules.RailroadRents[Math.Max(0, CountOfType(view, ownerId, PropertyType.Railroad) - 1)],
             _ => content.Rules.UtilityRentMultipliers[Math.Max(0, CountOfType(view, ownerId, PropertyType.Utility) - 1)] * diceTotal,
         };
-        if (def.Group != null && view.StadiumBoosts.Any(b => b.GroupId == def.Group))
-            rent *= content.Rules.StadiumRentMultiplier;
+        var stadium = view.StadiumBoosts.Where(b => def.Group != null && b.GroupId == def.Group).ToList();
+        if (stadium.Count > 0)
+            rent *= stadium.Max(b => b.Multiplier > 0 ? b.Multiplier : content.Rules.StadiumRentMultiplier);
         rent = rent * (100 + owned.RentPercent) / 100; // revealed tiles next door
         if (view.Player(ownerId).InJail)
             rent *= content.Rules.JailRentMultiplier;

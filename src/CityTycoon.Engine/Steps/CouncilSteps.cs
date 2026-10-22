@@ -9,7 +9,7 @@ using CityTycoon.Engine.State;
 
 namespace CityTycoon.Engine.Steps;
 
-public enum CouncilStage { Start, PickOrdinance, PickDistrict, Vote, Resolve, Finish }
+public enum CouncilStage { Start, PickOrdinance, PickDistrict, Vote, Resolve, Reverse, Finish }
 
 /// <summary>One player's sealed vote, kept until everyone has voted.</summary>
 public sealed class CouncilVoteRecord
@@ -47,6 +47,12 @@ public sealed class CouncilStep : Step
     /// <summary>Sealed votes, by player ID. They are only counted once everyone has voted.</summary>
     public Dictionary<int, CouncilVoteRecord> Votes { get; set; } = [];
 
+    /// <summary>The result of the roll, kept while the City Planner decides whether to reverse it.</summary>
+    public bool Passed { get; set; }
+
+    /// <summary>The City Planner being asked whether to reverse the result, or null.</summary>
+    public int? ReverserId { get; set; }
+
     public override StepResult Run(EngineContext ctx)
     {
         switch (Stage)
@@ -79,6 +85,15 @@ public sealed class CouncilStep : Step
 
             case CouncilStage.Resolve:
                 return Resolve(ctx);
+
+            case CouncilStage.Reverse:
+                if (ReverserId is int planner)
+                {
+                    return StepResult.WaitFor(new PendingDecision(planner, DecisionKind.ReverseCouncilVote,
+                        $"The vote on {Definition(ctx).Name} {(Passed ? "passed" : "failed")}. As the City Planner you may reverse it, so it {(Passed ? "fails" : "passes")} instead. You can do this once per game.",
+                        OrdinanceId: OrdinanceId, DistrictId: DistrictId, Passed: Passed));
+                }
+                return Apply(ctx);
 
             default:
                 return StepResult.Done;
@@ -207,6 +222,7 @@ public sealed class CouncilStep : Step
 
     public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision) => decision.Kind switch
     {
+        DecisionKind.ReverseCouncilVote => [new ReverseVote(), new NoThanks()],
         DecisionKind.ChooseOrdinance => Options.Select(id => (GameAction)new ChooseOrdinance(id)).ToList(),
         DecisionKind.ChooseDistrict => (decision.Districts ?? []).Select(id => (GameAction)new ChooseDistrict(id)).ToList(),
         // Any lobbying amount is legal too (see IsLegal). These are examples.
@@ -246,6 +262,18 @@ public sealed class CouncilStep : Step
                 BeginVote(ctx);
                 break;
 
+            case ReverseVote:
+                PlayerState planner = ctx.Player(decision.PlayerId);
+                planner.VoteReversalUsed = true;
+                Passed = !Passed;
+                ctx.Emit(new CouncilReversed(planner.Id, OrdinanceId!, DistrictId, Passed));
+                ReverserId = null;
+                break;
+
+            case NoThanks when decision.Kind == DecisionKind.ReverseCouncilVote:
+                ReverserId = null;
+                break;
+
             case CastVote vote:
                 Votes[decision.PlayerId] = new CouncilVoteRecord
                 {
@@ -272,7 +300,9 @@ public sealed class CouncilStep : Step
             int influence = 0;
             if (vote.Choice != VoteChoice.Abstain)
             {
-                influence = RuleModifiers.VoteInfluence(state, ctx.Content, player.Id) + vote.Lobby;
+                // Each lobbying dollar is 1 influence (the Politician's is 2).
+                influence = RuleModifiers.VoteInfluence(state, ctx.Content, player.Id)
+                    + vote.Lobby * RuleModifiers.LobbyPercent(state, ctx.Content, player.Id) / 100;
                 if (vote.LobbyistCardId is string cardId)
                 {
                     influence += ctx.Content.Card(cardId).Int("amount");
@@ -290,14 +320,25 @@ public sealed class CouncilStep : Step
         }
 
         int roll = ctx.Dice.RollBelow(yes + no);
-        bool passed = roll < yes;
-        ctx.Emit(new CouncilResolved(def.Id, DistrictId, reveals, yes, no, roll, passed));
+        Passed = roll < yes;
+        ctx.Emit(new CouncilResolved(def.Id, DistrictId, reveals, yes, no, roll, Passed));
         state.OrdinanceDiscard.Add(def.Id);
 
-        if (passed)
+        // The City Planner may turn the result around, once per game (decision #152).
+        ReverserId = state.ActivePlayers
+            .FirstOrDefault(p => !p.VoteReversalUsed && RuleModifiers.VoteReversal(state, ctx.Content, p.Id) != null)?.Id;
+        Stage = CouncilStage.Reverse;
+        return StepResult.Continue;
+    }
+
+    /// <summary>The result is final: a passed ordinance takes effect.</summary>
+    private StepResult Apply(EngineContext ctx)
+    {
+        OrdinanceDefinition def = Definition(ctx);
+        if (Passed)
         {
             if (def.StaysActive)
-                OrdinanceRules.Activate(state, def, DistrictId);
+                OrdinanceRules.Activate(ctx.State, def, DistrictId);
             EffectOf(ctx).Apply(new OrdinanceContext(ctx, def, SetterId, DistrictId));
         }
         Stage = CouncilStage.Finish;

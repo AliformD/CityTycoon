@@ -106,9 +106,10 @@ public static class UiHelpers
             DeclineTrade => "Decline",
             PrecisionRoll => $"🎯 Precision Roll ({rules.PrecisionRollCost} tokens: roll {rules.PrecisionRollDice} dice, keep 2)",
             Nudge { Spaces: 0 } => "Don't Nudge",
-            Nudge n => $"Nudge {(n.Spaces > 0 ? "+" : "−")}{Math.Abs(n.Spaces)} ({rules.NudgeCost} token)",
+            Nudge n => $"Nudge {(n.Spaces > 0 ? "+" : "−")}{Math.Abs(n.Spaces)} ({Tokens(Math.Abs(n.Spaces) * rules.NudgeCost)})",
             NoThanks => "No thanks",
-            BuyInsurance => $"Buy an Insured marker ({Money(rules.InsuredMarkerCost)})",
+            BuyInsurance => view.Me.InsuredMarkerCost == 0 ? "Take a free Insured marker" : $"Buy an Insured marker ({Money(view.Me.InsuredMarkerCost)})",
+            ReverseVote => "↩ Reverse the result",
             AcceptDuel => "Accept the duel",
             DeclineDuel => "No thanks",
             PickStadiumGroup g => content.Groups[g.GroupId].Name,
@@ -135,6 +136,9 @@ public static class UiHelpers
             _ => action.GetType().Name,
         };
     }
+
+    /// <summary>"1 token" or "3 tokens".</summary>
+    private static string Tokens(int n) => n == 1 ? "1 token" : $"{n} tokens";
 
     /// <summary>What the next building level costs its owner, with every discount (Construction Permit, School, Power Plant).</summary>
     public static int BuildCost(string propertyId, PlayerView view, GameContent content) => view.Properties[propertyId].NextLevelCost;

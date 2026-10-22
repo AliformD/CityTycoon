@@ -37,6 +37,12 @@ public sealed class StadiumMultiplierModifier(ModifierContext c) : OwnedModifier
     public int StadiumMultiplier(GameState s, int playerId) => Mine(playerId) ? Value : 0;
 }
 
+/// <summary>The Hustler: a bigger win when the Casino coin flip pays them (decision #161).</summary>
+public sealed class CasinoWinBonusModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+{
+    public int CasinoWinBonus(GameState s, int playerId) => Mine(playerId) ? Value : 0;
+}
+
 /// <summary>The Commuter: a Nudge can reach further.</summary>
 public sealed class NudgeRangeModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
 {

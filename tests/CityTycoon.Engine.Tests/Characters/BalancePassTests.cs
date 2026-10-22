@@ -117,4 +117,22 @@ public class BalancePassTests
         Assert.Equal(0, game.Player(0).Cash);
         Assert.Contains(game.State.Log, e => e is CasinoCoinFlip { Net: -15 });
     }
+
+    [Theory]
+    [InlineData(2, 30)]   // a win pays 50% more (decision #161)
+    [InlineData(5, -20)]  // a loss is the same as for anyone
+    public void TheHustler_WinsHalfAsMuchAgain_OnTheCasinoCoinFlip(int die, int net)
+    {
+        var game = new TestGame(2, characters: ["hustler"],
+            content: TestContent.With(new() { ["startingCash"] = 1500, ["goSalary"] = 200, ["casinoLandingFlip"] = 20 }));
+        game.Player(0).Momentum = 0;
+        game.PlaceBefore(0, "casino", 5);
+        game.Dice.Add(1, 4, die);
+        game.Do(0, new RollDice());
+        if (game.DecisionFor(0)?.Kind == DecisionKind.RerollMove)
+            game.Do(0, new NoThanks());
+
+        Assert.Equal(1500 + net, game.Player(0).Cash);
+        Assert.Contains(game.State.Log, e => e is CasinoCoinFlip { PlayerId: 0 } f && f.Net == net);
+    }
 }

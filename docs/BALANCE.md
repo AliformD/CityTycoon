@@ -247,3 +247,6 @@ Decision #160. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, se
 
 Remarks per game: 4.1 warnings, 0.5 sassy, 0.3 threats, 0.2 friendly, 0.1 scoldings (most trades the bots offer are for the last piece of a group, so warnings are the most common). Trades finished 410 to 403 per 1,000 games; bankruptcies 1.05 per game both times. Character win rates moved by under half a point (Politician 22.6 % to 22.8 %, Hustler 30.3 % to 30.7 %, City Planner 20.1 % to 19.9 %). Temperament changes margins only a little, so it reads as flavor more than strategy, which was the aim.
 
+## Hustler Casino win bonus (2026-10-22)
+Decision #161. Same Sim settings. Hustler 30.7 % to 31.1 % (within normal run-to-run noise); the bonus is worth about $10 on half of the Hustler's Casino landings. The Hustler stays just over the 30 % target, as it was before.
+

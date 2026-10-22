@@ -148,6 +148,9 @@ public interface IRuleModifier
     /// <summary>True if this player may reroll once at the Casino (the Hustler).</summary>
     bool CasinoReroll(GameState state, int playerId) => false;
 
+    /// <summary>Extra percent this player gets when the Casino coin flip pays them (the Hustler 50), or 0.</summary>
+    int CasinoWinBonus(GameState state, int playerId) => 0;
+
     /// <summary>The Stadium rent multiplier when this player picks the group, or 0 for "no change" (the Hustler).</summary>
     int StadiumMultiplier(GameState state, int playerId) => 0;
 

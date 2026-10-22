@@ -120,7 +120,9 @@ public sealed class CasinoStep : Step
         int amount = ctx.Rules.CasinoLandingFlip;
         if (amount <= 0)
             return;
-        int net = ctx.Dice.RollDie() % 2 == 0 ? amount : -Math.Min(amount, player.Cash);
+        // The Hustler wins half as much again (decision #161).
+        int win = amount + amount * RuleModifiers.CasinoWinBonus(ctx.State, ctx.Content, player.Id) / 100;
+        int net = ctx.Dice.RollDie() % 2 == 0 ? win : -Math.Min(amount, player.Cash);
         if (net == 0)
             return;
         player.Cash += net;

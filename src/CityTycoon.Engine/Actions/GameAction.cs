@@ -58,6 +58,9 @@ namespace CityTycoon.Engine.Actions;
 [JsonDerivedType(typeof(ChooseOrdinance), nameof(ChooseOrdinance))]
 [JsonDerivedType(typeof(ChooseDistrict), nameof(ChooseDistrict))]
 [JsonDerivedType(typeof(CastVote), nameof(CastVote))]
+[JsonDerivedType(typeof(OfferVoteDeal), nameof(OfferVoteDeal))]
+[JsonDerivedType(typeof(AcceptVoteDeal), nameof(AcceptVoteDeal))]
+[JsonDerivedType(typeof(DeclineVoteDeal), nameof(DeclineVoteDeal))]
 [JsonDerivedType(typeof(ReverseVote), nameof(ReverseVote))]
 public abstract record GameAction;
 
@@ -203,6 +206,22 @@ public enum VoteChoice { Yes, No, Abstain }
 /// </summary>
 public sealed record CastVote(VoteChoice Choice, int Lobby = 0, bool PlayLobbyist = false) : GameAction;
 
+/// <summary>
+/// A vote deal (decision #159): before a City Council vote, <paramref name="FromId"/> offers
+/// <paramref name="ToId"/> cash to vote <paramref name="Choice"/>. If accepted, the cash is paid at once
+/// and the engine holds them to that vote.
+/// </summary>
+public sealed record VoteDeal(int FromId, int ToId, int Amount, VoteChoice Choice);
+
+/// <summary>Offer another player a vote deal before the City Council votes (decision #159).</summary>
+public sealed record OfferVoteDeal(VoteDeal Deal) : GameAction;
+
+/// <summary>Take the vote deal you were offered: the cash is yours, and you must vote that way.</summary>
+public sealed record AcceptVoteDeal : GameAction;
+
+/// <summary>Turn down the vote deal you were offered.</summary>
+public sealed record DeclineVoteDeal : GameAction;
+
 /// <summary>Pick one property (for example which building the Fire! card hits when there's a tie).</summary>
 public sealed record ChooseProperty(string PropertyId) : GameAction;
 
@@ -321,6 +340,8 @@ public enum DecisionKind
     RerollMove,
     ReverseCouncilVote,
     SwapTile,
+    OfferVoteDeal,
+    AnswerVoteDeal,
 }
 
 /// <summary>
@@ -355,6 +376,7 @@ public enum DecisionKind
 /// <param name="MaxLobby">City Council: the most this player can lobby (their cash).</param>
 /// <param name="HasLobbyist">City Council: true if this player holds a Lobbyist card.</param>
 /// <param name="Passed">City Council, for the City Planner's reversal: true if the ordinance passed.</param>
+/// <param name="Deal">City Council: the vote deal this player is asked to answer, or (when voting) the one they accepted.</param>
 public sealed record PendingDecision(
     int PlayerId,
     DecisionKind Kind,
@@ -385,4 +407,5 @@ public sealed record PendingDecision(
     IReadOnlyList<string>? Districts = null,
     int MaxLobby = 0,
     bool HasLobbyist = false,
-    bool Passed = false);
+    bool Passed = false,
+    VoteDeal? Deal = null);

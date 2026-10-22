@@ -134,6 +134,9 @@ public static class UiHelpers
             CastVote cv => cv.Choice == VoteChoice.Abstain ? "Abstain" : $"Vote {cv.Choice}{(cv.Lobby > 0 ? $" and lobby {Money(cv.Lobby)}" : "")}",
             PeekAtTile pt => view.Spaces.First(s => s.Id == pt.SpaceId).Name,
             SwapTile => "🔀 Swap it for a tile not in play",
+            OfferVoteDeal od => $"Offer {view.Player(od.Deal.ToId).Name} {Money(od.Deal.Amount)} to vote {od.Deal.Choice}",
+            AcceptVoteDeal => "Take the vote deal",
+            DeclineVoteDeal => "Turn the deal down",
             _ => action.GetType().Name,
         };
     }

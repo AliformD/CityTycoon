@@ -106,7 +106,9 @@ public partial class EasyBot : IPlayerController
             DecisionKind.SwapTile => ChooseSwap(view, decision, legalActions),
             DecisionKind.ChooseOrdinance => ChooseOrdinance(view, decision),
             DecisionKind.ChooseDistrict => ChooseDistrict(view, decision),
-            DecisionKind.CouncilVote => Vote(view, decision),
+            DecisionKind.CouncilVote => VoteWithDeal(view, decision),
+            DecisionKind.OfferVoteDeal => OfferDeal(view, decision),
+            DecisionKind.AnswerVoteDeal => AnswerDeal(view, decision),
             _ => PlayACard(view, decision, legalActions) ?? ManageMoney(view, decision, legalActions) ?? MainChoice(view, decision, legalActions),
         };
         return Task.FromResult(choice);
@@ -118,7 +120,7 @@ public partial class EasyBot : IPlayerController
     private GameAction ChooseOrdinance(PlayerView view, PendingDecision decision)
     {
         var best = decision.Ordinances!
-            .GroupBy(id => BestBenefit(view, id))
+            .GroupBy(id => BestScore(view, id))
             .OrderByDescending(g => g.Key).First().ToList();
         return new ChooseOrdinance(best[rng.NextInt(best.Count)]);
     }
@@ -127,7 +129,7 @@ public partial class EasyBot : IPlayerController
     {
         string ordinanceId = decision.OrdinanceId!;
         var best = decision.Districts!
-            .GroupBy(d => Benefit(view, ordinanceId, d))
+            .GroupBy(d => OrdinanceScore(view, ordinanceId, d))
             .OrderByDescending(g => g.Key).First().ToList();
         return new ChooseDistrict(best[rng.NextInt(best.Count)]);
     }
@@ -149,12 +151,12 @@ public partial class EasyBot : IPlayerController
     protected int MyRailroads(PlayerView view) =>
         view.Properties.Values.Count(p => p.OwnerId == view.ViewerId && content.Property(p.Id).Type == PropertyType.Railroad);
 
-    private int BestBenefit(PlayerView view, string ordinanceId)
+    private double BestScore(PlayerView view, string ordinanceId)
     {
         OrdinanceDefinition def = content.Ordinance(ordinanceId);
         if (def.Target != OrdinanceTarget.District)
-            return Benefit(view, ordinanceId, null);
-        return content.Board.Districts.Max(d => Benefit(view, ordinanceId, d.Id));
+            return OrdinanceScore(view, ordinanceId, null);
+        return content.Board.Districts.Max(d => OrdinanceScore(view, ordinanceId, d.Id));
     }
 
     /// <summary>How much an ordinance helps this bot: above 0 helps, below 0 hurts, 0 doesn't matter much.</summary>

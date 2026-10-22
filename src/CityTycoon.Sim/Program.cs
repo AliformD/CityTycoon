@@ -240,7 +240,9 @@ static void AddPerkReport(List<string> lines, List<GameStats> finished, SimOptio
     int sessions = finished.Sum(r => r.CouncilSessions);
     lines.Add($"City Council per game: {finished.Average(r => r.CouncilSessions):0.0} votes, "
         + $"{(sessions == 0 ? 0 : (double)finished.Sum(r => r.OrdinancesPassed) / sessions):P0} passed, "
-        + $"${finished.Average(r => r.LobbyingSpent):0} spent lobbying, {finished.Average(r => r.CouncilCancelled):0.00} sessions cancelled.");
+        + $"${finished.Average(r => r.LobbyingSpent):0} spent lobbying (Politician ${finished.Average(r => r.PoliticianLobbying):0}), "
+        + $"{finished.Average(r => r.CouncilCancelled):0.00} sessions cancelled, "
+        + $"{finished.Average(r => r.VoteDeals):0.0} vote deals worth ${finished.Average(r => r.VoteDealMoney):0}.");
     var passedByOrdinance = finished.SelectMany(r => r.OrdinanceCounts).GroupBy(kv => kv.Key).ToDictionary(g => g.Key, g => g.Sum(kv => kv.Value));
     foreach (var ordinance in content.Ordinances)
         lines.Add($"  {ordinance.Name,-28} passed {(double)passedByOrdinance.GetValueOrDefault(ordinance.Id) / finished.Count:0.00} times per game");

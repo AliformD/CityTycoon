@@ -10,7 +10,7 @@
 {
     <AuctionPanel Request="Request" Content="Content" OnAnswer="OnAnswer" />
 }
-else if (decision.Kind is DecisionKind.ChooseOrdinance or DecisionKind.ChooseDistrict or DecisionKind.CouncilVote)
+else if (decision.Kind is DecisionKind.ChooseOrdinance or DecisionKind.ChooseDistrict or DecisionKind.CouncilVote or DecisionKind.OfferVoteDeal or DecisionKind.AnswerVoteDeal)
 {
     <CouncilPanel Request="Request" Content="Content" OnAnswer="OnAnswer" />
 }

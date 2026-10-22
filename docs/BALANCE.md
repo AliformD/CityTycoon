@@ -230,3 +230,15 @@ In the swaps, each side won about as often as an even share (23 % and 24 %), so 
 Decision #158. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, seed 1. "Before" is decision #157.
 
 City Planner win rate 18.6 % to 21.3 %. In a game with a Planner it peeks about 3 times, swaps 0.34 times, and saves $70 in tile fees. Other characters moved by up to 3.5 points (Lawyer 25.7 % to 22.2 %, Hustler 29.3 % to 31.5 %); with these seeds a 2 to 3 point swing between runs is normal, because one change shifts every later dice roll. Bankruptcies 1.09 to 1.11 per game.
+
+## The Politician plans its votes; vote deals (2026-10-22)
+Decision #159. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, seed 1. "Before" is decision #158.
+
+| | Before | Votes in dollars, no deals | With deals |
+| --- | --- | --- | --- |
+| Politician wins | 18.7 % | 20.9 % | 22.6 % |
+| Lobbying per game | $338 | $0 | $0 |
+| Vote deals per game | 0 | 0 | 0.6 (about $40 each) |
+
+Lobbying: one extra dollar of lobbying moves the chance of winning a vote by much less than a dollar of what the ordinance is worth, even for the Politician (each of its dollars is worth 2 influence). For example, a 25 % rent boost on a Dark Blue set with hotels is worth about $220 to its owner against the table; lobbying would have to beat that, and it doesn't. A test with the bots treating every ordinance as worth 4 times more still spent only $2 a game. So the bots stopped lobbying, and the Politician gained 2 points from that and from choosing the agenda by dollars, and 2 more from vote deals. Hustler 30.3 %, Contractor 28.8 %, Mogul 27.8 %, Commuter 25.8 %, Lawyer 22.8 %, Medic 22.2 %, City Planner 20.1 %.
+

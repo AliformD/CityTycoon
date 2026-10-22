@@ -82,6 +82,11 @@ public sealed record GameStats(
     public int OrdinancesPassed { get; init; }
     public int LobbyingSpent { get; init; }
     public int CouncilCancelled { get; init; }
+    /// <summary>Lobbying money the Politician spent (decision #159).</summary>
+    public int PoliticianLobbying { get; init; }
+    /// <summary>Vote deals taken and the money they moved (decision #159).</summary>
+    public int VoteDeals { get; init; }
+    public int VoteDealMoney { get; init; }
     public Dictionary<string, int> OrdinanceCounts { get; init; } = [];
     public int PerkPayments { get; init; }
     // Pacing numbers (how soon building starts, close calls, how much money is around).
@@ -302,6 +307,10 @@ public static class SimulationRunner
                 + log.OfType<CouncilReversed>().Sum(r => r.NowPassed ? 1 : -1),
             LobbyingSpent = log.OfType<CouncilResolved>().Sum(r => r.Votes.Sum(v => v.Lobby)),
             CouncilCancelled = log.OfType<CouncilCancelled>().Count(),
+            PoliticianLobbying = log.OfType<CouncilResolved>().SelectMany(r => r.Votes)
+                .Where(v => state.Player(v.PlayerId).CharacterId == "politician").Sum(v => v.Lobby),
+            VoteDeals = log.OfType<VoteDealMade>().Count(),
+            VoteDealMoney = log.OfType<VoteDealMade>().Sum(d => d.Deal.Amount),
             OrdinanceCounts = log.OfType<CouncilResolved>().Where(r => r.Passed).GroupBy(r => r.OrdinanceId).ToDictionary(g => g.Key, g => g.Count()),
             PerkPayments = log.OfType<PerkPaid>().Count() + log.OfType<PerkIncome>().Count(),
             FirstBuildingRound = FirstBuildingRound(log),

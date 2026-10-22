@@ -40,29 +40,82 @@ else if (decision.Kind == DecisionKind.ChooseDistrict)
         </div>
     </div>
 }
+else if (decision.Kind == DecisionKind.OfferVoteDeal)
+{
+    @* Vote deals (decision #159): pay another player to vote your way. *@
+    <div class="decision council vote">
+        <h2>@view.Me.Name, make a vote deal?</h2>
+        @OrdinanceCard()
+        <p>@decision.Prompt</p>
+        <div class="bid-entry">
+            <label>
+                Offer
+                <select @bind="dealTarget">
+                    @foreach (var other in view.Players.Where(p => p.Id != Request.PlayerId && !p.IsBankrupt))
+                    {
+                        <option value="@other.Id">@other.Name</option>
+                    }
+                </select>
+            </label>
+            <label>
+                $<input type="number" min="@CityTycoon.Engine.Steps.CouncilStep.MinDeal" max="@decision.MaxBid" step="@CityTycoon.Engine.Steps.CouncilStep.MinDeal" @bind="dealAmount" @bind:event="oninput" />
+            </label>
+            <label>
+                to vote
+                <select @bind="dealChoice">
+                    <option value="@VoteChoice.Yes">Yes</option>
+                    <option value="@VoteChoice.No">No</option>
+                </select>
+            </label>
+        </div>
+        @if (DealProblem is string dealProblem)
+        {
+            <p class="error" role="alert">@dealProblem</p>
+        }
+        <p class="hint">If they take it, the money is theirs at once and they must vote that way. Other players see the deal.</p>
+        <div class="buttons">
+            <button class="primary" disabled="@(DealProblem != null)" @onclick="OfferDeal">Offer the deal</button>
+            <button @onclick="() => OnAnswer.InvokeAsync(new NoThanks())">No deal</button>
+        </div>
+    </div>
+}
+else if (decision.Kind == DecisionKind.AnswerVoteDeal)
+{
+    <div class="decision council vote">
+        <h2>@view.Me.Name, a vote deal for you</h2>
+        @OrdinanceCard()
+        <p>@decision.Prompt</p>
+        <div class="buttons">
+            <button class="primary" @onclick="() => OnAnswer.InvokeAsync(new AcceptVoteDeal())">Take @UiHelpers.Money(decision.Deal!.Amount) and vote @decision.Deal.Choice</button>
+            <button @onclick="() => OnAnswer.InvokeAsync(new DeclineVoteDeal())">No thanks</button>
+        </div>
+    </div>
+}
 else
 {
-    var ordinance = Content.Ordinance(decision.OrdinanceId!);
     <div class="decision council vote">
         <h2>@view.Me.Name, cast your vote</h2>
-        <div class="card-view ordinance">
-            <strong>@ordinance.Name@(decision.DistrictId is string d ? " in " + Content.Board.Districts.First(x => x.Id == d).Name : "") <SpeakButton Text="@(ordinance.Name + ". " + ordinance.Text)" Label="@ordinance.Name" /></strong>
-            <span class="timing">@LastsText(ordinance)</span>
-            <p>@ordinance.Text</p>
-        </div>
+        @OrdinanceCard()
         <p class="hint">Your vote and your lobbying money are secret until everyone has voted. Lobbying money goes to the bank, win or lose.</p>
 
-        <fieldset class="vote-choice">
-            <legend>Your vote</legend>
-            @foreach (var option in new[] { VoteChoice.Yes, VoteChoice.No, VoteChoice.Abstain })
-            {
-                var chosen = option;
-                <label class="vote-option @(choice == chosen ? "picked" : "")">
-                    <input type="radio" name="vote" checked="@(choice == chosen)" @onchange="() => Pick(chosen)" />
-                    @(chosen == VoteChoice.Abstain ? "Abstain" : chosen.ToString())
-                </label>
-            }
-        </fieldset>
+        @if (decision.Deal is VoteDeal bound)
+        {
+            <p class="hint">You took @view.Player(bound.FromId).Name's deal, so your vote is @bound.Choice. You may still lobby.</p>
+        }
+        else
+        {
+            <fieldset class="vote-choice">
+                <legend>Your vote</legend>
+                @foreach (var option in new[] { VoteChoice.Yes, VoteChoice.No, VoteChoice.Abstain })
+                {
+                    var chosen = option;
+                    <label class="vote-option @(choice == chosen ? "picked" : "")">
+                        <input type="radio" name="vote" checked="@(choice == chosen)" @onchange="() => Pick(chosen)" />
+                        @(chosen == VoteChoice.Abstain ? "Abstain" : chosen.ToString())
+                    </label>
+                }
+            </fieldset>
+        }
 
         @if (choice != VoteChoice.Abstain)
         {
@@ -106,11 +159,39 @@ else
         if (!ReferenceEquals(shownFor, Request))
         {
             shownFor = Request;
-            choice = VoteChoice.Yes;
+            choice = Request.Decision.Deal?.Choice ?? VoteChoice.Yes;
             lobby = 0;
             lobbyist = false;
+            dealTarget = Request.View.Players.FirstOrDefault(p => p.Id != Request.PlayerId && !p.IsBankrupt)?.Id ?? 0;
+            dealAmount = 50;
+            dealChoice = VoteChoice.Yes;
         }
     }
+
+    private int dealTarget;
+    private int dealAmount;
+    private VoteChoice dealChoice = VoteChoice.Yes;
+
+    private string? DealProblem =>
+        dealAmount < CityTycoon.Engine.Steps.CouncilStep.MinDeal ? $"A deal is at least {UiHelpers.Money(CityTycoon.Engine.Steps.CouncilStep.MinDeal)}."
+        : dealAmount % CityTycoon.Engine.Steps.CouncilStep.MinDeal != 0 ? $"Deals go up in steps of {UiHelpers.Money(CityTycoon.Engine.Steps.CouncilStep.MinDeal)}."
+        : dealAmount > Request.Decision.MaxBid ? $"You only have {UiHelpers.Money(Request.Decision.MaxBid)}."
+        : null;
+
+    private Task OfferDeal() => OnAnswer.InvokeAsync(new OfferVoteDeal(new VoteDeal(Request.PlayerId, dealTarget, dealAmount, dealChoice)));
+
+    /// <summary>The ordinance being voted on, as a card.</summary>
+    private RenderFragment OrdinanceCard() => __builder =>
+    {
+        var ordinance = Content.Ordinance(Request.Decision.OrdinanceId!);
+        <div class="card-view ordinance">
+            <strong>@ordinance.Name@(DistrictText) <SpeakButton Text="@(ordinance.Name + ". " + ordinance.Text)" Label="@ordinance.Name" /></strong>
+            <span class="timing">@LastsText(ordinance)</span>
+            <p>@ordinance.Text</p>
+        </div>
+    };
+
+    private string DistrictText => Request.Decision.DistrictId is string d ? " in " + Content.Board.Districts.First(x => x.Id == d).Name : "";
 
     private void Pick(VoteChoice option)
     {

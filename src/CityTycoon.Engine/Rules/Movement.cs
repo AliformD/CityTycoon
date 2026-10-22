@@ -89,6 +89,9 @@ public static class Movement
         // Step 8: the Red perk's Hostile Takeover is available again.
         player.TakeoverUsed = false;
 
+        // The Hustler's movement reroll is ready again (decision #152).
+        player.MoveRerollUsed = false;
+
         // Step 6: pending balances are due, paid right after the salary (Section 8.5).
         // Pushed in reverse board order so the first one on the board is handled first.
         var pending = ctx.State.Properties.Values
@@ -141,5 +144,12 @@ public static class Movement
         player.JailTurns = 0;
         player.DoublesInARow = 0;
         ctx.Emit(new SentToJail(player.Id, reason));
+
+        // The Lawyer still collects half of the GO salary on the way in (decision #152).
+        foreach (var (amount, source) in RuleModifiers.JailIncomes(ctx.State, ctx.Content, player.Id))
+        {
+            player.Cash += amount;
+            ctx.Emit(new PerkIncome(player.Id, amount, source));
+        }
     }
 }

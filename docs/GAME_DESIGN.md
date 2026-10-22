@@ -163,14 +163,14 @@ Each player picks a **different** character. Each one has a single small ability
 
 | Character | Ability | Design note |
 | --- | --- | --- |
-| **The Mogul** | When auction bids are compared, your bid counts as $10 higher than it is. You still pay your real bid. You win ties and any auction where you're within $10 of the top bid. | Small edge in the main buying system. |
-| **The Hustler** | Once per Casino visit, you may reroll your dice (High/Low) or your duel roll (Dice Duel). | For risk-takers. |
-| **The Commuter** | Start the game with 3 Momentum tokens instead of 2. Your token limit is 4 instead of 2. | More control over movement. |
-| **The Lawyer** | You never pay Jail bail (leaving early is free). You can't be targeted by Audit. | Jail still halves your rent. |
-| **The Contractor** | Your building costs are 10% lower. | Stacks with other discounts (Section 9.4). |
-| **The Politician** | Your City Council vote is worth 200 influence instead of 100. | Stronger voice in zoning. |
-| **The City Planner** | At game start, secretly look at 1 hidden Government tile of your choice. Each time you pass GO, secretly look at 1 more that is still hidden. | Information advantage. |
-| **The Medic** | If you're sent to the Hospital, you pay no bill and roll normally on your next turn. Insured markers cost you $25 instead of $50. | Shrugs off bad luck. |
+| **The Mogul** | In silent (sealed-bid) auctions, your bid counts as $20 higher than it is when bids are compared. You still pay your real bid. You win ties and any silent auction where you're within $20 of the top bid. You also win dice ties. | Small edge in the main buying system. |
+| **The Hustler** | Once per Casino visit, you may reroll your dice (High/Low) or your duel roll (Dice Duel). Once per lap, you may reroll your dice when you roll to move (not a Precision Roll). Your Stadium pick triples rent instead of doubling it. | For risk-takers. |
+| **The Commuter** | Start the game with 3 Momentum tokens instead of 2. Your token limit is 4 instead of 2, and you can Nudge up to 4 spaces instead of 2. | More control over movement. |
+| **The Lawyer** | You never pay Jail bail (leaving early is free). When you're sent to Jail, you still collect half the GO salary. You can't be targeted by Audit. | Jail still halves your rent. |
+| **The Contractor** | Your building costs are 25% lower. | Stacks with other discounts (Section 9.4). |
+| **The Politician** | Your City Council vote is worth 250 influence instead of 100, and each lobbying dollar adds 2 influence instead of 1. | Stronger voice in zoning. |
+| **The City Planner** | At game start, secretly look at 1 hidden Government tile of your choice. Each time you pass GO, secretly look at 1 more that is still hidden. Once per game, after a City Council roll, you may reverse the result. | Information advantage. |
+| **The Medic** | If you're sent to the Hospital, you pay no bill and roll normally on your next turn. Insured markers are free for you. | Shrugs off bad luck. |
 
 **Selection:** turn order is decided randomly first. Then players pick characters in **reverse** turn order (the last player picks first), so the first player's advantage is balanced by picking last. AI players pick randomly from what's left. There's also a "Random characters" setup option.
 
@@ -238,9 +238,9 @@ Momentum tokens let you steer your movement.
   - Start with 2 (the Commuter 3).
   - Passing GO gives no tokens (only the Light Blue perk does).
   - Gain 1 from City Park (if chosen) and the Fire Station, 2 from the Fast Track card, 2 from the Momentum Surge event (everyone else 1), and 1 from the Toll Collector railroad bonus.
-- **Detour beats a Nudge:** a Detour card played on you cancels your Nudge (the token stays spent) and moves you 1 space forward or back from what you rolled.
-- **Nudge:** after you roll, spend **1 token** to move **1 or 2 spaces more or fewer** than you rolled.
-  - Only one Nudge per roll, so the most you can shift is ±2.
+- **Detour beats a Nudge:** a Detour card played on you cancels your Nudge (the tokens stay spent) and moves you 1 space forward or back from what you rolled.
+- **Nudge:** after you roll, spend **1 token for each space** you move more or fewer than you rolled: 1 token for ±1, 2 tokens for ±2.
+  - Only one Nudge per roll, so the most you can shift is ±2 (the Commuter ±4, spending 4 tokens).
   - Your total movement must still be at least 1 space forward.
   - Nudging never changes whether you rolled doubles.
 - **Precision Roll:** before you roll, spend **2 tokens** (1 with all 4 railroads) to roll 3 dice and pick which 2 to use. Doubles count only if the 2 dice you pick match.
@@ -272,7 +272,7 @@ Sealed bids are used because they work the same way for humans on one screen, AI
    - **Pass**, or
    - **A bid** of at least the minimum bid, in steps of $10, plus a payment choice: **Pay in full** or **Down payment** (Section 8.5).
 3. All bids are revealed at the same moment.
-4. The highest bid wins. The Mogul's bid counts $10 higher when bids are compared.
+4. The highest bid wins. The Mogul's bid counts $20 higher when bids are compared.
 5. **Ties:** the Mogul wins first, then the player who landed there, then the next player in turn order after the lander.
 6. The winner pays **their own bid** to the bank (or to the owner, in forced auctions).
 7. **If nobody bids,** the property stays unowned. The next player to land there starts a new auction.
@@ -450,14 +450,15 @@ Every player who isn't bankrupt takes part, including players in Jail.
    - A lobbying amount: any amount of their cash, from $0 up. Players who abstain can't lobby.
 2. All votes and lobbying amounts are revealed together.
 3. **Influence** is counted for each side:
-   - Each Yes or No vote adds **100 influence** to its side (the Politician adds 200).
-   - Each lobbying dollar adds **1 influence** to the side that player voted for.
+   - Each Yes or No vote adds **100 influence** to its side (the Politician adds 250).
+   - Each lobbying dollar adds **1 influence** to the side that player voted for (2 for the Politician).
    - **Public opinion** always adds 100 to Yes and 100 to No, so nothing is ever certain.
    - The Lobbyist card adds 200 free influence to the player's side.
 4. **Chance of passing** = Yes influence ÷ (Yes influence + No influence). The screen shows this as a percentage before the roll.
 5. A random roll decides the outcome using that chance.
 6. **All lobbying money goes to the bank, whether the ordinance passes or fails.**
-7. A passed ordinance takes effect immediately. If it has a duration, it lasts that many rounds and ends during the end-of-round checks.
+7. **The City Planner** may then reverse the result, once per game: a pass becomes a fail, or a fail becomes a pass.
+8. A passed ordinance takes effect immediately. If it has a duration, it lasts that many rounds and ends during the end-of-round checks.
 
 **Example:** Ana votes Yes and lobbies $300. Ben votes No and lobbies $100. Cal abstains.
 Yes = 100 (vote) + 300 (lobbying) + 100 (public) = 500. No = 100 (vote) + 100 (lobbying) + 100 (public) = 300.
@@ -573,7 +574,7 @@ Jail is short, and it's no longer a safe place to hide late in the game.
 
 ### 14.1 Going to Jail
 
-You go to Jail when you land on Go To Jail, roll doubles 3 times in a row, or draw the Go to Jail Event card. Move straight there without passing GO, and your turn ends.
+You go to Jail when you land on Go To Jail, roll doubles 3 times in a row, or draw the Go to Jail Event card. Move straight there without passing GO, and your turn ends. The Lawyer still collects half the GO salary on the way in.
 
 ### 14.2 While you're in Jail
 
@@ -624,7 +625,7 @@ Nobody owns landmarks. Each one gives the player who lands there a choice.
 - **If an Event sends you here:** move straight here without passing GO, and pay a **$100 medical bill**. On your next turn you roll **only 1 die** while you recover.
   - If you have an **Insured** marker, the bill is $0, you roll normally next turn, and the marker is used up.
   - The **Medic** pays nothing and rolls normally.
-- **If you just land here:** you're visiting. You may buy an **Insured** marker for $50 (the Medic pays $25). You can hold only 1.
+- **If you just land here:** you're visiting. You may buy an **Insured** marker for $50 (free for the Medic). You can hold only 1.
 - An Insured marker protects you from **one** Hospital bill **or** one Fire! Event, whichever happens first.
 
 **Casino (end of Midtown)**
@@ -648,7 +649,7 @@ The Mall shop is 3 face-up Opportunity cards. When you land here, you may do one
 
 **Stadium (end of Uptown)**
 
-Choose any one color group. Its rent is ×2 until the start of your next turn. You can pick your own group, or someone else's as part of a deal.
+Choose any one color group. Its rent is ×2 (×3 if the Hustler picks it) until the start of your next turn. You can pick your own group, or someone else's as part of a deal.
 
 **City Park (corner)**
 
@@ -789,7 +790,7 @@ These rulings settle common conflicts. Add new ones to `docs/DECISIONS.md` as th
 9. **Lobbying and bids are paid in cash.** You may take loans before you submit.
 10. **When net worth is checked** for the catch-up bonus and the agenda setter, it's calculated at that exact moment.
 11. **Ordinance durations** count down during the end-of-round checks. "3 rounds" means it ends at the end of the 3rd round after it passes.
-12. **Mogul +$10:** only used when comparing bids. Payment is always the real bid.
+12. **Mogul +$20:** only used when comparing bids. Payment is always the real bid.
 
 ---
 
@@ -1386,7 +1387,7 @@ Each has a default the builder should use until Angel decides otherwise.
 | **Lap** | One full trip around the board. |
 | **Momentum token** | A token you spend to Nudge or Precision Roll. |
 | **Net worth** | The score: cash plus property and building value, minus loans. |
-| **Nudge** | Spending a token to move 1–2 spaces more or fewer. |
+| **Nudge** | Spending 1 token per space to move 1–2 spaces more or fewer (the Commuter up to 4). |
 | **Ordinance** | A City Council proposal that changes the rules or zoning. |
 | **Permit** | A limited license needed to build a hotel or skyscraper. |
 | **Precision Roll** | Rolling 3 dice and choosing 2. |

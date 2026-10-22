@@ -16,6 +16,8 @@ public enum TurnStage
     JailChoice,
     ChooseMove,
     Roll,
+    MoveReroll,
+    DiceKept,
     PrecisionRoll,
     PrecisionChosen,
     ExpressRoll,
@@ -126,8 +128,16 @@ public sealed class TurnStep : Step
 
             case TurnStage.Roll:
                 return OneDieTurn
-                    ? AfterDice(ctx, player, ctx.Dice.RollDie(), 0)
-                    : AfterDice(ctx, player, ctx.Dice.RollDie(), ctx.Dice.RollDie());
+                    ? AfterDice(ctx, player, ctx.Dice.RollDie(), 0, fromRoll: true)
+                    : AfterDice(ctx, player, ctx.Dice.RollDie(), ctx.Dice.RollDie(), fromRoll: true);
+
+            case TurnStage.MoveReroll:
+                return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.RerollMove,
+                    $"You rolled {(Die2 == 0 ? $"{Die1}" : $"{Die1} + {Die2} = {Die1 + Die2}")}. Use your Hustler reroll? You get one each lap.",
+                    Dice: Die2 == 0 ? [Die1] : [Die1, Die2]));
+
+            case TurnStage.DiceKept:
+                return ResolveDice(ctx, player);
 
             case TurnStage.PrecisionRoll:
                 return PrecisionRollStage(ctx, player);
@@ -145,7 +155,7 @@ public sealed class TurnStep : Step
 
             case TurnStage.Nudge:
                 return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.ChooseNudge,
-                    $"You rolled {Die1 + Die2}. Spend {ctx.Rules.NudgeCost} Momentum token to move up to {ctx.Rules.NudgeMaxSpaces} spaces more or fewer?",
+                    $"You rolled {Die1 + Die2}. Spend Momentum tokens to move more or fewer spaces? Each space costs {ctx.Rules.NudgeCost} token.",
                     Dice: Die2 == 0 ? [Die1] : [Die1, Die2]));
 
             case TurnStage.Detour:
@@ -212,6 +222,7 @@ public sealed class TurnStep : Step
             DecisionKind.ChooseMoveMethod => MoveChoices(ctx, player),
             DecisionKind.ChoosePrecisionDice => [new ChooseDice(0, 1), new ChooseDice(0, 2), new ChooseDice(1, 2)],
             DecisionKind.ChooseNudge => MomentumRules.NudgeOptions(ctx, player, Die1 + Die2).Select(n => (GameAction)new Nudge(n)).ToList(),
+            DecisionKind.RerollMove => [new RerollDice(), new NoThanks()],
             DecisionKind.PostMoveActions => [new EndTurn(), .. HostileTakeovers(ctx, player)],
             // Bail is paid with cash on hand. Short? Take a loan or mortgage something first. (The Lawyer pays $0.)
             DecisionKind.JailChoice => player.Cash >= RuleModifiers.Bail(ctx.State, ctx.Content, PlayerId)
@@ -333,6 +344,17 @@ public sealed class TurnStep : Step
                 });
                 break;
 
+            case RerollDice:
+                // The Hustler throws this roll away and rolls again (decision #152). It's used up until the next GO.
+                player.MoveRerollUsed = true;
+                ctx.Emit(new MoveRerolled(PlayerId, Die1, Die2));
+                Stage = TurnStage.Roll;
+                break;
+
+            case NoThanks when decision.Kind == DecisionKind.RerollMove:
+                Stage = TurnStage.DiceKept;
+                break;
+
             case ChooseDice keep:
                 KeptFirst = keep.First;
                 KeptSecond = keep.Second;
@@ -343,8 +365,9 @@ public sealed class TurnStep : Step
                 NudgeSpaces = nudge.Spaces;
                 if (nudge.Spaces != 0)
                 {
-                    player.Momentum -= ctx.Rules.NudgeCost;
-                    ctx.Emit(new Nudged(PlayerId, nudge.Spaces, ctx.Rules.NudgeCost));
+                    int cost = MomentumRules.NudgeCost(ctx, nudge.Spaces);
+                    player.Momentum -= cost;
+                    ctx.Emit(new Nudged(PlayerId, nudge.Spaces, cost));
                 }
                 Stage = TurnStage.Detour;
                 break;
@@ -385,19 +408,34 @@ public sealed class TurnStep : Step
     }
 
     /// <summary>
-    /// The dice that will move the player are known. Check doubles, then offer
-    /// a Nudge if the player has a token to spend, otherwise move straight away.
+    /// The dice that will move the player are known. A Hustler with their reroll ready is asked
+    /// first (only for a normal roll, not a Precision Roll or the Express Line); then the roll counts.
     /// </summary>
-    private StepResult AfterDice(EngineContext ctx, PlayerState player, int die1, int die2)
+    private StepResult AfterDice(EngineContext ctx, PlayerState player, int die1, int die2, bool fromRoll = false)
     {
-        var roll = new DiceRolled(PlayerId, die1, die2);
-        ctx.Emit(roll);
+        ctx.Emit(new DiceRolled(PlayerId, die1, die2));
         Die1 = die1;
         Die2 = die2;
         NudgeSpaces = 0;
         DetourSpaces = 0;
         DetourWindow = null;
         DetourPlayed = false;
+
+        if (fromRoll && !player.MoveRerollUsed && RuleModifiers.MoveReroll(ctx.State, ctx.Content, PlayerId) != null)
+        {
+            Stage = TurnStage.MoveReroll;
+            return StepResult.Continue;
+        }
+        return ResolveDice(ctx, player);
+    }
+
+    /// <summary>
+    /// The roll is final. Check doubles, then offer a Nudge if the player
+    /// has a token to spend, otherwise move straight away.
+    /// </summary>
+    private StepResult ResolveDice(EngineContext ctx, PlayerState player)
+    {
+        var roll = new DiceRolled(PlayerId, Die1, Die2);
 
         if (roll.IsDoubles && !LeftJailThisTurn)
         {

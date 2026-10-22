@@ -74,6 +74,11 @@ public sealed record PlayerView(
             MaxLoans = RuleModifiers.MaxLoans(state, content, p.Id, modifiers),
             Bail = RuleModifiers.Bail(state, content, p.Id),
             TakeoverReady = !p.TakeoverUsed && modifiers.Any(m => m.CanHostileTakeover(state, p.Id)),
+            NudgeMaxSpaces = RuleModifiers.NudgeMaxSpaces(state, content, p.Id, modifiers),
+            InsuredMarkerCost = RuleModifiers.InsuredMarkerCost(state, content, p.Id, modifiers),
+            LobbyPercent = RuleModifiers.LobbyPercent(state, content, p.Id, modifiers),
+            MoveRerollReady = !p.MoveRerollUsed && RuleModifiers.MoveReroll(state, content, p.Id, modifiers) != null,
+            VoteReversalReady = !p.VoteReversalUsed && RuleModifiers.VoteReversal(state, content, p.Id, modifiers) != null,
         }).ToList();
 
         // What this viewer knows: their own hand and any tiles they've peeked at. Nobody else's.
@@ -146,6 +151,21 @@ public sealed record PlayerInfo(
 
     /// <summary>True if they hold the Red perk and haven't used this lap's Hostile Takeover yet.</summary>
     public bool TakeoverReady { get; init; }
+
+    /// <summary>The furthest they can Nudge, either way (2, the Commuter 4). Each space costs a token.</summary>
+    public int NudgeMaxSpaces { get; init; } = 2;
+
+    /// <summary>What an Insured marker costs them at the Hospital ($0 for the Medic).</summary>
+    public int InsuredMarkerCost { get; init; } = 50;
+
+    /// <summary>Influence one lobbying dollar buys them, in percent (100, the Politician 200).</summary>
+    public int LobbyPercent { get; init; } = 100;
+
+    /// <summary>True if they are the Hustler and haven't used this lap's movement reroll yet.</summary>
+    public bool MoveRerollReady { get; init; }
+
+    /// <summary>True if they are the City Planner and haven't reversed a City Council result yet.</summary>
+    public bool VoteReversalReady { get; init; }
 }
 
 /// <param name="TileId">For a Government tile, which tile it is, or null while it's hidden from this viewer.</param>

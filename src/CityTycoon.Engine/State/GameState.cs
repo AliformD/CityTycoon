@@ -148,6 +148,12 @@ public sealed class PlayerState
     /// <summary>True once this player has used their Hostile Takeover this lap. Passing GO makes it available again (Section 15.1).</summary>
     public bool TakeoverUsed { get; set; }
 
+    /// <summary>True once the Hustler has rerolled their movement dice this lap. Passing GO makes it available again.</summary>
+    public bool MoveRerollUsed { get; set; }
+
+    /// <summary>True once the City Planner has reversed a City Council result (once per game).</summary>
+    public bool VoteReversalUsed { get; set; }
+
     /// <summary>Unpaid bank loans (Section 15.7).</summary>
     public int Loans { get; set; }
 
@@ -191,8 +197,11 @@ public sealed class PlayerState
 /// </summary>
 public sealed record ActiveOrdinance(string OrdinanceId, string? DistrictId, int? RoundsLeft);
 
-/// <summary>A color group with doubled rent until the start of the chooser's next turn (Section 15.3).</summary>
-public sealed record StadiumBoost(string GroupId, int ChosenById);
+/// <summary>
+/// A color group with doubled rent until the start of the chooser's next turn (Section 15.3).
+/// <paramref name="Multiplier"/> is how many times over (3 for the Hustler); 0 in older saves means the normal 2.
+/// </summary>
+public sealed record StadiumBoost(string GroupId, int ChosenById, int Multiplier = 0);
 
 /// <summary>One property's rent multiplied until the start of the chooser's next turn (Grand Opening).</summary>
 public sealed record PropertyBoost(string PropertyId, int ChosenById, int Multiplier);

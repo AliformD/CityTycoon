@@ -135,6 +135,9 @@ else
         }
     }
 
+    /// <summary>The influence the lobbying money buys (each dollar is 1, or 2 for the Politician).</summary>
+    private int LobbyInfluence => lobby * Request.View.Me.LobbyPercent / 100;
+
     private string? Problem =>
         lobby < 0 ? "Lobbying can't be negative."
         : lobby > Request.Decision.MaxLobby ? $"You only have {UiHelpers.Money(Request.Decision.MaxLobby)}."
@@ -142,8 +145,8 @@ else
 
     private string Summary => choice == VoteChoice.Abstain
         ? "You sit this one out. You add no influence and can't lobby."
-        : $"You add {VoteWorth + lobby + (lobbyist ? LobbyistAmount : 0)} influence to {choice.ToString().ToUpperInvariant()} " +
-          $"({VoteWorth} vote{(lobby > 0 ? $" + {lobby} lobbying" : "")}{(lobbyist ? $" + {LobbyistAmount} Lobbyist" : "")}). " +
+        : $"You add {VoteWorth + LobbyInfluence + (lobbyist ? LobbyistAmount : 0)} influence to {choice.ToString().ToUpperInvariant()} " +
+          $"({VoteWorth} vote{(lobby > 0 ? $" + {LobbyInfluence} lobbying" : "")}{(lobbyist ? $" + {LobbyistAmount} Lobbyist" : "")}). " +
           $"Public opinion adds {Content.Rules.PublicOpinionInfluence} to each side.";
 
     private Task Submit() => OnAnswer.InvokeAsync(new CastVote(choice, choice == VoteChoice.Abstain ? 0 : lobby, choice != VoteChoice.Abstain && lobbyist));

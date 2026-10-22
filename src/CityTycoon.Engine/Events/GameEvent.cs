@@ -104,6 +104,8 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(PerkIncome), nameof(PerkIncome))]
 [JsonDerivedType(typeof(PerkPaid), nameof(PerkPaid))]
 [JsonDerivedType(typeof(CasinoRerolled), nameof(CasinoRerolled))]
+[JsonDerivedType(typeof(MoveRerolled), nameof(MoveRerolled))]
+[JsonDerivedType(typeof(CouncilReversed), nameof(CouncilReversed))]
 [JsonDerivedType(typeof(CardKept), nameof(CardKept))]
 [JsonDerivedType(typeof(HospitalShrugged), nameof(HospitalShrugged))]
 [JsonDerivedType(typeof(BidEdgeWon), nameof(BidEdgeWon))]
@@ -316,6 +318,12 @@ public sealed record PerkPaid(int FromId, int ToId, int Amount, string Perk) : G
 
 /// <summary>The Hustler used their one reroll. <paramref name="What"/> says what was rerolled.</summary>
 public sealed record CasinoRerolled(int PlayerId, string What) : GameEvent;
+
+/// <summary>The Hustler threw away this movement roll and rolled again (once per lap, decision #152).</summary>
+public sealed record MoveRerolled(int PlayerId, int Die1, int Die2) : GameEvent;
+
+/// <summary>The City Planner reversed a City Council result (once per game). <paramref name="NowPassed"/> is the new result.</summary>
+public sealed record CouncilReversed(int PlayerId, string OrdinanceId, string? DistrictId, bool NowPassed) : GameEvent;
 
 /// <summary>The Arts District perk: a player drew two Opportunity cards and kept one (the other is discarded, unseen).</summary>
 public sealed record CardKept(int PlayerId) : GameEvent;

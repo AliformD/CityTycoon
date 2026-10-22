@@ -179,6 +179,8 @@ Each entry has a list of `modifiers`, such as `{ "type": "GoCash", "value": 50 }
 
 A modifier class only overrides the hooks it cares about (the "no change" answers are the defaults in `IRuleModifier`). One C# detail worth knowing: because each class sits on top of the shared `OwnedModifier` base class, it has to say `, IRuleModifier` again in its own declaration. Without that, C# quietly keeps using the interface's "do nothing" default and the perk never switches on. The tests catch this, because every perk has a test that checks its effect.
 
+Abilities you can use only so often keep a plain flag on `PlayerState`, next to the modifier that grants them: `TakeoverUsed` (Red perk) and `MoveRerollUsed` (the Hustler) are cleared when the player passes GO, and `VoteReversalUsed` (the City Planner) is never cleared, so it is once per game. The `PlayerView` shows each as a "ready" flag (`TakeoverReady`, `MoveRerollReady`, `VoteReversalReady`), so bots and the screen know without reading the state.
+
 `RuleModifiers` is still the only place the rest of the engine asks questions ("how many loans may this player hold?"). Because it is asked all the time, it keeps its answer until something changes: who owns what, which tiles are revealed, or who is bankrupt (`ModifierCache`).
 
 New things the player is asked, each a step on the resolution stack: `CharacterPickStep` (reverse turn order), `PeekTileStep` (City Planner), `KeepOneCardStep` (Pink), plus the Hustler's reroll question inside the Casino and Dice Duel steps. Express Line and Hostile Takeover are extra choices at the start of a turn (`TurnStep.MoveChoices`).

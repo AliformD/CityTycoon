@@ -52,7 +52,7 @@ public class MomentumTests
     }
 
     [Fact]
-    public void ANudge_CostsOneToken_AndChangesWhereYouLand()
+    public void ANudge_CostsOneTokenPerSpace_AndChangesWhereYouLand()
     {
         var game = new TestGame();
         game.PlaceBefore(0, "jail", 9);
@@ -61,8 +61,72 @@ public class MomentumTests
         game.Do(0, new Nudge(2));
 
         Assert.Equal(game.State.IndexOf("jail"), game.Player(0).Position);
+        Assert.Equal(0, game.Player(0).Momentum); // 2 spaces, 2 tokens
+        Assert.Contains(game.State.Log, e => e is Nudged { Spaces: 2, TokensSpent: 2 });
+    }
+
+    [Fact]
+    public void AOneSpaceNudge_CostsOneToken()
+    {
+        var game = new TestGame();
+        game.PlaceBefore(0, "jail", 6);
+        game.Dice.Add(3, 4);
+        game.Do(0, new RollDice());
+        game.Do(0, new Nudge(-1));
+
+        Assert.Equal(game.State.IndexOf("jail"), game.Player(0).Position);
         Assert.Equal(1, game.Player(0).Momentum);
-        Assert.Contains(game.State.Log, e => e is Nudged { Spaces: 2 });
+        Assert.Contains(game.State.Log, e => e is Nudged { Spaces: -1, TokensSpent: 1 });
+    }
+
+    [Fact]
+    public void WithOneToken_YouCanOnlyNudgeOneSpace()
+    {
+        var game = new TestGame();
+        game.Player(0).Momentum = 1;
+        game.PlaceBefore(0, "jail", 7);
+        game.Dice.Add(3, 4);
+        game.Do(0, new RollDice());
+        Assert.Equal([new Nudge(-1), new Nudge(0), new Nudge(1)], game.Engine.GetLegalActions(0));
+        Assert.False(game.Engine.Submit(0, new Nudge(2)).Accepted);
+    }
+
+    [Fact]
+    public void ExtraTokens_DontNudgeFurtherThanTwo_ForMostCharacters()
+    {
+        var game = new TestGame();
+        game.Player(0).Momentum = 3; // a Light Blue owner can hold 3
+        game.PlaceBefore(0, "jail", 7);
+        game.Dice.Add(3, 4);
+        game.Do(0, new RollDice());
+        Assert.Equal([new Nudge(-2), new Nudge(-1), new Nudge(0), new Nudge(1), new Nudge(2)], game.Engine.GetLegalActions(0));
+    }
+
+    [Fact]
+    public void TheCommuter_CanNudgeUpToFourSpaces_OneTokenEach()
+    {
+        var game = new TestGame(2, characters: ["commuter", "lawyer"]);
+        Assert.Equal(4, game.Engine.GetView(0).Me.NudgeMaxSpaces);
+        game.Player(0).Momentum = 4;
+        game.PlaceBefore(0, "jail", 11);
+        game.Dice.Add(3, 4);
+        game.Do(0, new RollDice());
+        Assert.Equal(Enumerable.Range(-4, 9).Select(n => (GameAction)new Nudge(n)), game.Engine.GetLegalActions(0));
+
+        game.Do(0, new Nudge(4));
+        Assert.Equal(game.State.IndexOf("jail"), game.Player(0).Position);
+        Assert.Equal(0, game.Player(0).Momentum);
+    }
+
+    [Fact]
+    public void TheCommuter_WithThreeTokens_CanNudgeThree()
+    {
+        var game = new TestGame(2, characters: ["commuter", "lawyer"]);
+        game.Player(0).Momentum = 3;
+        game.PlaceBefore(0, "jail", 7);
+        game.Dice.Add(3, 4);
+        game.Do(0, new RollDice());
+        Assert.Equal(Enumerable.Range(-3, 7).Select(n => (GameAction)new Nudge(n)), game.Engine.GetLegalActions(0));
     }
 
     [Fact]

@@ -22,7 +22,8 @@ public sealed class HospitalVisitStep : Step
             return StepResult.Done;
 
         return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.HospitalVisit,
-            $"You're visiting the Hospital. Buy an Insured marker for ${cost}? It cancels one Hospital bill."));
+            $"You're visiting the Hospital. {(cost == 0 ? "Take a free Insured marker" : $"Buy an Insured marker for ${cost}")}? It cancels one Hospital bill.",
+            AmountOwed: cost));
     }
 
     public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision) =>
@@ -176,7 +177,9 @@ public sealed class StadiumStep : Step
     public override StepResult Run(EngineContext ctx) => Answered
         ? StepResult.Done
         : StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.ChooseStadiumGroup,
-            "Big game at the Stadium! Choose a color group: its rent doubles until your next turn."));
+            $"Big game at the Stadium! Choose a color group: its rent {Times(RuleModifiers.StadiumMultiplier(ctx.State, ctx.Content, PlayerId))} until your next turn."));
+
+    private static string Times(int multiplier) => multiplier switch { 2 => "doubles", 3 => "triples", _ => $"goes up {multiplier} times" };
 
     public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision) =>
         ctx.Content.Groups.Keys.Select(g => (GameAction)new PickStadiumGroup(g)).ToList();
@@ -187,7 +190,7 @@ public sealed class StadiumStep : Step
         var pick = (PickStadiumGroup)action;
         // One boost per player: a second visit before their next turn moves it.
         ctx.State.StadiumBoosts.RemoveAll(b => b.ChosenById == PlayerId);
-        ctx.State.StadiumBoosts.Add(new StadiumBoost(pick.GroupId, PlayerId));
+        ctx.State.StadiumBoosts.Add(new StadiumBoost(pick.GroupId, PlayerId, RuleModifiers.StadiumMultiplier(ctx.State, ctx.Content, PlayerId)));
         ctx.Emit(new StadiumChosen(PlayerId, pick.GroupId));
     }
 }

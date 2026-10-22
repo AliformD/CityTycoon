@@ -129,6 +129,8 @@ public static class EventDescriber
             PerkIncome p => $"{Name(p.PlayerId)} collected ${p.Amount} ({p.Perk}).",
             PerkPaid p => $"{Name(p.FromId)} paid ${p.Amount} to {Name(p.ToId)} ({p.Perk}).",
             CasinoRerolled r => $"{Name(r.PlayerId)} used their Hustler reroll on the {r.What}.",
+            MoveRerolled r => $"{Name(r.PlayerId)} didn't like {(r.Die2 == 0 ? $"a {r.Die1}" : $"{r.Die1} + {r.Die2}")} and used their Hustler reroll (once per lap).",
+            CouncilReversed r => $"{Name(r.PlayerId)} reversed the City Council result as the City Planner: {content.Ordinance(r.OrdinanceId).Name} now {(r.NowPassed ? "passes" : "fails")}.",
             CardKept k => $"{Name(k.PlayerId)} drew two Opportunity cards and kept one.",
             HospitalShrugged h => $"{Name(h.PlayerId)} shrugged off the Hospital: no bill, and they roll normally next turn.",
             BidEdgeWon b => $"{Name(b.PlayerId)}'s edge won {Space(b.PropertyId)} with a bid of ${b.Bid}, below the top bid of ${b.TopBid}.",

@@ -68,7 +68,7 @@ public class CharacterBotTests
         Assert.IsType<KeepCard>(keep);
 
         var peek = await bot.DecideAsync(engine.GetView(0),
-            new PendingDecision(0, DecisionKind.PeekTile, ""), [new PeekAtTile("a"), new PeekAtTile("b")]);
+            new PendingDecision(0, DecisionKind.PeekTile, ""), [new PeekAtTile("old-town-government"), new PeekAtTile("midtown-government")]);
         Assert.IsType<PeekAtTile>(peek);
     }
 

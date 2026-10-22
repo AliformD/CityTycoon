@@ -74,6 +74,7 @@ public sealed record PlayerView(
             LoanBook = p.LoanBook.ToList(),
             LoanOptions = content.Rules.LoanOptions.Select(o => new LoanTerms(o.Amount, RuleModifiers.LoanRepayCost(state, content, p.Id, o.Amount, modifiers))).ToList(),
             MaxLoans = RuleModifiers.MaxLoans(state, content, p.Id, modifiers),
+            IgnoresTileFees = RuleModifiers.IgnoresTileFees(state, content, p.Id, modifiers),
             Bail = RuleModifiers.Bail(state, content, p.Id),
             TakeoverReady = !p.TakeoverUsed && modifiers.Any(m => m.CanHostileTakeover(state, p.Id)),
             NudgeMaxSpaces = RuleModifiers.NudgeMaxSpaces(state, content, p.Id, modifiers),
@@ -156,6 +157,9 @@ public sealed record PlayerInfo(
 
     /// <summary>What paying back one loan of this size costs them.</summary>
     public int RepayCost(int amount) => LoanOptions.FirstOrDefault(o => o.Amount == amount)?.Repay ?? amount * 5 / 4;
+
+    /// <summary>True if Government tile fees don't apply to them (the City Planner, decision #158).</summary>
+    public bool IgnoresTileFees { get; init; }
 
     /// <summary>What it costs them to leave Jail early ($0 for the Lawyer).</summary>
     public int Bail { get; init; } = 50;

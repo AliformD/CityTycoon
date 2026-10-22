@@ -133,6 +133,7 @@ public static class UiHelpers
             ChooseDistrict cd => content.Board.Districts.First(d => d.Id == cd.DistrictId).Name,
             CastVote cv => cv.Choice == VoteChoice.Abstain ? "Abstain" : $"Vote {cv.Choice}{(cv.Lobby > 0 ? $" and lobby {Money(cv.Lobby)}" : "")}",
             PeekAtTile pt => view.Spaces.First(s => s.Id == pt.SpaceId).Name,
+            SwapTile => "🔀 Swap it for a tile not in play",
             _ => action.GetType().Name,
         };
     }

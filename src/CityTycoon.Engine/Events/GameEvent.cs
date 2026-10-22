@@ -81,6 +81,8 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(RentBoostStarted), nameof(RentBoostStarted))]
 [JsonDerivedType(typeof(RentBoostEnded), nameof(RentBoostEnded))]
 [JsonDerivedType(typeof(TilePeeked), nameof(TilePeeked))]
+[JsonDerivedType(typeof(TileSwapped), nameof(TileSwapped))]
+[JsonDerivedType(typeof(TileFeeWaived), nameof(TileFeeWaived))]
 [JsonDerivedType(typeof(EventsArranged), nameof(EventsArranged))]
 [JsonDerivedType(typeof(RecoverySkipped), nameof(RecoverySkipped))]
 [JsonDerivedType(typeof(OwnerKeptProperty), nameof(OwnerKeptProperty))]
@@ -284,6 +286,12 @@ public sealed record RentBoostEnded(int PlayerId, string PropertyId) : GameEvent
 
 /// <summary>Inside Source: a player secretly looked at a hidden tile. Only they learn what it is.</summary>
 public sealed record TilePeeked(int PlayerId, string SpaceId) : GameEvent;
+
+/// <summary>The City Planner swapped a hidden tile for one not in play. Nobody else learns either tile (decision #158).</summary>
+public sealed record TileSwapped(int PlayerId, string SpaceId) : GameEvent;
+
+/// <summary>The City Planner landed on a Government tile and paid no fee (decision #158).</summary>
+public sealed record TileFeeWaived(int PlayerId, string TileId, int Amount) : GameEvent;
 
 /// <summary>Tip-Off: a player looked at the top Event cards and put them back. The order stays secret.</summary>
 public sealed record EventsArranged(int PlayerId, int Count) : GameEvent;

@@ -225,3 +225,8 @@ Decision #157. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, se
 | Lawyer win rate | 24.0 % | 25.7 % |
 
 In the swaps, each side won about as often as an even share (23 % and 24 %), so swaps help both sides about equally. Other characters moved by under 1.5 points; Politician 19.3 % and City Planner 18.6 % are still the weakest (their own changes come next). Bankruptcies 1.07 to 1.09 per game.
+
+## City Planner tile swaps and no tile fees (2026-10-22)
+Decision #158. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, seed 1. "Before" is decision #157.
+
+City Planner win rate 18.6 % to 21.3 %. In a game with a Planner it peeks about 3 times, swaps 0.34 times, and saves $70 in tile fees. Other characters moved by up to 3.5 points (Lawyer 25.7 % to 22.2 %, Hustler 29.3 % to 31.5 %); with these seeds a 2 to 3 point swing between runs is normal, because one change shifts every later dice roll. Bankruptcies 1.09 to 1.11 per game.

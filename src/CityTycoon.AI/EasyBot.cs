@@ -102,7 +102,8 @@ public partial class EasyBot : IPlayerController
             DecisionKind.RerollMove => ChooseMoveReroll(view, decision, legalActions),
             DecisionKind.ReverseCouncilVote => ReverseCouncilVote(view, decision),
             DecisionKind.KeepCard => new KeepCard(decision.Cards!.MaxBy(CardValue)!),
-            DecisionKind.PeekTile => legalActions[rng.NextInt(legalActions.Count)],
+            DecisionKind.PeekTile => ChoosePeek(view, legalActions),
+            DecisionKind.SwapTile => ChooseSwap(view, decision, legalActions),
             DecisionKind.ChooseOrdinance => ChooseOrdinance(view, decision),
             DecisionKind.ChooseDistrict => ChooseDistrict(view, decision),
             DecisionKind.CouncilVote => Vote(view, decision),
@@ -575,6 +576,7 @@ public partial class EasyBot : IPlayerController
             SpaceKind.Tax => -(space.Id == "income-tax" ? content.Rules.IncomeTax : content.Rules.LuxuryTax),
             SpaceKind.GoToJail => -100,
             SpaceKind.CityPark => TokenValue,
+            SpaceKind.GovernmentTile => TileLandingScore(view, space),
             _ => 0,
         };
     }

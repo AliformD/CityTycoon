@@ -163,6 +163,12 @@ public interface IRuleModifier
     /// <summary>How many hidden Government tiles this player may secretly peek at when the game starts (the City Planner).</summary>
     int StartPeeks(GameState state, int playerId) => 0;
 
+    /// <summary>True if Government tile fees don't apply to this player (the City Planner).</summary>
+    bool IgnoresTileFees(GameState state, int playerId) => false;
+
+    /// <summary>True if, after peeking at a hidden tile, this player may swap it for one not in play (the City Planner).</summary>
+    bool SwapsPeekedTiles(GameState state, int playerId) => false;
+
     // ----- City Council ordinances (Section 11.4) -----
 
     /// <summary>A reason nobody can build on this property right now (Building Moratorium), or null.</summary>

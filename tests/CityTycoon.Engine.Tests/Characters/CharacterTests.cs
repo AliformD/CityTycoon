@@ -193,6 +193,8 @@ public class CharacterTests
         var tile = game.State.Board.First(s => s.Kind == SpaceKind.GovernmentTile && !s.IsRevealed);
         Assert.Contains(new PeekAtTile(tile.Id), game.Engine.GetLegalActions(0));
         game.Do(0, new PeekAtTile(tile.Id));
+        Assert.Equal(DecisionKind.SwapTile, game.DecisionFor(0)!.Kind); // decision #158
+        game.Do(0, new NoThanks());
 
         Assert.Equal(tile.TileId, game.Engine.GetView(0).Spaces.First(s => s.Id == tile.Id).TileId);
         Assert.Null(game.Engine.GetView(1).Spaces.First(s => s.Id == tile.Id).TileId); // secret from everyone else
@@ -206,6 +208,7 @@ public class CharacterTests
         var game = With("city-planner");
         var first = game.State.Board.First(s => s.Kind == SpaceKind.GovernmentTile && !s.IsRevealed);
         game.Do(0, new PeekAtTile(first.Id));
+        game.Do(0, new NoThanks());
 
         game.PlaceBefore(0, "go", 5);
         game.Roll(0, 1, 4);

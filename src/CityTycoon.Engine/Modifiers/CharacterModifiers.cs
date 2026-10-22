@@ -111,6 +111,18 @@ public sealed class PeekOnGoModifier(ModifierContext c) : OwnedModifier(c), IRul
     public int GoPeeks(GameState s, int playerId) => Mine(playerId) ? Value : 0;
 }
 
+/// <summary>The City Planner: pays no Government tile fees (decision #158).</summary>
+public sealed class TileFeeImmunityModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+{
+    public bool IgnoresTileFees(GameState s, int playerId) => Mine(playerId);
+}
+
+/// <summary>The City Planner: after a peek, may swap that hidden tile for one not in play (decision #158).</summary>
+public sealed class SwapPeekedTileModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+{
+    public bool SwapsPeekedTiles(GameState s, int playerId) => Mine(playerId);
+}
+
 /// <summary>The Medic: the Hospital never bills or slows them down.</summary>
 public sealed class HospitalImmunityModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
 {

@@ -179,6 +179,7 @@ public class StrongerAbilityTests
         var game = new TestGame(2, characters: ["city-planner", "lawyer"]);
         // The City Planner's first peek happens before anything else.
         game.Do(0, (PeekAtTile)game.Engine.GetLegalActions(0)[0]);
+        game.Do(0, new NoThanks()); // keep the tile (decision #158)
         return game;
     }
 

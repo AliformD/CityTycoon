@@ -164,7 +164,7 @@ Each player picks a **different** character. Each one has a single small ability
 | Character | Ability | Design note |
 | --- | --- | --- |
 | **The Mogul** | In silent (sealed-bid) auctions, your bid counts as $10 higher than it is when bids are compared. You still pay your real bid. You win ties and any silent auction where you're within $10 of the top bid. You also win dice ties. | Small edge in the main buying system. |
-| **The Hustler** | Once per lap, when you roll to move (not a Precision Roll), you may roll **one** of your dice again. Your Stadium pick triples rent instead of doubling it. | For risk-takers. |
+| **The Hustler** | Once per lap, when you roll to move (not a Precision Roll), you may roll **one** of your dice again. Your Stadium pick triples rent instead of doubling it. When the Casino coin flip pays you, you get 50% more ($30 instead of $20). | For risk-takers. |
 | **The Commuter** | Start the game with 3 Momentum tokens instead of 2. Your token limit is 4 instead of 2, and you can Nudge up to 4 spaces instead of 2. | More control over movement. |
 | **The Lawyer** | You never pay Jail bail (leaving early is free). When you're sent to Jail, you still collect half the GO salary. You can't be targeted by Audit. | Jail still halves your rent. |
 | **The Contractor** | Your building costs are 25% lower. | Stacks with other discounts (Section 9.4). |

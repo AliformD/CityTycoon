@@ -49,6 +49,7 @@ public static class ModifierTypes
         ["CasinoReroll"] = new(c => new CasinoRerollModifier(c)),
         ["MoveReroll"] = new(c => new MoveRerollModifier(c)),
         ["StadiumMultiplier"] = new(c => new StadiumMultiplierModifier(c), NeedsValue: true),
+        ["CasinoWinBonus"] = new(c => new CasinoWinBonusModifier(c), NeedsValue: true),
         ["NudgeRange"] = new(c => new NudgeRangeModifier(c), NeedsValue: true),
         ["StartingMomentum"] = new(c => new StartingMomentumModifier(c), NeedsValue: true),
         ["FreeBail"] = new(c => new FreeBailModifier(c)),

@@ -50,7 +50,7 @@ public class TradeFeedbackBotTests
         var engine = BotWantsMarket();
         var greedy = new TradeOffer(0, 1, 0, 900, ["market-street"], []);
         var decline = Assert.IsType<DeclineTrade>(await Answer(new HardBot(1), engine, greedy, countersLeft: 0));
-        Assert.Contains("worse off", decline.Why);
+        Assert.Contains("I want Orange, but $900 is more than I'd pay", decline.Why);
         Assert.Contains("out of counter-offers", decline.Why);
     }
 
@@ -62,13 +62,13 @@ public class TradeFeedbackBotTests
         Assert.True(engine.Submit(0, new ProposeTrade(greedy)).Accepted);
 
         var counter = Assert.IsType<CounterTrade>(await Answer(new HardBot(1), engine, greedy));
-        Assert.Contains("Here's what I'd take", counter.Why);
+        Assert.Contains("I want Orange", counter.Why);
         Assert.True(engine.Submit(1, counter).Accepted);
 
         var logged = engine.State.Log.OfType<TradeCountered>().Single();
         Assert.Equal(counter.Why, logged.Why);
-        Assert.Contains("Here's what I'd take", EventDescriber.Describe(logged, engine.GetView(0), GameContent.Default));
-        Assert.Contains("Here's what I'd take", engine.GetPendingDecisions().Single().Prompt);
+        Assert.Contains("I want Orange", EventDescriber.Describe(logged, engine.GetView(0), GameContent.Default));
+        Assert.Contains("I want Orange", engine.GetPendingDecisions().Single().Prompt);
     }
 
     [Fact]

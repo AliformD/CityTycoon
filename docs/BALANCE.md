@@ -86,6 +86,19 @@ A close call is cash under $150 that later climbs back to $400 without going ban
 
 With the picked setting and personalities: HardVsEasy 75.0% (80.4% at 30 rounds with the old money), Easy only 0.15 bankruptcies and 15 buildings per game. Win rate by personality (Normal / Easy tables): Aggressive 31% / 30%, Balanced 25% / 26%, Reserved 19% / 20%.
 
+## Bots value whole color groups and haggle (2026-10-21)
+Decision #148. 1000 games each, 4 players, Timed, random characters:
+
+| Run | Before | After |
+| --- | --- | --- |
+| HardVsEasy, seed 1 (Hard seats' win rate) | 76.5% | 75.9% |
+| HardVsNormal, 40 rounds, seed 7 (Hard seats) | 68.6% | 68.6% |
+| Mixed, seed 1: trades per game | 0.3 | 0.6 |
+| Mixed, seed 1: buildings per game | 6.8 | 8.1 |
+| HardVsNormal: win rate Aggressive / Balanced / Reserved | 27.8 / 25.4 / 21.7% | 27.6 / 25.5 / 21.8% |
+
+Win rates moved less than the noise. Bot-to-bot trades stay rare (0.1 to 0.6 per game), because a bot selling the last piece of a group now asks for what the group is worth to the buyer too. The change shows most when a person trades with a bot.
+
 ## How to repeat this
 `dotnet run -c Release --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots HardVsEasy --mode timed --characters random --seed 20000 --out <new folder>`
 `--set name=value` changes any rules.json number for one run (repeatable), and `--rounds` sets the Timed limit.

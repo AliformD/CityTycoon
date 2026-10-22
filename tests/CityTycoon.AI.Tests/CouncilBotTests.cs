@@ -42,6 +42,18 @@ public class CouncilBotTests
     }
 
     [Fact]
+    public async Task HardBots_PlayFullGames_WithVoteDeals()
+    {
+        int deals = 0;
+        for (ulong seed = 1; seed <= 10; seed++)
+        {
+            var engine = await Play(seed, id => new HardBot(seed * 13 + (ulong)id));
+            deals += engine.State.Log.OfType<VoteDealMade>().Count();
+        }
+        Assert.True(deals > 0);
+    }
+
+    [Fact]
     public async Task Bots_ActuallyPassAndFailOrdinances()
     {
         int passed = 0, failed = 0;

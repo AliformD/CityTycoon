@@ -109,6 +109,8 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(CasinoRerolled), nameof(CasinoRerolled))]
 [JsonDerivedType(typeof(MoveRerolled), nameof(MoveRerolled))]
 [JsonDerivedType(typeof(CouncilReversed), nameof(CouncilReversed))]
+[JsonDerivedType(typeof(VoteDealMade), nameof(VoteDealMade))]
+[JsonDerivedType(typeof(VoteDealDeclined), nameof(VoteDealDeclined))]
 [JsonDerivedType(typeof(CardKept), nameof(CardKept))]
 [JsonDerivedType(typeof(HospitalShrugged), nameof(HospitalShrugged))]
 [JsonDerivedType(typeof(BidEdgeWon), nameof(BidEdgeWon))]
@@ -341,6 +343,12 @@ public sealed record CasinoRerolled(int PlayerId, string What) : GameEvent;
 public sealed record MoveRerolled(int PlayerId, int Die1, int Die2, int? Die = null) : GameEvent;
 
 /// <summary>The City Planner reversed a City Council result (once per game). <paramref name="NowPassed"/> is the new result.</summary>
+/// <summary>A vote deal was accepted: the cash moved, and <c>Deal.ToId</c> must vote <c>Deal.Choice</c> (decision #159).</summary>
+public sealed record VoteDealMade(Actions.VoteDeal Deal) : GameEvent;
+
+/// <summary>A vote deal was turned down (decision #159).</summary>
+public sealed record VoteDealDeclined(Actions.VoteDeal Deal) : GameEvent;
+
 public sealed record CouncilReversed(int PlayerId, string OrdinanceId, string? DistrictId, bool NowPassed) : GameEvent;
 
 /// <summary>The Arts District perk: a player drew two Opportunity cards and kept one (the other is discarded, unseen).</summary>

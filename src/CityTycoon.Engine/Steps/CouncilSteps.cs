@@ -9,7 +9,8 @@ using CityTycoon.Engine.State;
 
 namespace CityTycoon.Engine.Steps;
 
-public enum CouncilStage { Start, PickOrdinance, PickDistrict, Vote, Resolve, Reverse, Finish }
+/// <summary>The stages of a session. New ones go at the end, so saved games keep their numbers.</summary>
+public enum CouncilStage { Start, PickOrdinance, PickDistrict, Vote, Resolve, Reverse, Finish, Deals, DealAnswers }
 
 /// <summary>One player's sealed vote, kept until everyone has voted.</summary>
 public sealed class CouncilVoteRecord
@@ -53,6 +54,15 @@ public sealed class CouncilStep : Step
     /// <summary>The City Planner being asked whether to reverse the result, or null.</summary>
     public int? ReverserId { get; set; }
 
+    /// <summary>Who has answered the "offer a vote deal?" question, with their offer (null for none). Decision #159.</summary>
+    public Dictionary<int, VoteDeal?> DealOffers { get; set; } = [];
+
+    /// <summary>Offers still waiting for an answer, biggest first.</summary>
+    public List<VoteDeal> DealQueue { get; set; } = [];
+
+    /// <summary>Accepted deals, by the player who must vote that way.</summary>
+    public Dictionary<int, VoteDeal> Deals { get; set; } = [];
+
     public override StepResult Run(EngineContext ctx)
     {
         switch (Stage)
@@ -71,6 +81,35 @@ public sealed class CouncilStep : Step
                     $"Pick the district for {Definition(ctx).Name}.", OrdinanceId: OrdinanceId,
                     Districts: effect.Districts(ctx, Definition(ctx)).ToList()));
 
+            case CouncilStage.Deals:
+                var offering = ctx.State.ActivePlayers.Where(p => !DealOffers.ContainsKey(p.Id) && p.Cash >= MinDeal).ToList();
+                if (offering.Count == 0 || ctx.State.ActivePlayers.Count() < 2)
+                {
+                    DealQueue = DealOffers.Values.OfType<VoteDeal>().OrderByDescending(d => d.Amount).ThenBy(d => d.FromId).ToList();
+                    Stage = CouncilStage.DealAnswers;
+                    return StepResult.Continue;
+                }
+                return StepResult.WaitFor(offering.Select(p => new PendingDecision(p.Id, DecisionKind.OfferVoteDeal,
+                    $"Before the vote on {Definition(ctx).Name}, you may offer another player cash to vote your way. If they take it, they must vote that way.",
+                    OrdinanceId: OrdinanceId, DistrictId: DistrictId, MaxBid: p.Cash)));
+
+            case CouncilStage.DealAnswers:
+                while (DealQueue.Count > 0)
+                {
+                    VoteDeal deal = DealQueue[0];
+                    // Someone can only be held to one deal, and the payer must still have the cash.
+                    if (Deals.ContainsKey(deal.ToId) || ctx.Player(deal.FromId).Cash < deal.Amount || ctx.Player(deal.ToId).IsBankrupt)
+                    {
+                        DealQueue.RemoveAt(0);
+                        continue;
+                    }
+                    return StepResult.WaitFor(new PendingDecision(deal.ToId, DecisionKind.AnswerVoteDeal,
+                        $"{ctx.Player(deal.FromId).Name} offers you ${deal.Amount} to vote {deal.Choice.ToString().ToUpperInvariant()} on {Definition(ctx).Name}. If you take it, you must vote that way.",
+                        OrdinanceId: OrdinanceId, DistrictId: DistrictId, OtherPlayerId: deal.FromId, Deal: deal));
+                }
+                Stage = CouncilStage.Vote;
+                return StepResult.Continue;
+
             case CouncilStage.Vote:
                 var waiting = ctx.State.ActivePlayers.Where(p => !Votes.ContainsKey(p.Id)).ToList();
                 if (waiting.Count == 0)
@@ -79,9 +118,11 @@ public sealed class CouncilStep : Step
                     return StepResult.Continue;
                 }
                 return StepResult.WaitFor(waiting.Select(p => new PendingDecision(p.Id, DecisionKind.CouncilVote,
-                    $"Vote on {Definition(ctx).Name}. Your vote and your lobbying are secret until everyone has voted.",
+                    Deals.TryGetValue(p.Id, out VoteDeal? bound)
+                        ? $"Vote on {Definition(ctx).Name}. You took {ctx.Player(bound.FromId).Name}'s deal, so you vote {bound.Choice.ToString().ToUpperInvariant()}. You may still lobby."
+                        : $"Vote on {Definition(ctx).Name}. Your vote and your lobbying are secret until everyone has voted.",
                     OrdinanceId: OrdinanceId, DistrictId: DistrictId,
-                    MaxLobby: Math.Max(0, p.Cash), HasLobbyist: LobbyistIn(ctx, p) != null)));
+                    MaxLobby: Math.Max(0, p.Cash), HasLobbyist: LobbyistIn(ctx, p) != null, Deal: bound)));
 
             case CouncilStage.Resolve:
                 return Resolve(ctx);
@@ -214,9 +255,13 @@ public sealed class CouncilStep : Step
     private StepResult BeginVote(EngineContext ctx)
     {
         ctx.Emit(new OrdinanceProposed(SetterId, OrdinanceId!, DistrictId));
-        Stage = CouncilStage.Vote;
+        // Vote deals come first (decision #159).
+        Stage = ctx.Rules.VoteDeals ? CouncilStage.Deals : CouncilStage.Vote;
         return StepResult.Continue;
     }
+
+    /// <summary>The smallest vote deal, and the step deals go up in.</summary>
+    public const int MinDeal = 10;
 
     // ---------------------------------------------------------- answers
 
@@ -225,17 +270,31 @@ public sealed class CouncilStep : Step
         DecisionKind.ReverseCouncilVote => [new ReverseVote(), new NoThanks()],
         DecisionKind.ChooseOrdinance => Options.Select(id => (GameAction)new ChooseOrdinance(id)).ToList(),
         DecisionKind.ChooseDistrict => (decision.Districts ?? []).Select(id => (GameAction)new ChooseDistrict(id)).ToList(),
+        DecisionKind.AnswerVoteDeal => [new AcceptVoteDeal(), new DeclineVoteDeal()],
+        // Any deal within the rules is legal too (see IsLegal). This is the "no deal" answer.
+        DecisionKind.OfferVoteDeal => [new NoThanks()],
+        DecisionKind.CouncilVote when decision.Deal is VoteDeal bound => [new CastVote(bound.Choice)],
         // Any lobbying amount is legal too (see IsLegal). These are examples.
         _ => [new CastVote(VoteChoice.Yes), new CastVote(VoteChoice.No), new CastVote(VoteChoice.Abstain)],
     };
 
     public override bool IsLegal(EngineContext ctx, PendingDecision decision, GameAction action)
     {
+        if (decision.Kind == DecisionKind.OfferVoteDeal && action is OfferVoteDeal offer)
+        {
+            VoteDeal d = offer.Deal;
+            return d.FromId == decision.PlayerId && d.ToId != d.FromId
+                && ctx.State.ActivePlayers.Any(p => p.Id == d.ToId)
+                && d.Amount >= MinDeal && d.Amount % MinDeal == 0 && d.Amount <= ctx.Player(d.FromId).Cash
+                && d.Choice != VoteChoice.Abstain;
+        }
         if (decision.Kind != DecisionKind.CouncilVote)
             return LegalActions(ctx, decision).Contains(action);
         if (action is not CastVote vote)
             return false;
         PlayerState player = ctx.Player(decision.PlayerId);
+        if (Deals.TryGetValue(decision.PlayerId, out VoteDeal? deal) && vote.Choice != deal.Choice)
+            return false;
         if (vote.Lobby < 0 || vote.Lobby > Math.Max(0, player.Cash))
             return false;
         if (vote.PlayLobbyist && LobbyistIn(ctx, player) == null)
@@ -272,6 +331,30 @@ public sealed class CouncilStep : Step
 
             case NoThanks when decision.Kind == DecisionKind.ReverseCouncilVote:
                 ReverserId = null;
+                break;
+
+            case OfferVoteDeal offer:
+                DealOffers[decision.PlayerId] = offer.Deal;
+                break;
+
+            case NoThanks when decision.Kind == DecisionKind.OfferVoteDeal:
+                DealOffers[decision.PlayerId] = null;
+                break;
+
+            case AcceptVoteDeal:
+            {
+                VoteDeal deal = DealQueue[0];
+                DealQueue.RemoveAt(0);
+                ctx.Player(deal.FromId).Cash -= deal.Amount;
+                ctx.Player(deal.ToId).Cash += deal.Amount;
+                Deals[deal.ToId] = deal;
+                ctx.Emit(new VoteDealMade(deal));
+                break;
+            }
+
+            case DeclineVoteDeal:
+                ctx.Emit(new VoteDealDeclined(DealQueue[0]));
+                DealQueue.RemoveAt(0);
                 break;
 
             case CastVote vote:

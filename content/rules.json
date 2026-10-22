@@ -92,6 +92,8 @@
   "casinoDoublesPayout": 2,
   // Landing on the Casino flips a coin: win or lose this much (decision #153).
   "casinoLandingFlip": 20,
+  // Before a council vote, players may pay each other to vote a certain way (decision #159).
+  "voteDeals": true,
   "stadiumRentMultiplier": 2,
   "cityParkMomentum": 1
 }

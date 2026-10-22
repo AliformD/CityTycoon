@@ -445,6 +445,7 @@ The City Council is how players change zoning and city rules. Money can influenc
 
 Every player who isn't bankrupt takes part, including players in Jail.
 
+0. **Vote deals** (decision #159, `voteDeals` in rules.json). Before voting, each player with at least $10 may offer one other player cash (in steps of $10) to vote Yes or No. Offers are then answered one at a time, biggest first. A player who takes a deal gets the cash at once and must vote that way (they may still lobby). Each player can be held to only one deal; later offers to them are dropped. Deals are public.
 1. Each player **secretly** chooses:
    - A vote: **Yes**, **No**, or **Abstain**.
    - A lobbying amount: any amount of their cash, from $0 up. Players who abstain can't lobby.

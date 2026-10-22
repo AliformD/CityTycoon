@@ -135,6 +135,8 @@ public static class EventDescriber
             MoveRerolled r => r.Die is int die
                 ? $"{Name(r.PlayerId)} didn't like {(r.Die2 == 0 ? $"a {r.Die1}" : $"{r.Die1} + {r.Die2}")} and used their Hustler reroll on the {(die == 0 ? r.Die1 : r.Die2)} (once per lap)."
                 : $"{Name(r.PlayerId)} didn't like {(r.Die2 == 0 ? $"a {r.Die1}" : $"{r.Die1} + {r.Die2}")} and used their Hustler reroll (once per lap).",
+            VoteDealMade v => $"{Name(v.Deal.ToId)} took ${v.Deal.Amount} from {Name(v.Deal.FromId)} to vote {v.Deal.Choice.ToString().ToUpperInvariant()}.",
+            VoteDealDeclined v => $"{Name(v.Deal.ToId)} turned down ${v.Deal.Amount} from {Name(v.Deal.FromId)} to vote {v.Deal.Choice.ToString().ToUpperInvariant()}.",
             CouncilReversed r => $"{Name(r.PlayerId)} reversed the City Council result as the City Planner: {content.Ordinance(r.OrdinanceId).Name} now {(r.NowPassed ? "passes" : "fails")}.",
             CardKept k => $"{Name(k.PlayerId)} drew two Opportunity cards and kept one.",
             HospitalShrugged h => $"{Name(h.PlayerId)} shrugged off the Hospital: no bill, and they roll normally next turn.",

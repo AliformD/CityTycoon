@@ -20,6 +20,8 @@ public static class TestContent
         // The Casino coin flip (decision #153) rolls a die on landing, which would shift every scripted die after it.
         // CasinoTests turns it back on to test it.
         ["casinoLandingFlip"] = 0,
+        // Vote deals (decision #159) add a question before every council vote. CouncilDealTests turns them on.
+        ["voteDeals"] = false,
     });
 
     /// <summary>A copy of the default content with some rules.json numbers changed.</summary>

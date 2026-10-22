@@ -201,6 +201,10 @@ public static class GameHistory
                     foreach (var vote in r.Votes)
                         Add(vote.PlayerId, -vote.Lobby, MoneyKind.Council, $"Lobbied {vote.Choice.ToString().ToLowerInvariant()} on {Ordinance(r.OrdinanceId)}");
                     break;
+                case VoteDealMade v:
+                    Move(v.Deal.FromId, v.Deal.ToId, v.Deal.Amount, MoneyKind.Council,
+                        $"Paid {Name(v.Deal.ToId)} to vote {v.Deal.Choice.ToString().ToLowerInvariant()}", $"Paid by {Name(v.Deal.FromId)} to vote {v.Deal.Choice.ToString().ToLowerInvariant()}");
+                    break;
                 case CouncilPayout c:
                     Add(c.PlayerId, c.Amount, MoneyKind.Council, Ordinance(c.OrdinanceId));
                     break;

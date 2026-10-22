@@ -1,3 +1,4 @@
+using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.Events;
 using CityTycoon.Engine.State;
 using CityTycoon.Engine.Steps;
@@ -21,8 +22,8 @@ public static class Bankruptcy
 
         // 2. The bank's loans are paid back first, from whatever cash there is.
         int beforeLoans = player.Cash;
-        player.Cash = Math.Max(0, player.Cash - player.Loans * MoneyRules.LoanRepayCost(ctx, player.Id));
-        player.Loans = 0;
+        player.Cash = Math.Max(0, player.Cash - RuleModifiers.LoanDebt(ctx.State, ctx.Content, player.Id));
+        player.LoanBook.Clear();
 
         // 3. Pending properties were never fully paid for, so they go back to the bank.
         var pending = owned.Where(p => p.IsPending).ToList();

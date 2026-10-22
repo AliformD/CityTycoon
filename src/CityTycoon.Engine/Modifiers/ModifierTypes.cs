@@ -30,7 +30,7 @@ public static class ModifierTypes
         ["HandLimit"] = new(c => new HandLimitModifier(c), NeedsValue: true),
         ["JailToll"] = new(c => new JailTollModifier(c), NeedsValue: true),
         ["HostileTakeover"] = new(c => new HostileTakeoverModifier(c)),
-        ["LoanRepayCost"] = new(c => new LoanRepayCostModifier(c), NeedsValue: true),
+        ["LoanInterestDiscount"] = new(c => new LoanInterestDiscountModifier(c), NeedsValue: true),
         ["MaxLoans"] = new(c => new MaxLoansModifier(c), NeedsValue: true),
         ["DividendPerTower"] = new(c => new DividendPerTowerModifier(c), NeedsValue: true),
         ["IgnoreNegativeRent"] = new(c => new IgnoreNegativeRentModifier(c)),

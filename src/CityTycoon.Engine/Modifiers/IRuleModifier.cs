@@ -88,8 +88,8 @@ public interface IRuleModifier
 
     // ----- Loans and the start of a turn -----
 
-    /// <summary>The cost to repay one loan, if this modifier changes it (Bank Partner). Return 0 for "no change".</summary>
-    int LoanRepayCost(GameState state, int playerId) => 0;
+    /// <summary>The share of a loan's interest this player doesn't pay, in percent (Yellow, Bank Partner, decision #154).</summary>
+    int LoanInterestDiscountPercent(GameState state, int playerId) => 0;
 
     /// <summary>How many loans this player may hold, if this modifier changes it (Bank Partner). Return 0 for "no change".</summary>
     int MaxLoans(GameState state, int playerId) => 0;

@@ -213,7 +213,7 @@ public sealed class AuctionStep : Step
     {
         PlayerState player = ctx.Player(playerId);
         int loansLeft = Math.Max(0, MoneyRules.MaxLoans(ctx, playerId) - player.Loans);
-        int bestCash = player.Cash + loansLeft * ctx.Rules.LoanAmount;
+        int bestCash = player.Cash + loansLeft * ctx.Rules.BiggestLoan;
         int best = MaxFullBid(ctx.Rules, bestCash);
         if (AllowsDownPayment && HasFreePendingSlot(ctx, playerId))
             best = Math.Max(best, MaxDepositBid(ctx.Rules, bestCash));

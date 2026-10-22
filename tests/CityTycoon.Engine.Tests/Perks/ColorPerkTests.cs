@@ -154,15 +154,16 @@ public class ColorPerkTests
         var game = new TestGame();
         game.Give(0, Yellow);
         var me = game.Engine.GetView(0).Me;
-        Assert.Equal(210, me.LoanRepayCost);
+        Assert.Equal(225, me.RepayCost(200)); // half the $50 interest
+        Assert.Equal(470, me.RepayCost(400)); // half the $140 interest
         Assert.Equal(3, me.MaxLoans);
 
-        game.Do(0, new TakeLoan());
-        game.Do(0, new TakeLoan());
-        game.Do(0, new TakeLoan());
+        game.Do(0, new TakeLoan(200));
+        game.Do(0, new TakeLoan(200));
+        game.Do(0, new TakeLoan(200));
         Assert.Equal(3, game.Player(0).Loans);
-        game.Do(0, new RepayLoan());
-        Assert.Equal(1500 + 600 - 210, game.Player(0).Cash);
+        game.Do(0, new RepayLoan(200));
+        Assert.Equal(1500 + 600 - 225, game.Player(0).Cash);
     }
 
     [Fact]

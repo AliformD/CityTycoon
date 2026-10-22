@@ -58,9 +58,15 @@ public sealed class RulesConfig
     public required int PublicOpinionInfluence { get; init; }
 
     // Section 15.7: loans.
-    public required int LoanAmount { get; init; }
-    public required int LoanRepay { get; init; }
+    /// <summary>The loans the bank offers (decision #154): how much it lends, and what paying it back costs. Bigger loans cost more interest.</summary>
+    public required IReadOnlyList<LoanTerms> LoanOptions { get; init; }
     public required int MaxLoans { get; init; }
+
+    /// <summary>The terms for a loan of this size. A size the bank doesn't offer (a loan from an old save) is charged 25% interest.</summary>
+    public LoanTerms Loan(int amount) => LoanOptions.FirstOrDefault(o => o.Amount == amount) ?? new LoanTerms(amount, amount * 5 / 4);
+
+    /// <summary>The biggest loan the bank offers.</summary>
+    public int BiggestLoan => LoanOptions.Count == 0 ? 0 : LoanOptions.Max(o => o.Amount);
 
     // Section 14: Jail.
     public required int JailBail { get; init; }
@@ -135,3 +141,10 @@ public sealed record ZoningRule(ZoningLevel Level, int MaxBuildingLevel);
 
 /// <summary>One row of the permit table in Section 10.3.</summary>
 public sealed record PermitSupply(int MinPlayers, int MaxPlayers, int HotelPermits, int SkyscraperPermits);
+
+/// <summary>One kind of bank loan: borrow <paramref name="Amount"/>, pay back <paramref name="Repay"/> (Section 15.7).</summary>
+public sealed record LoanTerms(int Amount, int Repay)
+{
+    /// <summary>What the loan costs on top of the money borrowed.</summary>
+    public int Interest => Repay - Amount;
+}

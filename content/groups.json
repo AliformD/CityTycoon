@@ -72,8 +72,8 @@
       "perk": {
         "id": "bank-partner",
         "name": "Bank Partner",
-        "text": "Your loans cost $210 to repay instead of $250, and you can hold 3 instead of 2.",
-        "modifiers": [ { "type": "LoanRepayCost", "value": 210 }, { "type": "MaxLoans", "value": 3 } ]
+        "text": "Your loans cost half the usual interest, and you can hold 3 instead of 2.",
+        "modifiers": [ { "type": "LoanInterestDiscount", "value": 50 }, { "type": "MaxLoans", "value": 3 } ]
       }
     },
     {

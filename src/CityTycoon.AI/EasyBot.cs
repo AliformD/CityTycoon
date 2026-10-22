@@ -74,7 +74,7 @@ public partial class EasyBot : IPlayerController
         GameAction choice = decision.Kind switch
         {
             DecisionKind.SubmitBid => ChooseBid(view, decision),
-            DecisionKind.RaiseMoney => RaiseMoney(legalActions),
+            DecisionKind.RaiseMoney => RaiseMoney(view, decision, legalActions),
             DecisionKind.RespondToTrade => RespondToTrade(view, decision),
             DecisionKind.ChoosePrecisionDice => ChooseBestDice(view, decision),
             DecisionKind.ChooseNudge => ChooseNudge(view, decision, legalActions),
@@ -228,12 +228,18 @@ public partial class EasyBot : IPlayerController
         // Build on the cheapest spot it can afford.
         if (PickBuild(view, legalActions, spare) is Build build)
             return build;
+        if (BorrowToBuild(view, legalActions, spare) is TakeLoan borrow)
+            return borrow;
 
         // Only when really comfortable: get mortgaged properties back, then clear loans.
         if (legalActions.OfType<Unmortgage>().FirstOrDefault() is Unmortgage unmortgage && spare > Reserve(view) * 2)
             return unmortgage;
-        if (legalActions.Contains(new RepayLoan()) && spare > Reserve(view) * 2 + view.Me.LoanRepayCost)
-            return new RepayLoan();
+        // The biggest loan first: it has the highest interest.
+        if (legalActions.OfType<RepayLoan>().OrderByDescending(r => r.Amount).FirstOrDefault() is RepayLoan repay
+            && spare > Reserve(view) * 2 + view.Me.RepayCost(repay.Amount))
+        {
+            return repay;
+        }
 
         // The Red perk: force an auction on the one missing piece of a color group it nearly owns.
         if (legalActions.OfType<HostileTakeover>().FirstOrDefault(t => CompletesAGroup(view, t.PropertyId)) is HostileTakeover takeover
@@ -262,12 +268,51 @@ public partial class EasyBot : IPlayerController
             .All(id => view.Properties[id].OwnerId == view.ViewerId && !view.Properties[id].IsPending);
     }
 
-    /// <summary>Owes money: mortgage first (no loss), then loans, then sell buildings (it loses half).</summary>
-    private static GameAction RaiseMoney(IReadOnlyList<GameAction> legalActions) =>
-        legalActions.OfType<Mortgage>().FirstOrDefault()
-        ?? legalActions.OfType<TakeLoan>().FirstOrDefault()
-        ?? legalActions.OfType<SellBuilding>().FirstOrDefault()
-        ?? legalActions[0] as GameAction;
+    /// <summary>
+    /// Owes money: mortgage first (no loss), then the smallest loan that covers the rest (the least interest),
+    /// then sell buildings (it loses half).
+    /// </summary>
+    private static GameAction RaiseMoney(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions)
+    {
+        if (legalActions.OfType<Mortgage>().FirstOrDefault() is Mortgage mortgage)
+            return mortgage;
+        var loans = legalActions.OfType<TakeLoan>().OrderBy(l => l.Amount).ToList();
+        int shortfall = decision.AmountOwed - view.Me.Cash;
+        if ((loans.FirstOrDefault(l => l.Amount >= shortfall) ?? loans.LastOrDefault()) is TakeLoan loan)
+            return loan;
+        return legalActions.OfType<SellBuilding>().FirstOrDefault() ?? legalActions[0];
+    }
+
+    /// <summary>
+    /// Borrows to build (decision #154) when a building it can't quite afford would earn back the loan's
+    /// interest, with room to spare, before the game ends. Takes the smallest loan that is enough.
+    /// </summary>
+    private TakeLoan? BorrowToBuild(PlayerView view, IReadOnlyList<GameAction> legalActions, int spare)
+    {
+        int opponents = view.Players.Count(p => !p.IsBankrupt && p.Id != view.ViewerId);
+        foreach (TakeLoan loan in legalActions.OfType<TakeLoan>().OrderBy(l => l.Amount))
+        {
+            if (PickBuild(view, legalActions, spare + loan.Amount) is not Build build)
+                continue;
+            int interest = view.Me.RepayCost(loan.Amount) - loan.Amount;
+            if (ExtraRent(view, build.PropertyId) * opponents * RoundsLeft(view) / view.Spaces.Count >= interest * LoanPayback)
+                return loan;
+        }
+        return null;
+    }
+
+    /// <summary>How many times over the extra rent must pay back a loan's interest before the bot borrows to build.</summary>
+    protected virtual double LoanPayback => 2.0;
+
+    /// <summary>How much more rent one landing pays after the next building level on this property.</summary>
+    private double ExtraRent(PlayerView view, string propertyId)
+    {
+        PropertyDefinition def = content.Property(propertyId);
+        int level = view.Properties[propertyId].Level;
+        if (def.Rents == null || level + 1 >= def.Rents.Count)
+            return 0;
+        return def.Rents[level + 1] - def.Rents[level];
+    }
 
     private GameAction ChooseBid(PlayerView view, PendingDecision decision)
     {
@@ -346,7 +391,7 @@ public partial class EasyBot : IPlayerController
     protected int MostTheyCouldPay(PlayerView view, int playerId)
     {
         PlayerInfo player = view.Players.First(p => p.Id == playerId);
-        int total = player.Cash + Math.Max(0, player.MaxLoans - player.Loans) * content.Rules.LoanAmount;
+        int total = player.Cash + Math.Max(0, player.MaxLoans - player.Loans) * content.Rules.BiggestLoan;
         foreach (PropertyInfo owned in view.Properties.Values.Where(p => p.OwnerId == playerId))
         {
             PropertyDefinition def = content.Property(owned.Id);

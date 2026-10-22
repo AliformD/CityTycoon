@@ -60,7 +60,7 @@ public static class RulesReference
                 "Opportunity cards are kept in your hand, secret, and played later. You can hold three. Event cards happen as soon as they are drawn. A used card goes to the bottom of its deck, never reshuffled, so remembering what was drawn tells you what comes back around. Hidden Government tiles on the board are a surprise: the first player to land on one reveals it for everybody.",
             ]),
             new("money", "Loans, mortgages and bankruptcy", [
-                $"You can take a {money(r.LoanAmount)} loan from the bank, and repaying it costs {money(r.LoanRepay)}. You can hold {r.MaxLoans} loans at once. Mortgaging a property pays {r.MortgagePercent}% of its value, and unmortgaging costs that plus {r.UnmortgageFeePercent}%.",
+                $"The bank lends {string.Join(", ", r.LoanOptions.Select(o => $"{money(o.Amount)} (repay {money(o.Repay)})"))}. Bigger loans cost more interest. You can hold {r.MaxLoans} loans at once. Mortgaging a property pays {r.MortgagePercent}% of its value, and unmortgaging costs that plus {r.UnmortgageFeePercent}%.",
                 "If you owe more than you have, you must raise money by selling buildings, mortgaging or taking loans. If you still can't pay, you go bankrupt and your things go to the person you owed, or to auction if you owed the bank.",
             ]),
             new("characters", "Characters", content.Characters.Select(c => $"{c.Name}: {c.Text}").ToList()),

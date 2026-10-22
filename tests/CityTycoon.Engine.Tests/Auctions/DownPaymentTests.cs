@@ -107,7 +107,7 @@ public class DownPaymentTests
         game.Player(0).Cash = 100;
         game.RollOnto(0, "market-street");
 
-        game.Do(0, new TakeLoan());
+        game.Do(0, new TakeLoan(200));
 
         Assert.Equal(300, game.DecisionFor(0)!.MaxBid);
         game.Do(0, new PlaceBid(250));
@@ -175,7 +175,7 @@ public class DownPaymentTests
         game.PlaceBefore(0, "go", 5);
         game.Roll(0, 1, 4);
 
-        game.Do(0, new TakeLoan());
+        game.Do(0, new TakeLoan(200));
 
         Assert.False(game.Property("market-street").IsPending);
         Assert.Equal(100, game.Player(0).Cash);   // 300 (salary + catch-up) + 200 loan - 400

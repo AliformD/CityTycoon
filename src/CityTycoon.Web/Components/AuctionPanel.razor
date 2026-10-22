@@ -69,9 +69,15 @@
     {
         <p>You don't have enough cash to bid.</p>
     }
-    @if (Request.LegalActions.Contains(new TakeLoan()))
+    @if (Request.LegalActions.OfType<TakeLoan>().Any())
     {
-        <p><button class="small" @onclick="() => OnAnswer.InvokeAsync(new TakeLoan())">@UiHelpers.ActionLabel(new TakeLoan(), Request.View, Content)</button> to bid more.</p>
+        <p>
+            @foreach (var loan in Request.LegalActions.OfType<TakeLoan>())
+            {
+                <button class="small" @onclick="() => OnAnswer.InvokeAsync(loan)">@UiHelpers.ActionLabel(loan, Request.View, Content)</button>
+            }
+            to bid more.
+        </p>
     }
 
     <div class="buttons">

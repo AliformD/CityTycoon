@@ -159,7 +159,7 @@ public class MoneyAndTradeBotTests
         var engine = NewGame();
         engine.State.Properties["market-street"].OwnerId = 1;
         var decision = new PendingDecision(1, DecisionKind.RaiseMoney, "", AmountOwed: 300, Management: ManagementOptions.RaiseMoney);
-        GameAction[] legal = [new TakeLoan(), new Mortgage("market-street")];
+        GameAction[] legal = [new TakeLoan(200), new Mortgage("market-street")];
 
         var choice = await new EasyBot(1).DecideAsync(engine.GetView(1), decision, legal);
 
@@ -171,11 +171,11 @@ public class MoneyAndTradeBotTests
     {
         var engine = NewGame();
         var decision = new PendingDecision(1, DecisionKind.RaiseMoney, "", AmountOwed: 300, Management: ManagementOptions.RaiseMoney);
-        GameAction[] legal = [new ForfeitProperty(), new TakeLoan()];
+        GameAction[] legal = [new ForfeitProperty(), new TakeLoan(200)];
 
         var choice = await new EasyBot(1).DecideAsync(engine.GetView(1), decision, legal);
 
-        Assert.Equal(new TakeLoan(), choice);
+        Assert.Equal(new TakeLoan(200), choice);
     }
 
     [Fact]

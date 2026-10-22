@@ -19,7 +19,7 @@ public class RaiseMoneyTests
         Assert.Equal(DecisionKind.RaiseMoney, decision.Kind);
         Assert.Equal(200, decision.AmountOwed);
         Assert.Contains(game.State.Log, e => e is RaisingMoney { AmountOwed: 200 });
-        Assert.Equal([new Mortgage("mill-street"), new TakeLoan()], game.Engine.GetLegalActions(0));
+        Assert.Equal([new Mortgage("mill-street"), new TakeLoan(100), new TakeLoan(200), new TakeLoan(400)], game.Engine.GetLegalActions(0));
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public class RaiseMoneyTests
 
         game.Do(0, new Mortgage("mill-street")); // $130: still short
         Assert.Equal(DecisionKind.RaiseMoney, game.DecisionFor(0)!.Kind);
-        game.Do(0, new TakeLoan());               // $330: enough
+        game.Do(0, new TakeLoan(200));               // $330: enough
 
         Assert.Equal(130, game.Player(0).Cash);
         Assert.Equal(DecisionKind.PostMoveActions, game.DecisionFor(0)!.Kind);
@@ -49,7 +49,7 @@ public class RaiseMoneyTests
         game.RollOnto(0, "income-tax");
 
         Assert.Equal("You can't unmortgage right now.", game.Engine.WhyIllegal(0, new Unmortgage("mill-street")));
-        Assert.Equal("You can't repay a loan right now.", game.Engine.WhyIllegal(0, new RepayLoan()));
+        Assert.Equal("You can't repay that loan right now.", game.Engine.WhyIllegal(0, new RepayLoan(200)));
     }
 
     [Fact]

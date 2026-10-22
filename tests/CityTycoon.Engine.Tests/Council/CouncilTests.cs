@@ -100,7 +100,7 @@ public class CouncilTests
         CouncilResolved result = game.LastResolved();
         Assert.Equal(400, result.YesInfluence);   // 100 vote + 200 Lobbyist + 100 public opinion
         Assert.DoesNotContain("lobbyist", game.Player(0).Hand);
-        Assert.Contains("lobbyist", game.State.OpportunityDiscard);
+        Assert.Equal("lobbyist", game.State.OpportunityDeck[^1]);
         Assert.True(result.Votes.First(v => v.PlayerId == 0).UsedLobbyist);
     }
 

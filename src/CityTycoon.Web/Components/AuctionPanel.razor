@@ -1,10 +1,10 @@
-@* A sealed bid (Section 8.2): type an amount or use the quick buttons, choose how to pay, then bid or pass. *@
+@* An auction turn: a silent (sealed) bid (Section 8.2) or a turn in an open auction: type an amount or use the quick buttons, choose how to pay, then bid or pass. *@
 <div class="decision auction">
-    <h2>@(Request.Decision.OpenAuction ? "Open auction" : "Auction"): @Content.Property(Request.Decision.PropertyId!).Name</h2>
-    <PropertyCard PropertyId="@(Request.Decision.PropertyId!)" View="Request.View" Content="Content" />
+    <h2>@(Request.Decision.OpenAuction ? "Open auction" : "Silent auction"): @Content.Property(Request.Decision.PropertyId!).Name</h2>
     @if (Request.Decision.OpenAuction)
     {
-        @* Open auction: everyone sees every bid. Players take turns, and dropping out is for good. *@
+        @* Open auction: everyone sees every bid. Players take turns, and dropping out is for good.
+           The bidding comes first; the property's details are further down. *@
         <p>
             <strong>@Request.View.Me.Name</strong>, it's your turn.
             @if (Request.Decision.HighBidderId is int leader)
@@ -18,9 +18,23 @@
             Raise to at least <strong>@UiHelpers.Money(Request.Decision.MinBid)</strong>, or drop out (you can't come back in).
             You have <strong>@UiHelpers.Money(Request.View.Me.Cash)</strong>.
         </p>
+        @if (Request.Decision.Bidders is { Count: > 0 } bidders)
+        {
+            <ul class="bidders" aria-label="Bidders">
+                @foreach (int id in bidders)
+                {
+                    <li class="@BidderClass(id)" style="--player:@UiHelpers.PlayerColor(id)">
+                        <span class="token" style="background:@UiHelpers.PlayerColor(id)" aria-hidden="true">@UiHelpers.Initial(Request.View.Player(id).Name)</span>
+                        <span>@Request.View.Player(id).Name</span>
+                        <span class="bidder-state">@BidderState(id)</span>
+                    </li>
+                }
+            </ul>
+        }
     }
     else
     {
+        <p class="hint">Silent auction: everyone bids in secret at the same time. Nobody sees the bids until they are all in, and the highest bid wins.</p>
         <p>
             <strong>@Request.View.Me.Name</strong>, your bid is secret until everyone has chosen.
             Minimum bid <strong>@UiHelpers.Money(Request.Decision.MinBid)</strong>.
@@ -67,6 +81,9 @@
         }
         <button class="big" @onclick="() => OnAnswer.InvokeAsync(new PassBid())">@(Request.Decision.OpenAuction ? "Drop out" : "Pass")</button>
     </div>
+
+    @* The property's details last: the same card shows in the side panel when you click a space. *@
+    <PropertyCard PropertyId="@(Request.Decision.PropertyId!)" View="Request.View" Content="Content" />
 </div>
 
 @code {
@@ -102,6 +119,17 @@
             downPayment = !CanPayInFull && CanDownPay;
         }
     }
+
+    private bool IsOut(int id) => Request.Decision.DroppedOut?.Contains(id) == true;
+
+    private string BidderClass(int id) =>
+        IsOut(id) ? "out" : id == Request.Decision.HighBidderId ? "leading" : "";
+
+    private string BidderState(int id) =>
+        IsOut(id) ? "Dropped out"
+        : id == Request.Decision.HighBidderId ? $"Leads with {UiHelpers.Money(Request.Decision.HighBid)}"
+        : id == Request.Decision.PlayerId ? "Bidding now"
+        : "Still in";
 
     private void Change(int amount) =>
         bid = Math.Clamp(bid + amount, Request.Decision.MinBid, Math.Max(Request.Decision.MinBid, MaxBid));

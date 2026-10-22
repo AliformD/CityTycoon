@@ -496,6 +496,15 @@ button.skip { align-self: flex-end; display: inline-flex; align-items: center; g
     padding: 0.8rem 1.1rem 1rem;
 }
 .decision h2 { font-size: 1.35rem; margin: 0.2rem 0 0.7rem; }
+/* Open auction: who is still in, who leads and who has dropped out. */
+.bidders { list-style: none; margin: 0 0 0.7rem; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.bidders li { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 12px; border: 2px solid transparent; }
+.bidders .token { width: 1.6rem; height: 1.6rem; font-size: 0.8rem; border-width: 2px; }
+.bidders .bidder-state { margin-left: auto; color: var(--muted); font-size: 0.9rem; }
+.bidders li.leading { border-color: var(--player); }
+.bidders li.leading .bidder-state { color: var(--text); }
+.bidders li.out { opacity: 0.55; }
+.decision.auction .property-card { margin-top: 1rem; }
 .buttons { display: flex; gap: 0.6rem; flex-wrap: wrap; }
 .buttons.stacked { flex-direction: column; align-items: stretch; }
 .bid-entry { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.5rem; }
@@ -564,6 +573,10 @@ button.skip { align-self: flex-end; display: inline-flex; align-items: center; g
 .player-card dd { margin: 0; font-weight: 700; }
 .player-card .status { margin: 0.2rem 0 0; font-weight: 700; }
 .player-card .character p { margin: 0.3rem 0 0; font-size: 0.88rem; }
+/* Perk chips are buttons: hover shows a tooltip, a click shows the explanation underneath. */
+button.chip.perk { border: 2px solid transparent; box-shadow: none; cursor: pointer; font-family: inherit; min-height: 0; }
+button.chip.perk:hover, button.chip.perk.open { border-color: var(--outline); }
+.player-card .perk-text { margin: 0.2rem 0 0; font-size: 0.88rem; border-left: 4px solid var(--highlight); padding-left: 0.5rem; }
 .momentum { display: inline-flex; gap: 3px; vertical-align: middle; }
 .momentum span { width: 0.6rem; height: 0.6rem; border-radius: 50%; border: 2px solid var(--player, var(--outline)); }
 .momentum span.on { background: var(--player, var(--outline)); }

@@ -42,6 +42,21 @@ public class OpenAuctionTests
     }
 
     [Fact]
+    public void TheQuestion_ListsTheBidders_AndWhoDroppedOut()
+    {
+        var game = OpenAuction();
+        game.Do(0, new PlaceBid(100));
+        game.Do(1, new PassBid());
+
+        // Player 2's turn: the screen can show who leads, who is still in and who dropped out.
+        var d = game.DecisionFor(2)!;
+        Assert.Equal([0, 1, 2], d.Bidders);
+        Assert.Equal([1], d.DroppedOut);
+        Assert.Equal(0, d.HighBidderId);
+        Assert.Equal(100, d.HighBid);
+    }
+
+    [Fact]
     public void ThePropertyOwnedByAnyoneCounts_EvenTheLander()
     {
         var game = new TestGame();

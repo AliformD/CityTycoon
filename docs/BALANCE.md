@@ -242,3 +242,8 @@ Decision #159. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, se
 
 Lobbying: one extra dollar of lobbying moves the chance of winning a vote by much less than a dollar of what the ordinance is worth, even for the Politician (each of its dollars is worth 2 influence). For example, a 25 % rent boost on a Dark Blue set with hotels is worth about $220 to its owner against the table; lobbying would have to beat that, and it doesn't. A test with the bots treating every ordinance as worth 4 times more still spent only $2 a game. So the bots stopped lobbying, and the Politician gained 2 points from that and from choosing the agenda by dollars, and 2 more from vote deals. Hustler 30.3 %, Contractor 28.8 %, Mogul 27.8 %, Commuter 25.8 %, Lawyer 22.8 %, Medic 22.2 %, City Planner 20.1 %.
 
+## Table talk and temperament (2026-10-22)
+Decision #160. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, seed 1. "Before" is decision #159.
+
+Remarks per game: 4.1 warnings, 0.5 sassy, 0.3 threats, 0.2 friendly, 0.1 scoldings (most trades the bots offer are for the last piece of a group, so warnings are the most common). Trades finished 410 to 403 per 1,000 games; bankruptcies 1.05 per game both times. Character win rates moved by under half a point (Politician 22.6 % to 22.8 %, Hustler 30.3 % to 30.7 %, City Planner 20.1 % to 19.9 %). Temperament changes margins only a little, so it reads as flavor more than strategy, which was the aim.
+

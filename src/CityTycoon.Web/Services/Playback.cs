@@ -265,6 +265,7 @@ public sealed class Playback(SettingsService settings, SoundService sounds, Game
     private static int PauseFor(GameEvent e) => e switch
     {
         TurnStarted => 800,
+        TableTalk => 1500,   // time to read what a bot said
         PassedGo => 1100,
         LandedOn => 350,
         SentToJail => 1600,
@@ -301,6 +302,7 @@ public sealed class Playback(SettingsService settings, SoundService sounds, Game
     private (string Icon, string Tone, string? CardId, bool CardBack, string Sound) Look(GameEvent e) => e switch
     {
         TurnStarted => ("turn", "", null, false, "turn"),
+        TableTalk t => ("talk", t.Tone switch { TalkTone.Friendly => "good", TalkTone.Scold or TalkTone.Threat => "bad", _ => "" }, null, false, ""),
         PassedGo => ("coin", "good", null, false, "coin-in"),
         SentToJail => ("police", "bad", null, false, "jail"),
         LeftJail => ("unlock", "good", null, false, "turn"),

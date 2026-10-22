@@ -409,9 +409,13 @@ public partial class EasyBot
     private static TradeOffer WithNet(TradeOffer mine, int net) =>
         net >= 0 ? mine with { GiveCash = net, GetCash = 0 } : mine with { GiveCash = 0, GetCash = -net };
 
-    /// <summary>The margin: 5% of everything changing hands, at least $10, so the bot doesn't trade for a break-even deal.</summary>
+    /// <summary>
+    /// The margin: 5% of everything changing hands, at least $10, so the bot doesn't trade for a break-even deal.
+    /// It asks more from players it dislikes and less from friends (decision #160).
+    /// </summary>
     private double Margin(PlayerView view, TradeOffer mine) =>
-        Math.Max(10, (Math.Abs(Net(mine)) + mine.GiveProperties.Concat(mine.GetProperties).Sum(id => Value(view, id))) * 0.05);
+        Math.Max(10, (Math.Abs(Net(mine)) + mine.GiveProperties.Concat(mine.GetProperties).Sum(id => Value(view, id))) * 0.05)
+        * MoodMargin(view, mine.ToId);
 
     /// <summary>
     /// The bot's limit: this trade (written from the bot's side) with the cash moved to the most

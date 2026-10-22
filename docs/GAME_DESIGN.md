@@ -1131,6 +1131,12 @@ Bots only ever receive their own `PlayerView`. They **never** see hidden tiles t
 - **Vote value:** how much this ordinance would change the bot's net worth compared with each opponent's. Lobby up to a share of that difference.
 - **Nudge choice:** compare the expected value of the possible landing spots.
 
+### 23.4 Table talk and temperament (decision #160)
+
+Bots watch every trade between other players and size it up from what everyone can see: face values, and whether it finishes a color group for one side. When a trade looks lopsided, one onlooking bot speaks up (they take turns): a **warning** to the player about to answer it ("Don't take that, Bo. It hands Cy the Green set."), a **sassy** remark to a player offering a gift, a **scolding** for the player who handed a set over, or a **threat** to the winner if the bot already dislikes them. Remarks are public, appear in the game log and the news, and change nothing by themselves.
+
+Each bot keeps a **temperament** toward every other player, worked out from the log: trades and vote deals with it warm it up; rent it pays them, cards played against it, duels, rude remarks aimed at it, and lopsided trades that hand a rival a color group cool it down. Aggressive bots hold grudges longer, Reserved ones let more go. The result is Friendly, Neutral, Wary or Hostile, shown on the bot's player card toward each person. A bot asks a bigger margin in trades with players it dislikes (Wary 1.3 times, Hostile 2 times) and a smaller one with friends (0.8 times), and taunts or threatens players it is Hostile toward when big rent changes hands.
+
 Each bot gets a small random "personality" (for example, risk tolerance), so bots don't all play the same. On top of that each bot secretly draws a style, Aggressive, Balanced or Reserved, on its own, so a table can have two Aggressive bots and no Reserved one (decision #144). Bot decisions must be quick (under about 50 ms each), so simulations stay fast.
 
 ---

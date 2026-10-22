@@ -101,6 +101,8 @@ Tests swap the real dice for `ScriptedDice`, so a test can say "the next roll is
 
 Each seat at the table has an `IPlayerController`: a bot today, a person clicking in the browser from Phase 2, a person on another device later. `GameHost` asks the engine what it's waiting for and passes each question to the right controller. For sealed bids it collects every answer before handing any of them in, so nobody's bid can influence anyone else's.
 
+Table talk (decision #160): after each move, `GameHost` shows every controller that is also an `ITableTalker` (bots) the new events, in seat order, and passes what they want to say to `GameEngine.Say`, which adds a `TableTalk` event to the log. Talking is the one thing that needs no pending decision, and it changes nothing but the log. The bot side is `EasyBot.Talk.cs`: `Judge` sizes up a trade from public facts, `Talk` picks a remark (lines are chosen from the log position, never the bot's random numbers), and `Temperament`/`MoodToward` read the log a little at a time. Its margin in `EasyBot.Trades.cs` is multiplied by `MoodMargin`.
+
 ## Managing money between decisions (Phase 3)
 
 Building, selling, mortgages, loans and trades aren't answers to a question like "roll or pay bail?". They're extra things you may do **while** a question is waiting, and then the same question is asked again. For example, before rolling you might build two houses and take a loan, then roll.

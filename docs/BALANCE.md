@@ -177,3 +177,18 @@ Decision #154. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, se
 Does borrowing to build help? In 2,000 more games, half the seats were allowed to borrow to build and half were not: the borrowers won 28.3 % and the others 21.7 %, and both went bankrupt about as often (22 %). So the extra bankruptcies come from the higher rents hitting other players, not from the borrowers. Asking for 3 times the interest back instead of 2 changed almost nothing. With borrowing turned off (only the new sizes), bankruptcies were 0.67 per game.
 
 Characters barely moved: Mogul 31.3 %, Hustler 31.9 %, Contractor 26.0 %, Lawyer 25.7 %, Medic 23.4 %, Commuter 22.6 %, Politician 20.1 %, City Planner 19.3 %. Game length 39.6 rounds.
+
+## Building higher with Green and Dark Blue (2026-10-22)
+Decision #155. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, seed 1. "Before" is decision #154.
+
+Counting the dividend and cheap skyscrapers alone changed almost nothing, because the bots' plans were not what held them back. At the end of a game, a Green set was usually stuck under 4-house zoning (Residential) or partly mortgaged; of the Green sets with no buildings at the end, about 3 in 4 had a mortgaged piece. So this change also makes bots push to rezone a district once their set there is built to the limit, and lift mortgages on a whole set first.
+
+| | before | after |
+| --- | --- | --- |
+| Green dividends paid per game | $26 | $34 |
+| Rezone Up passed per game | 0.59 | 0.68 |
+| Buildings built per game | 36.5 | 37.6 |
+| Green holders who won | 56.9 % | 59.1 % |
+| Contractor win rate | 26.0 % | 27.2 % |
+
+Bankruptcies 1.02 to 1.06 per game. Other characters moved by 1 point or less. Green is still held rarely (about 1 in 4 games) and its $200 houses are dear, so its dividend stays small; making it bigger would be a rules change (for example cheaper Green hotels), not a bot change.

@@ -45,7 +45,7 @@ public partial class EasyBot
     };
 
     /// <summary>For the first this many rounds the bot builds only with the cash it has now.</summary>
-    private const int NearRounds = 10;
+    protected const int NearRounds = 10;
 
     /// <summary>In a Classic game (no round limit) the bot plans for this many more rounds.</summary>
     private const int ClassicRoundsLeft = 30;
@@ -536,11 +536,18 @@ public partial class EasyBot
         double near = Math.Min(rounds, NearRounds);
         double far = rounds - near;
 
-        int maxLevel = district != null && view.Zoning.TryGetValue(district, out ZoningLevel zoning)
-            ? Math.Min(3, content.Rules.MaxBuildingLevel(zoning))
+        // Three houses each is where rent pays best for what they cost, so the guess usually stops there.
+        // Green's dividend pays for every hotel, and Dark Blue's skyscrapers are cheap, so their owners plan to build higher.
+        bool dividends = PerkModifier(group, "DividendPerTower") > 0 || GroupPerkModifier(view, ownerId, "DividendPerTower") > 0;
+        int plan = PerkModifier(group, "SkyscraperCostMultiplier") > 0 ? content.Rules.SkyscraperLevel
+            : dividends ? content.Rules.HotelLevel
             : 3;
-        // Three houses each is where rent pays best for what they cost, so the guess stops there.
-        int Levels(double cash) => first.HouseCost > 0 ? Math.Min(members.Count * maxLevel, (int)(cash / first.HouseCost)) : 0;
+        int maxLevel = district != null && view.Zoning.TryGetValue(district, out ZoningLevel zoning)
+            ? Math.Min(plan, content.Rules.MaxBuildingLevel(zoning))
+            : plan;
+        // The Contractor builds for less, so the same cash buys more levels.
+        int houseCost = BuildingRules.ApplyDiscount(content.Rules, first.HouseCost, CharacterModifier(view, ownerId, "BuildDiscount"));
+        int Levels(double cash) => houseCost > 0 ? Math.Min(members.Count * maxLevel, (int)(cash / houseCost)) : 0;
         int levels = Levels(budget);
         int farLevels = Levels(farBudget);
 
@@ -573,9 +580,11 @@ public partial class EasyBot
         double rent = landingsPerRound * (AverageRent(0) * waiting + AverageRent(levels) * (near - waiting)
             + AverageRent(farLevels) * far * FarDiscount);
         // Houses cost money; selling them back to the bank returns half, so half their cost is spent for good.
-        double housesSpent = (far > 0 ? farLevels : levels) * first.HouseCost * 0.5;
-        return (Math.Max(0, rent - housesSpent) + PerkWorth(view, ownerId, group, near, far),
-                levels * first.HouseCost, farLevels * first.HouseCost);
+        double housesSpent = (far > 0 ? farLevels : levels) * houseCost * 0.5;
+        // Hotels this group should end up with, for Green's dividend.
+        int plannedTowers = members.Count(id => farLevels / members.Count + (members.IndexOf(id) < farLevels % members.Count ? 1 : 0) >= content.Rules.HotelLevel);
+        return (Math.Max(0, rent - housesSpent) + PerkWorth(view, ownerId, group, near, far, plannedTowers),
+                levels * houseCost, farLevels * houseCost);
     }
 
     /// <summary>
@@ -584,13 +593,15 @@ public partial class EasyBot
     /// Perks that don't pay cash get a small guess. These read the perk's rule changes from
     /// groups.json, so changing a number there changes what the bots think too.
     /// </summary>
-    private double PerkWorth(PlayerView view, int ownerId, string group, double near, double far)
+    private double PerkWorth(PlayerView view, int ownerId, string group, double near, double far, int plannedTowers = 0)
     {
         double lapsPerRound = SpacesPerTurn / view.Spaces.Count;
         double laps = (near + far * FarDiscount) * lapsPerRound;
         double rounds = near + far * FarDiscount;
         int opponents = view.Players.Count(p => p.Id != ownerId && !p.IsBankrupt);
-        int towers = view.Properties.Values.Count(p => p.OwnerId == ownerId && p.Level >= 5);
+        int TowersIn(bool thisGroup) => view.Properties.Values.Count(p => p.OwnerId == ownerId && p.Level >= content.Rules.HotelLevel
+            && (content.Property(p.Id).Group == group) == thisGroup);
+        int towers = TowersIn(false) + Math.Max(TowersIn(true), plannedTowers);
         return (content.Groups[group].Perk.Modifiers ?? []).Sum(m => m.Type switch
         {
             "GoCash" => m.Value * laps,
@@ -600,11 +611,27 @@ public partial class EasyBot
             "JailToll" => m.Value * opponents * rounds / 8,
             "HostileTakeover" => 30 * laps,
             "DrawTwoKeepOne" => 10 * laps,
-            "DividendPerTower" => m.Value * towers * rounds + 30,
+            // The hotels come later, so count them over the far rounds only.
+            "DividendPerTower" => m.Value * towers * (far > 0 ? far * FarDiscount : near) + 30,
             _ => 20,
         });
     }
 
+
+    /// <summary>The value of one of this player's character's rule changes (the Contractor's 25 for "BuildDiscount"), or 0.</summary>
+    protected int CharacterModifier(PlayerView view, int playerId, string type) =>
+        view.Player(playerId).CharacterId is string id
+            ? content.Character(id).Modifiers?.Where(m => m.Type == type).Sum(m => m.Value) ?? 0
+            : 0;
+
+    /// <summary>The value of a rule change in this color group's perk (Green's 20 for "DividendPerTower"), or 0.</summary>
+    protected int PerkModifier(string group, string type) =>
+        content.Groups[group].Perk.Modifiers?.Where(m => m.Type == type).Sum(m => m.Value) ?? 0;
+
+    /// <summary>The value of a perk rule change this player has switched on by owning a whole color group, or 0.</summary>
+    protected int GroupPerkModifier(PlayerView view, int playerId, string type) =>
+        content.Groups.Keys.Where(g => content.GroupMembers(g).All(id => view.Properties[id].OwnerId == playerId))
+            .Sum(g => PerkModifier(g, type));
 
     /// <summary>
     /// How much a gain for this player hurts the bot: more when they're ahead on net

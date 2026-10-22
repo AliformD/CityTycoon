@@ -71,9 +71,14 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
 
     // ------------------------------------------------------------ Building
 
-    /// <summary>Builds where each dollar buys the most extra rent.</summary>
+    /// <summary>
+    /// Builds where each dollar buys the most extra rent. With Green's Dividends, a new hotel also
+    /// pays its dividend every turn, counted here as the same money in rent.
+    /// </summary>
     protected override Build? PickBuild(PlayerView view, IReadOnlyList<GameAction> legalActions, int spare)
     {
+        int dividend = GroupPerkModifier(view, view.ViewerId, "DividendPerTower");
+        int opponents = Math.Max(1, view.Players.Count(p => !p.IsBankrupt && p.Id != view.ViewerId));
         double Payback(Build b)
         {
             PropertyDefinition def = content.Property(b.PropertyId);
@@ -81,7 +86,11 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
             double cost = Math.Max(1, NextBuildCost(view, b.PropertyId));
             if (def.Rents == null || level + 1 >= def.Rents.Count)
                 return 0;
-            return (def.Rents[level + 1] - def.Rents[level]) / cost;
+            double gain = def.Rents[level + 1] - def.Rents[level];
+            // Rent is paid about (opponents / spaces) times a round; the dividend once a round.
+            if (level + 1 == content.Rules.HotelLevel)
+                gain += dividend * (double)view.Spaces.Count / opponents;
+            return gain / cost;
         }
         return legalActions.OfType<Build>()
             .Where(b => NextBuildCost(view, b.PropertyId) <= spare)
@@ -112,6 +121,30 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
     protected virtual double LobbyShare => 0.2;
     protected virtual int LobbyReserveFactor => 2;
 
+    /// <summary>
+    /// What one more building level on each of its groups in this district would earn before the game ends
+    /// (plus Green's dividend for each new hotel), for a group already built to the zoning limit.
+    /// </summary>
+    private double RezoneWorth(PlayerView view, string districtId)
+    {
+        int opponents = Math.Max(1, view.Players.Count(p => !p.IsBankrupt && p.Id != view.ViewerId));
+        int dividend = GroupPerkModifier(view, view.ViewerId, "DividendPerTower");
+        double rounds = Math.Min(RoundsLeft(view), NearRounds);
+        double worth = 0;
+        foreach (SpaceInfo space in view.Spaces.Where(s => s.DistrictId == districtId && s.Kind == SpaceKind.Property))
+        {
+            PropertyInfo property = view.Properties[space.Id];
+            PropertyDefinition def = content.Property(space.Id);
+            if (property.OwnerId != view.ViewerId || def.Rents == null || property.Level + 1 >= def.Rents.Count)
+                continue;
+            double gain = (def.Rents[property.Level + 1] - def.Rents[property.Level]) * opponents / (double)view.Spaces.Count;
+            if (property.Level + 1 == content.Rules.HotelLevel)
+                gain += dividend;
+            worth += gain * rounds - property.NextLevelCost * 0.5;
+        }
+        return Math.Max(80, worth);
+    }
+
     /// <summary>A rough dollar size of how much an ordinance matters to this bot.</summary>
     protected double Impact(PlayerView view, string ordinanceId, string? districtId)
     {
@@ -129,6 +162,8 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
             double swing = Math.Abs(def.Int("percent")) / 100.0 * Math.Abs(mine - theirs / others) * 3;
             return Math.Max(60, swing);
         }
+        if (def.EffectType == "Rezone" && districtId != null && Benefit(view, ordinanceId, districtId) == 2)
+            return RezoneWorth(view, districtId);
         return 80;
     }
 }

@@ -683,6 +683,8 @@ button.primary small { color: inherit; }
 
 /* ---------- Government tiles ---------- */
 .tile-note { font-size: 0.9rem; border-left: 4px solid var(--good); padding-left: 0.5rem; }
+.set-perk { font-size: 0.9rem; border-top: 2px dashed var(--soft-line); padding-top: 0.5rem; margin-top: 0.6rem; }
+.set-perk .hint { display: block; }
 
 /* ---------- City Council ---------- */
 .vote-choice { border: 2px solid var(--soft-line); border-radius: 12px; display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 0.5rem 0; }

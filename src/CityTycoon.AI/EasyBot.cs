@@ -183,6 +183,8 @@ public partial class EasyBot : IPlayerController
             "CollectFromBank" => 1,
             "RevealAllTiles" => 1,
             "AddPermits" => 1,
+            // A whole group already built up to the zoning limit can only grow if the district is rezoned up.
+            "Rezone" when def.Int("direction") > 0 && districtId != null && BuiltToTheLimit(view, districtId) => 2,
             "Rezone" => def.Int("direction") * Sign(mineHere, theirsHere),
             "DistrictRent" => Math.Sign(def.Int("percent")) * Sign(mineHere, theirsHere),
             "Preserve" => Sign(mineHere, theirsHere),
@@ -195,6 +197,17 @@ public partial class EasyBot : IPlayerController
             _ => 0,
         };
     }
+
+    /// <summary>True if the bot owns a whole color group in this district and every piece is as tall as the zoning allows.</summary>
+    protected bool BuiltToTheLimit(PlayerView view, string districtId) =>
+        view.Zoning.TryGetValue(districtId, out ZoningLevel zoning) && zoning != ZoningLevel.HighRise
+        && content.Groups.Keys.Any(group =>
+        {
+            var members = content.GroupMembers(group).ToList();
+            return view.Spaces.First(s => s.Id == members[0]).DistrictId == districtId
+                && members.All(id => view.Properties[id].OwnerId == view.ViewerId
+                    && view.Properties[id].Level >= content.Rules.MaxBuildingLevel(zoning));
+        });
 
     private GameAction MainChoice(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions) => decision.Kind switch
     {
@@ -231,7 +244,15 @@ public partial class EasyBot : IPlayerController
         if (BorrowToBuild(view, legalActions, spare) is TakeLoan borrow)
             return borrow;
 
-        // Only when really comfortable: get mortgaged properties back, then clear loans.
+        // A mortgaged piece stops a whole group from collecting double rent and from building,
+        // so lift those first, as soon as the cash for the whole group is spare.
+        if (RoundsLeft(view) > 5 && legalActions.OfType<Unmortgage>()
+                .FirstOrDefault(u => CompletesAGroupWhenLifted(view, u.PropertyId, out int lift) && spare >= lift) is Unmortgage unlock)
+        {
+            return unlock;
+        }
+
+        // Only when really comfortable: get other mortgaged properties back, then clear loans.
         if (legalActions.OfType<Unmortgage>().FirstOrDefault() is Unmortgage unmortgage && spare > Reserve(view) * 2)
             return unmortgage;
         // The biggest loan first: it has the highest interest.
@@ -259,6 +280,18 @@ public partial class EasyBot : IPlayerController
             .FirstOrDefault();
 
     protected static int NextBuildCost(PlayerView view, string propertyId) => view.Properties[propertyId].NextLevelCost;
+
+    /// <summary>True if the bot owns this property's whole color group; <paramref name="lift"/> is what lifting every mortgage in it costs.</summary>
+    private bool CompletesAGroupWhenLifted(PlayerView view, string propertyId, out int lift)
+    {
+        lift = 0;
+        string? group = content.Property(propertyId).Group;
+        if (group == null || !content.GroupMembers(group).All(id => view.Properties[id].OwnerId == view.ViewerId))
+            return false;
+        lift = content.GroupMembers(group).Where(id => view.Properties[id].IsMortgaged)
+            .Sum(id => MoneyRules.UnmortgageCost(content, content.Property(id)));
+        return true;
+    }
 
     /// <summary>True if owning this property would give the bot a whole color group.</summary>
     private bool CompletesAGroup(PlayerView view, string propertyId)

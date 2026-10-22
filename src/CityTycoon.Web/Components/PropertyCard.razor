@@ -97,6 +97,13 @@
             }
         </tbody>
     </table>
+    @if (group != null)
+    {
+        <p class="set-perk">
+            <strong>Set bonus: @group.Perk.Name.</strong> @group.Perk.Text
+            <span class="hint">@SetBonusStatus(def.Group!)</span>
+        </p>
+    }
     @if (ShowHistory)
     {
         <SpaceHistoryPanel SpaceId="@PropertyId" View="View" Content="Content" />
@@ -113,4 +120,13 @@
 
     /// <summary>Show who bought it, for how much, and everything that has happened to it since.</summary>
     [Parameter] public bool ShowHistory { get; set; } = true;
+
+    /// <summary>Who has the color group's bonus, or what it takes to get it.</summary>
+    private string SetBonusStatus(string groupId)
+    {
+        var owners = Content.GroupMembers(groupId).Select(id => View.Properties[id].OwnerId).Distinct().ToList();
+        return owners is [int owner]
+            ? $"{View.Player(owner).Name} owns the whole group, so this is on."
+            : "Whoever owns the whole group gets this.";
+    }
 }

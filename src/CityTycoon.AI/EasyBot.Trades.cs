@@ -158,8 +158,8 @@ public partial class EasyBot
             - offer.GetCards.Sum(id => CardWorth(view, id))
             // The bank's 10% fee on any mortgaged property the bot would receive.
             - MortgageFees(view, offer.GiveProperties);
-        string? myGroup = CompletedGroup(view, me, add: offer.GiveProperties, remove: offer.GetProperties);
-        string? theirGroup = CompletedGroup(view, them, add: offer.GetProperties, remove: offer.GiveProperties);
+        string? myGroup = CompletedGroups(view, me, add: offer.GiveProperties, remove: offer.GetProperties);
+        string? theirGroup = CompletedGroups(view, them, add: offer.GetProperties, remove: offer.GiveProperties);
 
         int myCashAfter = view.Me.Cash + offer.GiveCash - offer.GetCash;
         int theirCashAfter = view.Player(them).Cash - offer.GiveCash + offer.GetCash;
@@ -172,14 +172,26 @@ public partial class EasyBot
             myGroup, theirGroup);
     }
 
-    /// <summary>The name of a color group this trade would complete for the player, or null.</summary>
-    private string? CompletedGroup(PlayerView view, int playerId, IReadOnlyList<string> add, IReadOnlyList<string> remove)
+    /// <summary>
+    /// The names of the color groups this trade would complete for the player, joined up
+    /// ("Yellow", "Yellow and Red", "Yellow, Orange and Red"), or null if it completes none.
+    /// </summary>
+    private string? CompletedGroups(PlayerView view, int playerId, IReadOnlyList<string> add, IReadOnlyList<string> remove)
     {
         bool Owns(string id) => add.Contains(id) || (view.Properties[id].OwnerId == playerId && !view.Properties[id].IsPending && !remove.Contains(id));
-        return add.Select(id => content.Property(id).Group).OfType<string>().Distinct()
+        var names = add.Select(id => content.Property(id).Group).OfType<string>().Distinct()
             .Where(group => content.GroupMembers(group).All(Owns))
-            .Select(group => content.Groups[group].Name).FirstOrDefault();
+            .Select(group => content.Groups[group].Name).ToList();
+        return names.Count switch
+        {
+            0 => null,
+            1 => names[0],
+            _ => string.Join(", ", names.Take(names.Count - 1)) + " and " + names[^1],
+        };
     }
+
+    /// <summary>"set" or "sets", to go after names from <see cref="CompletedGroups"/>.</summary>
+    private static string Sets(string names) => names.Contains(" and ") ? "sets" : "set";
 
     /// <summary>
     /// Accept a good offer. Otherwise haggle: send back terms between the two sides, up to the most
@@ -210,11 +222,11 @@ public partial class EasyBot
         int ask = offer.GetCash - offer.GiveCash;
         // It doesn't say its limit here, or there would be nothing left to haggle over.
         if (sums.MyGroup != null && sums.Mine >= 10 && ask > 0)
-            return $"I want {sums.MyGroup}, but ${ask} is more than I'd pay for it.";
+            return $"I want {sums.MyGroup}, but ${ask} is more than I'd pay for {(Sets(sums.MyGroup) == "sets" ? "them" : "it")}.";
         int short_ = Math.Max(10, (int)Math.Ceiling(-sums.Gain / 10) * 10);
         string text = $"By my sums I'd be about ${short_} worse off.";
         if (sums.TheirGroup != null && sums.Theirs >= 10)
-            text += $" It gives you the whole {sums.TheirGroup} set, which I think costs me about ${Round10(sums.Theirs)}.";
+            text += $" It gives you the whole {sums.TheirGroup} {Sets(sums.TheirGroup)}, which I think costs me about ${Round10(sums.Theirs)}.";
         return text;
     }
 
@@ -354,7 +366,12 @@ public partial class EasyBot
         {
             return (null, "I can't find a price that works for both of us right now.");
         }
-        return (counter, final ? "This is my best and final offer." : "Let's meet partway.");
+        string why = final ? "This is my best and final offer." : "Let's meet partway.";
+        // A small sum can fix a big gap, because cash left over turns into houses (decision #149). Say so, or it looks odd.
+        int moved = Math.Abs(net - ask);
+        if (moved >= 10 && -Gain(view, asked.Reversed()) > 3 * moved)
+            why = "Cash you keep turns into houses, so a little cash changes a lot. " + why;
+        return (counter, why);
     }
 
     private int MortgageFees(PlayerView view, IEnumerable<string> propertyIds) =>
@@ -375,50 +392,90 @@ public partial class EasyBot
 
     /// <summary>
     /// What the player would earn from groups this trade completes for them, minus
-    /// what they'd lose from groups it breaks up.
+    /// what they'd lose from groups it breaks up. Groups completed together share one
+    /// house budget (see <see cref="GroupsEarnings"/>).
     /// </summary>
     private double GroupChange(PlayerView view, int playerId, IReadOnlyList<string> add, IReadOnlyList<string> remove, int cashAfter)
     {
         bool OwnsNow(string id) => view.Properties[id].OwnerId == playerId && !view.Properties[id].IsPending;
         bool OwnsAfter(string id) => add.Contains(id) || (OwnsNow(id) && !remove.Contains(id));
-        double change = 0;
+        var gained = new List<string>();
+        var lost = new List<string>();
         foreach (string group in add.Concat(remove).Select(id => content.Property(id).Group).OfType<string>().Distinct())
         {
             var members = content.GroupMembers(group).ToList();
             bool before = members.All(OwnsNow);
             bool after = members.All(OwnsAfter);
             if (after && !before)
-                change += EarningsOnceLifted(view, playerId, group, cashAfter);
+                gained.Add(group);
             else if (before && !after)
-                change -= EarningsOnceLifted(view, playerId, group, view.Player(playerId).Cash);
+                lost.Add(group);
         }
-        return change;
+        return GroupsEarnings(view, playerId, gained, cashAfter) - GroupsEarnings(view, playerId, lost, view.Player(playerId).Cash);
     }
 
     /// <summary>
-    /// What a whole group earns once any mortgages in it are lifted. A mortgaged piece earns no rent
-    /// and stops the double rent and building, so the owner must pay to lift it first, and that cash
-    /// can't go on houses. If they can't afford to lift it, the group earns nothing for now.
+    /// What these groups earn together from now until the game ends (decision #148), sharing
+    /// one pot of cash (decision #149). The owner spends it on the group that pays back best
+    /// first (most rent per dollar of houses), then the next, the way a player would build.
+    /// A mortgaged piece earns no rent and stops the double rent and building, so the owner must
+    /// pay to lift it first, and that cash can't go on houses. A group they can't afford to lift earns nothing for now.
+    /// Before this, each group was counted as if all the cash went into it, so a trade that
+    /// finished three groups counted the same cash three times.
     /// </summary>
-    private double EarningsOnceLifted(PlayerView view, int playerId, string group, int cash)
+    protected double GroupsEarnings(PlayerView view, int playerId, IReadOnlyList<string> groups, int cash)
     {
-        int lift = content.GroupMembers(group).Where(id => view.Properties[id].IsMortgaged)
-                          .Sum(id => MoneyRules.UnmortgageCost(content, content.Property(id)));
-        return cash < lift ? 0 : GroupEarnings(view, playerId, group, cash - lift);
+        if (groups.Count == 0)
+            return 0;
+        double rounds = RoundsLeft(view);
+        double near = Math.Min(rounds, NearRounds);
+        double lapsPerRound = SpacesPerTurn / view.Spaces.Count;
+
+        // Cash to build with: keep $150 back for rent and taxes, plus a GO salary if they're about to pass GO.
+        PlayerInfo owner = view.Player(playerId);
+        int spacesToGo = (view.Spaces.Count - owner.Position) % view.Spaces.Count;
+        double soonSalary = spacesToGo is > 0 and <= 14 ? content.Rules.GoSalary : 0;
+        // Later on, about half of each GO salary goes into houses.
+        double laterSalary = content.Rules.GoSalary * near * lapsPerRound * 0.5;
+
+        double cashLeft = cash, spentNow = 0, spentLater = 0, total = 0;
+        foreach (string group in groups.OrderByDescending(RentPerHouseDollar))
+        {
+            int lift = content.GroupMembers(group).Where(id => view.Properties[id].IsMortgaged)
+                              .Sum(id => MoneyRules.UnmortgageCost(content, content.Property(id)));
+            if (cashLeft < lift)
+                continue;
+            cashLeft -= lift;
+            double budget = Math.Max(0, Math.Max(0, cashLeft - 150) + soonSalary - spentNow);
+            double farBudget = Math.Max(0, Math.Max(0, cashLeft - 150) + soonSalary + laterSalary - spentLater);
+            var (earnings, now, later) = GroupEarnings(view, playerId, group, budget, farBudget);
+            total += earnings;
+            spentNow += now;
+            spentLater += later;
+        }
+        return total;
+    }
+
+    /// <summary>Rent at three houses each for every dollar those houses cost: the order a player should build in.</summary>
+    private double RentPerHouseDollar(string group)
+    {
+        var members = content.GroupMembers(group).Select(content.Property).ToList();
+        return members[0].HouseCost <= 0 ? 0 : members.Average(p => p.Rents![3]) / members[0].HouseCost;
     }
 
     /// <summary>
     /// A rough guess at what a whole color group earns its owner from now until the game ends
     /// (decision #148): rent, plus the group's perk (see <see cref="PerkWorth"/>).
-    /// For rent it looks at how many houses the owner could build with the cash they'd have left
-    /// (plus a GO salary if they're about to pass GO), the most the zoning allows, a Building
+    /// For rent it looks at how many houses the owner could build with <paramref name="budget"/>
+    /// (cash they can spend now), the most the zoning allows, a Building
     /// Moratorium, Rent Control, and who is left to land there. After the first
-    /// <see cref="NearRounds"/> rounds it guesses they build more with their GO salaries,
-    /// and counts that later money at <see cref="FarDiscount"/>.
+    /// <see cref="NearRounds"/> rounds it guesses they build more with <paramref name="farBudget"/>
+    /// (now plus some of their GO salaries), and counts that later money at <see cref="FarDiscount"/>.
     /// Each player lands on a given space about once every lap, so roughly
     /// (spaces in the group / spaces on the board) times per turn.
+    /// Also returns how much of each budget the houses use, so groups can share one budget.
     /// </summary>
-    protected double GroupEarnings(PlayerView view, int ownerId, string group, int cashAfter)
+    protected (double Earnings, int SpentNow, int SpentLater) GroupEarnings(PlayerView view, int ownerId, string group, double budget, double farBudget)
     {
         var members = content.GroupMembers(group).ToList();
         PropertyDefinition first = content.Property(members[0]);
@@ -426,23 +483,17 @@ public partial class EasyBot
 
         double rounds = RoundsLeft(view);
         if (rounds <= 0)
-            return 0;
+            return (0, 0, 0);
         double near = Math.Min(rounds, NearRounds);
         double far = rounds - near;
-        double lapsPerRound = SpacesPerTurn / view.Spaces.Count;
 
-        // Cash to build with: keep $150 back for rent and taxes.
-        PlayerInfo owner = view.Player(ownerId);
-        int spacesToGo = (view.Spaces.Count - owner.Position) % view.Spaces.Count;
-        double budget = Math.Max(0, cashAfter - 150) + (spacesToGo is > 0 and <= 14 ? content.Rules.GoSalary : 0);
         int maxLevel = district != null && view.Zoning.TryGetValue(district, out ZoningLevel zoning)
             ? Math.Min(3, content.Rules.MaxBuildingLevel(zoning))
             : 3;
         // Three houses each is where rent pays best for what they cost, so the guess stops there.
         int Levels(double cash) => first.HouseCost > 0 ? Math.Min(members.Count * maxLevel, (int)(cash / first.HouseCost)) : 0;
         int levels = Levels(budget);
-        // Later on, about half of each GO salary goes into houses.
-        int farLevels = Levels(budget + content.Rules.GoSalary * near * lapsPerRound * 0.5);
+        int farLevels = Levels(farBudget);
 
         // Nobody can build during a Building Moratorium, so building waits and earns for fewer rounds.
         int moratoriumRounds = view.ActiveOrdinances
@@ -474,7 +525,8 @@ public partial class EasyBot
             + AverageRent(farLevels) * far * FarDiscount);
         // Houses cost money; selling them back to the bank returns half, so half their cost is spent for good.
         double housesSpent = (far > 0 ? farLevels : levels) * first.HouseCost * 0.5;
-        return Math.Max(0, rent - housesSpent) + PerkWorth(view, ownerId, group, near, far);
+        return (Math.Max(0, rent - housesSpent) + PerkWorth(view, ownerId, group, near, far),
+                levels * first.HouseCost, farLevels * first.HouseCost);
     }
 
     /// <summary>

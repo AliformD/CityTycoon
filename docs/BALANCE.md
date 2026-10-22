@@ -103,3 +103,14 @@ Win rates moved less than the noise. Bot-to-bot trades stay rare (0.1 to 0.6 per
 `dotnet run -c Release --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots HardVsEasy --mode timed --characters random --seed 20000 --out <new folder>`
 `--set name=value` changes any rules.json number for one run (repeatable), and `--rounds` sets the Timed limit.
 `--bots` takes `Random`, `Easy`, `Normal`, `Hard`, `Mixed`, `NormalVsEasy`, `HardVsEasy` or `HardVsNormal`. The report prints the match-up result for the two-kind modes.
+
+## Shared house budget in multi-set trades (2026-10-22)
+Decision #149. 1000 games each, 4 players, Timed, 40 rounds, random characters, seed 1:
+
+| Run | Before | After |
+| --- | --- | --- |
+| HardVsEasy (Hard seats' win rate) | 79.3% | 79.3% |
+| Mixed: trades per game | 0.9 | 0.9 |
+| Mixed: buildings per game | 14.1 | 14.1 |
+
+Identical, as expected: bots only offer cash for the last piece of one group, so the change only shows when a person offers a trade that finishes several groups.

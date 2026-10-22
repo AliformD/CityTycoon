@@ -59,6 +59,10 @@ public partial class EasyBot
     /// <summary>Average spaces moved per turn: two dice average 7.</summary>
     private const double SpacesPerTurn = 7;
 
+    /// <summary>0 until the last 10 rounds of a Timed game, then rising to 1 in the last round.</summary>
+    protected virtual double EndgameWeight(PlayerView view) =>
+        view.Mode == GameMode.Timed ? Math.Clamp(1 - (RoundsLeft(view) - 1) / 10.0, 0, 1) : 0;
+
     /// <summary>Rounds left in the game, counting this one.</summary>
     protected static double RoundsLeft(PlayerView view) =>
         view.Mode == GameMode.Timed ? Math.Max(0, view.MaxRounds - view.Round + 1) : ClassicRoundsLeft;
@@ -184,9 +188,10 @@ public partial class EasyBot
     /// (or break up) are worth to it, and what the groups the other player completes
     /// would cost it. The names are the groups' names, for the explanation.
     /// </summary>
-    private sealed record TradeSums(double Basic, double Mine, double Theirs, string? MyGroup, string? TheirGroup)
+    /// <param name="Boost">Near the end of a Timed game: what the other player's gain at face value costs the bot (decision #156).</param>
+    private sealed record TradeSums(double Basic, double Mine, double Theirs, string? MyGroup, string? TheirGroup, double Boost = 0)
     {
-        public double Gain => Basic + Mine - Theirs;
+        public double Gain => Basic + Mine - Theirs - Boost;
     }
 
     private TradeSums Sums(PlayerView view, TradeOffer offer)
@@ -208,10 +213,13 @@ public partial class EasyBot
         // What they earn from a new group is mostly what the bot (and the others) pay them,
         // and it matters more when they are already ahead.
         double mine = GroupChange(view, me, add: offer.GiveProperties, remove: offer.GetProperties, myCashAfter);
+        // The game is won on net worth, so near the end, paying a rival more than a property is worth
+        // lifts their score just as surely as it lowers the bot's (the Green example in decision #156).
+        double boost = Math.Max(0, -basic) * EndgameWeight(view) * LeaderFactor(view, them) * 0.5;
         return new TradeSums(basic,
             mine > 0 ? mine * SetAppetite : mine,
             GroupChange(view, them, add: offer.GetProperties, remove: offer.GiveProperties, theirCashAfter) * LeaderFactor(view, them) * SetCaution,
-            myGroup, theirGroup);
+            myGroup, theirGroup, boost);
     }
 
     /// <summary>
@@ -593,12 +601,22 @@ public partial class EasyBot
     /// Perks that don't pay cash get a small guess. These read the perk's rule changes from
     /// groups.json, so changing a number there changes what the bots think too.
     /// </summary>
+    /// <summary>What a group's perk is worth to this owner from now to the end of the game (see <see cref="PerkWorth"/>).</summary>
+    protected double PerkWorthFor(PlayerView view, int ownerId, string group)
+    {
+        double rounds = RoundsLeft(view);
+        double near = Math.Min(rounds, NearRounds);
+        return rounds <= 0 ? 0 : PerkWorth(view, ownerId, group, near, rounds - near);
+    }
+
     private double PerkWorth(PlayerView view, int ownerId, string group, double near, double far, int plannedTowers = 0)
     {
         double lapsPerRound = SpacesPerTurn / view.Spaces.Count;
         double laps = (near + far * FarDiscount) * lapsPerRound;
         double rounds = near + far * FarDiscount;
         int opponents = view.Players.Count(p => p.Id != ownerId && !p.IsBankrupt);
+        // Perks without a cash value get a small guess, which shrinks when there are only a few rounds left.
+        double time = Math.Min(1, rounds / NearRounds);
         int TowersIn(bool thisGroup) => view.Properties.Values.Count(p => p.OwnerId == ownerId && p.Level >= content.Rules.HotelLevel
             && (content.Property(p.Id).Group == group) == thisGroup);
         int towers = TowersIn(false) + Math.Max(TowersIn(true), plannedTowers);
@@ -606,14 +624,14 @@ public partial class EasyBot
         {
             "GoCash" => m.Value * laps,
             "GoMomentum" => TokenValue * m.Value * laps,
-            "MomentumCap" => 10,
+            "MomentumCap" => 10 * time,
             // Each opponent spends about one turn in eight in Jail or the Hospital.
             "JailToll" => m.Value * opponents * rounds / 8,
             "HostileTakeover" => 30 * laps,
             "DrawTwoKeepOne" => 10 * laps,
             // The hotels come later, so count them over the far rounds only.
-            "DividendPerTower" => m.Value * towers * (far > 0 ? far * FarDiscount : near) + 30,
-            _ => 20,
+            "DividendPerTower" => m.Value * towers * (far > 0 ? far * FarDiscount : near) + 30 * time,
+            _ => 20 * time,
         });
     }
 

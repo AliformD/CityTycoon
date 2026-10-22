@@ -29,10 +29,12 @@ public static class ManagementRules
             actions.AddRange(mine.Where(id => MoneyRules.WhyCantMortgage(ctx, playerId, id) == null).Select(id => new Mortgage(id)));
         if (options.HasFlag(ManagementOptions.Unmortgage))
             actions.AddRange(mine.Where(id => MoneyRules.WhyCantUnmortgage(ctx, playerId, id) == null).Select(id => new Unmortgage(id)));
+        // Each loan size the bank offers, smallest first (decision #154), and each size of loan held that can be paid back.
         if (options.HasFlag(ManagementOptions.TakeLoan) && MoneyRules.CanTakeLoan(ctx, playerId))
-            actions.Add(new TakeLoan());
-        if (options.HasFlag(ManagementOptions.RepayLoan) && MoneyRules.CanRepayLoan(ctx, playerId))
-            actions.Add(new RepayLoan());
+            actions.AddRange(ctx.Rules.LoanOptions.OrderBy(o => o.Amount).Select(o => new TakeLoan(o.Amount)));
+        if (options.HasFlag(ManagementOptions.RepayLoan))
+            actions.AddRange(ctx.Player(playerId).LoanBook.Distinct().Order()
+                .Where(amount => MoneyRules.CanRepayLoan(ctx, playerId, amount)).Select(amount => new RepayLoan(amount)));
         // Trades can't be listed (there are endless combinations), so they're checked in IsLegal.
         return actions;
     }
@@ -47,8 +49,8 @@ public static class ManagementRules
         SellBuilding s => !options.HasFlag(ManagementOptions.Sell) ? "You can't sell right now." : BuildingRules.WhyCantSell(ctx, playerId, s.PropertyId),
         Mortgage m => !options.HasFlag(ManagementOptions.Mortgage) ? "You can't mortgage right now." : MoneyRules.WhyCantMortgage(ctx, playerId, m.PropertyId),
         Unmortgage u => !options.HasFlag(ManagementOptions.Unmortgage) ? "You can't unmortgage right now." : MoneyRules.WhyCantUnmortgage(ctx, playerId, u.PropertyId),
-        TakeLoan => options.HasFlag(ManagementOptions.TakeLoan) && MoneyRules.CanTakeLoan(ctx, playerId) ? null : "You can't take a loan right now.",
-        RepayLoan => options.HasFlag(ManagementOptions.RepayLoan) && MoneyRules.CanRepayLoan(ctx, playerId) ? null : "You can't repay a loan right now.",
+        TakeLoan l => options.HasFlag(ManagementOptions.TakeLoan) && MoneyRules.CanTakeLoan(ctx, playerId, l.Amount) ? null : "You can't take that loan right now.",
+        RepayLoan r => options.HasFlag(ManagementOptions.RepayLoan) && MoneyRules.CanRepayLoan(ctx, playerId, r.Amount) ? null : "You can't repay that loan right now.",
         ProposeTrade t => !CanProposeTrades(ctx, playerId, options) ? "You can't offer a trade right now."
             : t.Offer.FromId != playerId ? "You can only offer your own trades."
             : TradeRules.WhyCantAskForCards(t.Offer) ?? TradeRules.WhyInvalid(ctx, t.Offer),
@@ -63,8 +65,8 @@ public static class ManagementRules
             case SellBuilding s: BuildingRules.Sell(ctx, playerId, s.PropertyId); break;
             case Mortgage m: MoneyRules.MortgageProperty(ctx, playerId, m.PropertyId); break;
             case Unmortgage u: MoneyRules.UnmortgageProperty(ctx, playerId, u.PropertyId); break;
-            case TakeLoan: MoneyRules.TakeLoan(ctx, playerId); break;
-            case RepayLoan: MoneyRules.RepayLoan(ctx, playerId); break;
+            case TakeLoan l: MoneyRules.TakeLoan(ctx, playerId, l.Amount); break;
+            case RepayLoan r: MoneyRules.RepayLoan(ctx, playerId, r.Amount); break;
             case ProposeTrade t:
                 ctx.Player(playerId).TradesProposedThisTurn++;
                 ctx.Emit(new TradeProposed(t.Offer));

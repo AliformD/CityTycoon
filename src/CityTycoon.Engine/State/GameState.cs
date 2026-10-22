@@ -154,8 +154,27 @@ public sealed class PlayerState
     /// <summary>True once the City Planner has reversed a City Council result (once per game).</summary>
     public bool VoteReversalUsed { get; set; }
 
-    /// <summary>Unpaid bank loans (Section 15.7).</summary>
-    public int Loans { get; set; }
+    /// <summary>
+    /// How many unpaid bank loans the player has (Section 15.7). Setting it (old saves, tests) adds or removes
+    /// loans of the old $200 size. It comes before <see cref="LoanBook"/>, so a save that has both reads the real list last.
+    /// </summary>
+    public int Loans
+    {
+        get => LoanBook.Count;
+        set
+        {
+            while (LoanBook.Count > value)
+                LoanBook.RemoveAt(LoanBook.Count - 1);
+            while (LoanBook.Count < value)
+                LoanBook.Add(LegacyLoanAmount);
+        }
+    }
+
+    /// <summary>The size of a loan from before loans came in sizes (decision #154).</summary>
+    public const int LegacyLoanAmount = 200;
+
+    /// <summary>The amount borrowed for each unpaid loan, oldest first (decision #154). What paying one back costs depends on its size.</summary>
+    public List<int> LoanBook { get; set; } = [];
 
     /// <summary>Building levels added this turn, for the build limit (Section 9.2, rule 6).</summary>
     public int BuildsThisTurn { get; set; }

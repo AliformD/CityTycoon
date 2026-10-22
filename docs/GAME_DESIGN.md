@@ -549,7 +549,7 @@ A perk stays on as long as you own the whole group with none of it mortgaged or 
 | Pink | **Arts District** | When you draw an Opportunity card, draw 2 and keep 1. Your hand limit becomes 4. |
 | Orange | **Neighborhood Watch** | Any opponent in Jail or recovering from the Hospital pays you $25 at the start of each of their turns there. |
 | Red | **Hostile Takeover** | Once per lap (resets when you pass GO), force an auction on one eligible opponent property (Section 8.6). |
-| Yellow | **Bank Partner** | Your loans cost $210 to repay instead of $250, and you can hold 3 instead of 2. |
+| Yellow | **Bank Partner** | Your loans cost half the usual interest (a $200 loan costs $225 to repay instead of $250), and you can hold 3 instead of 2. |
 | Green | **Dividends** | At the start of each of your turns, collect $20 for every hotel or skyscraper you own anywhere. |
 | Dark Blue | **Prime Real Estate** | Immune to negative rent modifiers (Section 13.1). Skyscraper levels cost 1 × house cost. |
 
@@ -712,10 +712,18 @@ A used Opportunity or Event card goes to the bottom of its deck, so the decks ar
 ### 15.7 Loans
 
 - **When:** any time on your turn, or whenever you need to pay, bid, or lobby.
-- Each loan gives you **$200** and costs **$250** to repay (Yellow perk: $210).
-- You can hold **2** at a time (Yellow perk: 3).
-- Repay any time on your turn.
-- In scoring, each unpaid loan counts as **−$250** (−$210 with the Yellow perk).
+- Pick the size (decision #154). Bigger loans cost more interest, so a big loan is a risk that can win a game back:
+
+  | Borrow | Repay | Interest |
+  | --- | --- | --- |
+  | $100 | $115 | 15 % |
+  | $200 | $250 | 25 % |
+  | $400 | $540 | 35 % |
+
+- Yellow perk: half the interest (for example $225 for a $200 loan).
+- You can hold **2** at a time (Yellow perk: 3), of any sizes.
+- Repay any time on your turn. You choose which loan to repay, and pay its repay amount.
+- In scoring, each unpaid loan counts as minus what it costs to repay.
 - In bankruptcy, the bank's loans are paid back first.
 
 ### 15.8 Mortgages
@@ -766,7 +774,7 @@ Net worth is **public** and shown live for every player. It's calculated as:
 - \+ the assessed value of each property you own (half if mortgaged; for pending properties, assessed value minus the unpaid balance)
 - \+ the full cost of every building level you currently own
 - \+ $50 for each Opportunity card in your hand
-- − $250 for each unpaid loan (−$210 with the Yellow perk)
+- − what it would cost to repay each unpaid loan
 
 **Winner:** the highest net worth wins. If tied, the player with more cash wins. If still tied, they share the win.
 
@@ -823,7 +831,7 @@ Every value below must live in one config file that loads at startup. The rules 
 | `councilEveryNRounds` | 4 | 11.1 |
 | `voteInfluence` / `politicianVoteInfluence` | 100 / 200 | 11.3 |
 | `publicOpinionInfluence` | 100 per side | 11.3 |
-| `loanAmount` / `loanRepay` / `maxLoans` | 200 / 250 / 2 | 15.7 |
+| `loanOptions` / `maxLoans` | $100→$115, $200→$250, $400→$540 / 2 | 15.7 |
 | `jailBail` / `maxJailTurns` | 50 / 2 | 14.3 |
 | `jailRentMultiplier` | 0.5 | 14.2 |
 | `hospitalBill` / `insuredMarkerCost` | 100 / 50 | 15.3 |

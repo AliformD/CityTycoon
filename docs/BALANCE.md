@@ -160,3 +160,20 @@ Decision #153. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, se
 | Medic | 19.3 % | 23.2 % |
 
 Even share is 25 %. The Mogul is still a little over the 30 % target, mostly from winning tied sealed bids (about 1 in 6 sealed auctions tie, because bots bid in $10 steps). Desperate bots now bet at the Casino: 0.3 bets per game, players lost $2,100 in total over 1,000 games. Game length is unchanged (39.8 rounds).
+
+## Loan sizes and bots borrowing to build (2026-10-22)
+Decision #154. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, seed 1. "Before" is decision #153.
+
+| | before | after |
+| --- | --- | --- |
+| Loans taken per game | 2.7 | 7.4 |
+| Buildings built per game | 32.9 | 36.5 |
+| Average rent payment | $102 | $116 |
+| Bankruptcies per game | 0.74 | 1.02 |
+| Games with a bankruptcy | 51 % | 66 % |
+| Net worth at the end (players still in) | $3,206 | $3,453 |
+| Yellow holders who won | 55.0 % | 60.8 % |
+
+Does borrowing to build help? In 2,000 more games, half the seats were allowed to borrow to build and half were not: the borrowers won 28.3 % and the others 21.7 %, and both went bankrupt about as often (22 %). So the extra bankruptcies come from the higher rents hitting other players, not from the borrowers. Asking for 3 times the interest back instead of 2 changed almost nothing. With borrowing turned off (only the new sizes), bankruptcies were 0.67 per game.
+
+Characters barely moved: Mogul 31.3 %, Hustler 31.9 %, Contractor 26.0 %, Lawyer 25.7 %, Medic 23.4 %, Commuter 22.6 %, Politician 20.1 %, City Planner 19.3 %. Game length 39.6 rounds.

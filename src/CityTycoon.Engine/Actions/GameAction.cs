@@ -225,8 +225,11 @@ public sealed record Build(string PropertyId) : ManagementAction;
 public sealed record SellBuilding(string PropertyId) : ManagementAction;
 public sealed record Mortgage(string PropertyId) : ManagementAction;
 public sealed record Unmortgage(string PropertyId) : ManagementAction;
-public sealed record TakeLoan : ManagementAction;
-public sealed record RepayLoan : ManagementAction;
+/// <summary>Borrow this much from the bank: one of the loan sizes in rules.json (decision #154).</summary>
+public sealed record TakeLoan(int Amount) : ManagementAction;
+
+/// <summary>Pay back one loan of this size.</summary>
+public sealed record RepayLoan(int Amount) : ManagementAction;
 public sealed record ProposeTrade(TradeOffer Offer) : ManagementAction;
 
 /// <summary>

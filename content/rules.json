@@ -45,8 +45,12 @@
   "voteInfluence": 100,
   "publicOpinionInfluence": 100,
 
-  "loanAmount": 200,
-  "loanRepay": 250,
+  // Bank loans (decision #154): the bigger the loan, the more interest (15%, 25%, 35%).
+  "loanOptions": [
+    { "amount": 100, "repay": 115 },
+    { "amount": 200, "repay": 250 },
+    { "amount": 400, "repay": 540 }
+  ],
   "maxLoans": 2,
 
   "jailBail": 50,

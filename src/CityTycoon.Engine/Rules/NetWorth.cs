@@ -23,7 +23,7 @@ public static class NetWorth
         }
         // Each unpaid loan counts as what it costs this player to repay (less with the Yellow perk).
         if (player.Loans > 0)
-            total -= player.Loans * RuleModifiers.LoanRepayCost(state, content, playerId, active);
+            total -= RuleModifiers.LoanDebt(state, content, playerId, active);
         return total;
     }
 
@@ -47,7 +47,7 @@ public static class NetWorth
             buildings += BuildingValue(content, def, owned.Level);
         }
         return new Breakdown(player.Cash, properties, buildings, player.Hand.Count * content.Rules.HandCardNetWorth,
-            player.Loans * RuleModifiers.LoanRepayCost(state, content, playerId, active));
+            RuleModifiers.LoanDebt(state, content, playerId, active));
     }
 
     /// <summary>

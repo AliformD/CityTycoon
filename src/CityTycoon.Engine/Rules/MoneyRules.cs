@@ -70,28 +70,34 @@ public static class MoneyRules
     /// <summary>How many loans this player may hold (3 with the Yellow perk, otherwise 2).</summary>
     public static int MaxLoans(EngineContext ctx, int playerId) => RuleModifiers.MaxLoans(ctx.State, ctx.Content, playerId);
 
-    /// <summary>What repaying one loan costs this player ($210 with the Yellow perk, otherwise $250).</summary>
-    public static int LoanRepayCost(EngineContext ctx, int playerId) => RuleModifiers.LoanRepayCost(ctx.State, ctx.Content, playerId);
+    /// <summary>What repaying a loan of this size costs this player (less interest with the Yellow perk).</summary>
+    public static int LoanRepayCost(EngineContext ctx, int playerId, int amount) =>
+        RuleModifiers.LoanRepayCost(ctx.State, ctx.Content, playerId, amount);
 
+    /// <summary>True if this player may take another loan (of any size the bank offers).</summary>
     public static bool CanTakeLoan(EngineContext ctx, int playerId) =>
         ctx.Player(playerId).Loans < MaxLoans(ctx, playerId);
 
-    public static void TakeLoan(EngineContext ctx, int playerId)
+    public static bool CanTakeLoan(EngineContext ctx, int playerId, int amount) =>
+        CanTakeLoan(ctx, playerId) && ctx.Rules.LoanOptions.Any(o => o.Amount == amount);
+
+    public static void TakeLoan(EngineContext ctx, int playerId, int amount)
     {
         PlayerState player = ctx.Player(playerId);
-        player.Loans++;
-        player.Cash += ctx.Rules.LoanAmount;
-        ctx.Emit(new LoanTaken(playerId, ctx.Rules.LoanAmount));
+        player.LoanBook.Add(amount);
+        player.Cash += amount;
+        ctx.Emit(new LoanTaken(playerId, amount));
     }
 
-    public static bool CanRepayLoan(EngineContext ctx, int playerId) =>
-        ctx.Player(playerId).Loans > 0 && ctx.Player(playerId).Cash >= LoanRepayCost(ctx, playerId);
+    /// <summary>True if this player holds a loan of this size and has the cash to pay it back.</summary>
+    public static bool CanRepayLoan(EngineContext ctx, int playerId, int amount) =>
+        ctx.Player(playerId).LoanBook.Contains(amount) && ctx.Player(playerId).Cash >= LoanRepayCost(ctx, playerId, amount);
 
-    public static void RepayLoan(EngineContext ctx, int playerId)
+    public static void RepayLoan(EngineContext ctx, int playerId, int amount)
     {
         PlayerState player = ctx.Player(playerId);
-        int cost = LoanRepayCost(ctx, playerId);
-        player.Loans--;
+        int cost = LoanRepayCost(ctx, playerId, amount);
+        player.LoanBook.Remove(amount);
         player.Cash -= cost;
         ctx.Emit(new LoanRepaid(playerId, cost));
     }
@@ -112,7 +118,7 @@ public static class MoneyRules
             if (!owned.IsMortgaged && !owned.IsPending)
                 total += NetWorth.MortgageValue(ctx.Content, def);
         }
-        total += (MaxLoans(ctx, playerId) - player.Loans) * ctx.Rules.LoanAmount;
+        total += Math.Max(0, MaxLoans(ctx, playerId) - player.Loans) * ctx.Rules.BiggestLoan;
         return total;
     }
 }

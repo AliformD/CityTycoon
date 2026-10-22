@@ -234,12 +234,20 @@ public static class RuleModifiers
 
     // ----- Loans and the start of a turn -----
 
-    /// <summary>What repaying one loan costs this player (Section 15.7).</summary>
-    public static int LoanRepayCost(GameState state, GameContent content, int playerId,
+    /// <summary>What repaying a loan of this size costs this player (Section 15.7): less interest with the Yellow perk.</summary>
+    public static int LoanRepayCost(GameState state, GameContent content, int playerId, int amount,
         IReadOnlyList<IRuleModifier>? active = null)
     {
-        var cheaper = (active ?? Active(state, content)).Select(m => m.LoanRepayCost(state, playerId)).Where(c => c > 0).ToList();
-        return cheaper.Count == 0 ? content.Rules.LoanRepay : cheaper.Min();
+        LoanTerms terms = content.Rules.Loan(amount);
+        int discount = Math.Clamp((active ?? Active(state, content)).Select(m => m.LoanInterestDiscountPercent(state, playerId)).DefaultIfEmpty(0).Max(), 0, 100);
+        return amount + terms.Interest * (100 - discount) / 100;
+    }
+
+    /// <summary>What paying back every loan this player holds would cost.</summary>
+    public static int LoanDebt(GameState state, GameContent content, int playerId, IReadOnlyList<IRuleModifier>? active = null)
+    {
+        active ??= Active(state, content);
+        return state.Player(playerId).LoanBook.Sum(amount => LoanRepayCost(state, content, playerId, amount, active));
     }
 
     /// <summary>How many loans this player may hold at once.</summary>

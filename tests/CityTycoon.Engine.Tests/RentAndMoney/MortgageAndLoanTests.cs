@@ -55,20 +55,20 @@ public class MortgageAndLoanTests
     public void ALoan_Gives200_AndYouCanHoldTwo()
     {
         var game = new TestGame();
-        game.Do(0, new TakeLoan());
-        game.Do(0, new TakeLoan());
+        game.Do(0, new TakeLoan(200));
+        game.Do(0, new TakeLoan(200));
 
         Assert.Equal(1900, game.Player(0).Cash);
         Assert.Equal(2, game.Player(0).Loans);
-        Assert.DoesNotContain(new TakeLoan(), game.Engine.GetLegalActions(0));
+        Assert.DoesNotContain(new TakeLoan(200), game.Engine.GetLegalActions(0));
     }
 
     [Fact]
     public void RepayingALoan_Costs250()
     {
         var game = new TestGame();
-        game.Do(0, new TakeLoan());
-        game.Do(0, new RepayLoan());
+        game.Do(0, new TakeLoan(200));
+        game.Do(0, new RepayLoan(200));
 
         Assert.Equal(1500 + 200 - 250, game.Player(0).Cash);
         Assert.Equal(0, game.Player(0).Loans);
@@ -78,10 +78,10 @@ public class MortgageAndLoanTests
     public void YouCanOnlyRepay_WhenYouHaveALoanAndTheCash()
     {
         var game = new TestGame();
-        Assert.DoesNotContain(new RepayLoan(), game.Engine.GetLegalActions(0));
+        Assert.DoesNotContain(new RepayLoan(200), game.Engine.GetLegalActions(0));
         game.Player(0).Loans = 1;
         game.Player(0).Cash = 100;
-        Assert.DoesNotContain(new RepayLoan(), game.Engine.GetLegalActions(0));
+        Assert.DoesNotContain(new RepayLoan(200), game.Engine.GetLegalActions(0));
     }
 
     [Fact]
@@ -90,9 +90,58 @@ public class MortgageAndLoanTests
         var game = new TestGame();
         game.Give(0, "market-street");
         game.Do(0, new Mortgage("market-street"));
-        game.Do(0, new TakeLoan());
+        game.Do(0, new TakeLoan(200));
 
         // Cash 1500 + 90 + 200, property 180 - 90, loan -250.
         Assert.Equal(1790 + 90 - 250, NetWorth.Calculate(game.State, game.Engine.Content, 0));
+    }
+
+    // ----- Decision #154: three loan sizes, bigger ones cost more interest -----
+
+    [Theory]
+    [InlineData(100, 115)]
+    [InlineData(200, 250)]
+    [InlineData(400, 540)]
+    public void EachLoanSize_HasItsOwnRepayCost(int amount, int repay)
+    {
+        var game = new TestGame();
+        game.Do(0, new TakeLoan(amount));
+        Assert.Equal(1500 + amount, game.Player(0).Cash);
+        Assert.Equal(repay, game.Engine.GetView(0).Me.RepayCost(amount));
+
+        game.Do(0, new RepayLoan(amount));
+        Assert.Equal(1500 + amount - repay, game.Player(0).Cash);
+    }
+
+    [Fact]
+    public void ALoanSizeTheBankDoesntOffer_IsIllegal()
+    {
+        var game = new TestGame();
+        Assert.Equal("You can't take that loan right now.", game.Engine.WhyIllegal(0, new TakeLoan(300)));
+    }
+
+    [Fact]
+    public void YouRepayTheLoanYouChoose_AndOnlyLoansYouHold()
+    {
+        var game = new TestGame();
+        game.Do(0, new TakeLoan(100));
+        game.Do(0, new TakeLoan(400));
+        var legal = game.Engine.GetLegalActions(0);
+        Assert.Contains(new RepayLoan(100), legal);
+        Assert.Contains(new RepayLoan(400), legal);
+        Assert.DoesNotContain(new RepayLoan(200), legal);
+
+        game.Do(0, new RepayLoan(400));
+        Assert.Equal([100], game.Player(0).LoanBook);
+        Assert.Equal(115, game.Engine.GetView(0).Me.LoanDebt);
+    }
+
+    [Fact]
+    public void NetWorth_CountsWhatEachLoanCostsToRepay()
+    {
+        var game = new TestGame();
+        game.Do(0, new TakeLoan(100));
+        game.Do(0, new TakeLoan(400));
+        Assert.Equal(1500 + 500 - 115 - 540, NetWorth.Calculate(game.State, game.Engine.Content, 0));
     }
 }

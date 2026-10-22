@@ -44,10 +44,10 @@ public sealed class HostileTakeoverModifier(ModifierContext c) : OwnedModifier(c
     public bool CanHostileTakeover(GameState s, int playerId) => Mine(playerId);
 }
 
-/// <summary>Yellow, Bank Partner: cheaper loan repayment.</summary>
-public sealed class LoanRepayCostModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+/// <summary>Yellow, Bank Partner: loans cost less interest ("value" is the percent of the interest that is let off).</summary>
+public sealed class LoanInterestDiscountModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
 {
-    public int LoanRepayCost(GameState s, int playerId) => Mine(playerId) ? Value : 0;
+    public int LoanInterestDiscountPercent(GameState s, int playerId) => Mine(playerId) ? Value : 0;
 }
 
 /// <summary>Yellow, Bank Partner: more loans at once.</summary>

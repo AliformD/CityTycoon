@@ -70,7 +70,9 @@ public sealed record PlayerView(
                 .Where(name => p.CharacterId == null || content.Character(p.CharacterId).Name != name).ToList(),
             HandLimit = RuleModifiers.HandLimit(state, content, p.Id, modifiers),
             MomentumCap = RuleModifiers.MomentumCap(state, content, p.Id, modifiers),
-            LoanRepayCost = RuleModifiers.LoanRepayCost(state, content, p.Id, modifiers),
+            LoanDebt = RuleModifiers.LoanDebt(state, content, p.Id, modifiers),
+            LoanBook = p.LoanBook.ToList(),
+            LoanOptions = content.Rules.LoanOptions.Select(o => new LoanTerms(o.Amount, RuleModifiers.LoanRepayCost(state, content, p.Id, o.Amount, modifiers))).ToList(),
             MaxLoans = RuleModifiers.MaxLoans(state, content, p.Id, modifiers),
             Bail = RuleModifiers.Bail(state, content, p.Id),
             TakeoverReady = !p.TakeoverUsed && modifiers.Any(m => m.CanHostileTakeover(state, p.Id)),
@@ -142,9 +144,18 @@ public sealed record PlayerInfo(
     /// <summary>How many Momentum tokens they can hold.</summary>
     public int MomentumCap { get; init; } = 2;
 
-    /// <summary>What paying back one loan costs them, and how many loans they may hold.</summary>
-    public int LoanRepayCost { get; init; } = 250;
+    /// <summary>What paying back all their loans would cost, and how many loans they may hold.</summary>
+    public int LoanDebt { get; init; }
     public int MaxLoans { get; init; } = 2;
+
+    /// <summary>The size of each loan they hold (decision #154).</summary>
+    public IReadOnlyList<int> LoanBook { get; init; } = [];
+
+    /// <summary>The loans the bank offers, with what each would cost them to repay (less interest with the Yellow perk).</summary>
+    public IReadOnlyList<LoanTerms> LoanOptions { get; init; } = [];
+
+    /// <summary>What paying back one loan of this size costs them.</summary>
+    public int RepayCost(int amount) => LoanOptions.FirstOrDefault(o => o.Amount == amount)?.Repay ?? amount * 5 / 4;
 
     /// <summary>What it costs them to leave Jail early ($0 for the Lawyer).</summary>
     public int Bail { get; init; } = 50;

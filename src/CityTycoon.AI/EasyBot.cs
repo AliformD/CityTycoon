@@ -232,7 +232,7 @@ public partial class EasyBot : IPlayerController
         int spare = view.Me.Cash - Reserve(view);
 
         if (decision.Management.HasFlag(ManagementOptions.Trade) && lastTradeRound != view.Round
-            && SetCompletingTrade(view) is TradeOffer offer)
+            && (SwapTrade(view) ?? SetCompletingTrade(view) ?? SellSpareCard(view)) is TradeOffer offer)
         {
             lastTradeRound = view.Round;
             return new ProposeTrade(offer);
@@ -660,8 +660,9 @@ public partial class EasyBot : IPlayerController
             return null;
         PlayCard? Find(string effect) => plays.FirstOrDefault(p => content.Card(p.CardId).EffectType == effect);
 
+        // When bail is free (the Lawyer), the card is worth more kept, to sell or trade.
         if (decision.Kind == DecisionKind.JailChoice)
-            return Find("GetOutOfJailFree");
+            return view.Me.Bail > 0 ? Find("GetOutOfJailFree") : null;
 
         // Only when every token fits under its limit, so none go to waste.
         if (Find("GainMomentum") is PlayCard fastTrack && view.Me.Momentum + content.Card(fastTrack.CardId).Int("amount") <= view.Me.MomentumCap)

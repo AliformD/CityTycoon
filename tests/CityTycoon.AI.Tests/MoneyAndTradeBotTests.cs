@@ -139,18 +139,18 @@ public class MoneyAndTradeBotTests
         // The person asks too much for their property, the bot counters, then the person asks less and the bot accepts.
         var host = new GameHost(engine, new Dictionary<int, IPlayerController>
         {
-            [0] = new ScriptedController(new ProposeTrade(new TradeOffer(0, 1, 0, 400, ["market-street"], [])), new CounterTrade(new TradeOffer(0, 1, 0, 170, ["market-street"], []))),
+            [0] = new ScriptedController(new ProposeTrade(new TradeOffer(0, 1, 0, 400, ["market-street"], [])), new CounterTrade(new TradeOffer(0, 1, 0, 150, ["market-street"], []))),
             [1] = new EasyBot(1),
         });
 
         await host.StepAsync(); // the person offers $400
         await host.StepAsync(); // the bot counters with less
         Assert.Equal(0, engine.GetPendingDecisions().Single().PlayerId);
-        await host.StepAsync(); // the person counters at $170, less than it's worth
+        await host.StepAsync(); // the person counters at $150, enough below its $180 value
         await host.StepAsync(); // the bot accepts
 
         Assert.Equal(1, engine.State.Properties["market-street"].OwnerId);
-        Assert.Equal(1200 + 170, engine.State.Player(0).Cash);
+        Assert.Equal(1200 + 150, engine.State.Player(0).Cash);
     }
 
     [Fact]

@@ -212,3 +212,16 @@ This is the backfire Angel warned about: at full strength the bump made the Comm
 Hard against Easy: Hard seats won 77.0 % before, 76.9 % after, so bidding didn't get worse.
 
 Trades near the end: before this change, 21 trades (in 1,000 games) finished in the last 8 rounds, and the player who paid cash won only 3 of the 19 where someone paid. Now bots don't overpay rivals that late, and no trades finished in the last 8 rounds. Trades in all: 180 to 153 (in 1,000 games).
+
+## Trade fixes: limits, splitting the difference, swaps, spare jail cards (2026-10-22)
+Decision #157. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, seed 1. "Before" is decision #156.
+
+| | before | after |
+| --- | --- | --- |
+| Trades finished (1,000 games) | 153 | 392 |
+| Share of offers that finished | 3 % | 7 % |
+| Swaps (a property for a property) | 0 | 79 |
+| Jail cards sold | 0 | 112 |
+| Lawyer win rate | 24.0 % | 25.7 % |
+
+In the swaps, each side won about as often as an even share (23 % and 24 %), so swaps help both sides about equally. Other characters moved by under 1.5 points; Politician 19.3 % and City Planner 18.6 % are still the weakest (their own changes come next). Bankruptcies 1.07 to 1.09 per game.

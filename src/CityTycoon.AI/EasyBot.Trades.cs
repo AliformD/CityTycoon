@@ -90,7 +90,7 @@ public partial class EasyBot
                 continue;
             }
 
-            var ask = new TradeOffer(myId, ownerId, 0, 0, [], [target.Id]);
+            var ask = new TradeOffer(myId, ownerId, 0, 0, [], [target.Id]) { GiveCards = SpareCards(view) };
             int limit = Math.Min(Limit(view, ask).GiveCash, view.Me.Cash - Reserve(view)) / 10 * 10;
             int assessed = content.Property(target.Id).AssessedValue;
             if (limit < assessed)
@@ -108,6 +108,102 @@ public partial class EasyBot
             return offer;
         }
         return null;
+    }
+
+    /// <summary>
+    /// A swap (decision #157): the bot is one piece short of a color group, and the owner of that piece
+    /// is one piece short of another group, which the bot holds. Trading the two finishes a group
+    /// for each of them, with some cash to even it up. Opens below its limit, like a cash offer.
+    /// </summary>
+    private TradeOffer? SwapTrade(PlayerView view)
+    {
+        int myId = view.ViewerId;
+        foreach (var group in content.Groups.Keys)
+        {
+            if (MissingPiece(view, myId, group) is not string wanted || view.Properties[wanted].OwnerId is not int ownerId
+                || view.Player(ownerId).IsBankrupt)
+            {
+                continue;
+            }
+            foreach (var theirGroup in content.Groups.Keys.Where(g => g != group))
+            {
+                if (MissingPiece(view, ownerId, theirGroup) is not string mine || view.Properties[mine].OwnerId != myId)
+                    continue;
+                if (LastOffer(view, ownerId, wanted) is (int round, _) && view.Round - round < RepeatOfferRounds)
+                    continue;
+
+                var ask = new TradeOffer(myId, ownerId, 0, 0, [mine], [wanted]);
+                TradeOffer limitOffer = Limit(view, ask);
+                if (!IsGoodForMe(view, limitOffer.Reversed()))
+                    continue;
+                int limit = Math.Min(Net(limitOffer), view.Me.Cash - Reserve(view)) / 10 * 10;
+                int net = limit - Math.Max(20, (int)(Math.Abs(limit) * (1 - OpeningShare)) / 10 * 10);
+                if (-net > view.Player(ownerId).Cash)
+                    continue;
+                TradeOffer offer = WithNet(ask, net);
+                Note(view, "Offered", offer, new ProposeTrade(offer));
+                return offer;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// The one piece of this color group the player doesn't own, if another player owns it and nobody has
+    /// built in the group or mortgaged that piece; otherwise null.
+    /// </summary>
+    private string? MissingPiece(PlayerView view, int playerId, string group)
+    {
+        var members = content.GroupMembers(group).ToList();
+        var missing = members.Where(id => view.Properties[id].OwnerId != playerId || view.Properties[id].IsPending).ToList();
+        if (missing.Count != 1 || members.Any(id => view.Properties[id].Level > 0))
+            return null;
+        PropertyInfo piece = view.Properties[missing[0]];
+        return piece.OwnerId is int owner && owner != playerId && !piece.IsPending && !piece.IsMortgaged ? piece.Id : null;
+    }
+
+    /// <summary>Cards in the bot's hand that it hardly values itself (the Lawyer's Get Out of Jail Free), to sell or add to a deal.</summary>
+    private IReadOnlyList<string> SpareCards(PlayerView view) =>
+        view.MyHand.Where(id => CardWorth(view, id) <= SpareCardWorth).Distinct().ToList();
+
+    private const double SpareCardWorth = 10;
+
+    /// <summary>
+    /// Sells a card it has no use for (decision #157): a Get Out of Jail Free card the Lawyer doesn't
+    /// need, offered first to someone in Jail, for a bit less than it is worth to them.
+    /// </summary>
+    private TradeOffer? SellSpareCard(PlayerView view)
+    {
+        foreach (string card in SpareCards(view))
+        {
+            if (content.Card(card).EffectType != "GetOutOfJailFree")
+                continue;
+            var buyer = view.Players
+                .Where(p => p.Id != view.ViewerId && !p.IsBankrupt && p.Bail > 0 && p.Cash >= 200 && !SoldTo(view, p.Id, card))
+                .OrderByDescending(p => p.InJail).ThenByDescending(p => p.Cash).FirstOrDefault();
+            if (buyer == null)
+                continue;
+            // What it's worth to them, as the bots count it: $40, plus the bail they'd save now.
+            int price = (40 + (buyer.InJail ? buyer.Bail : 0)) * 7 / 10 / 10 * 10;
+            TradeOffer offer = new(view.ViewerId, buyer.Id, 0, price, [], []) { GiveCards = [card] };
+            Note(view, "Offered", offer, new ProposeTrade(offer));
+            return offer;
+        }
+        return null;
+    }
+
+    /// <summary>True if the bot offered this card to that player within the last few rounds.</summary>
+    private static bool SoldTo(PlayerView view, int playerId, string card)
+    {
+        int round = 0, last = -100;
+        foreach (var e in view.Log)
+        {
+            if (e is TurnStarted t)
+                round = t.Round;
+            else if (e is TradeProposed { Offer: var o } && o.FromId == view.ViewerId && o.ToId == playerId && o.GiveCards.Contains(card))
+                last = round;
+        }
+        return view.Round - last < RepeatOfferRounds;
     }
 
     // ----- The bot's private notebook (decision #150) -----
@@ -172,9 +268,21 @@ public partial class EasyBot
         return last;
     }
 
-    /// <summary>Accepts when the trade leaves it better off and it keeps some cash back.</summary>
-    private bool IsGoodForMe(PlayerView view, TradeOffer offer) =>
-        view.Me.Cash - offer.GetCash >= Reserve(view) / 2 && Gain(view, offer) > 0;
+    /// <summary>
+    /// Accepts when the trade leaves it better off by its margin (so never past its own limit, decision #157)
+    /// and it keeps some cash back. <paramref name="halfway"/> lowers the bar to just better off, for
+    /// splitting the difference when both sides are close.
+    /// </summary>
+    private bool IsGoodForMe(PlayerView view, TradeOffer offer, bool halfway = false) =>
+        view.Me.Cash - offer.GetCash >= Reserve(view) / 2
+        && Gain(view, offer) >= (halfway ? 1 : Margin(view, offer.Reversed()));
+
+    /// <summary>
+    /// True when the other side's terms are close to the bot's limit: within twice its margin, or $30.
+    /// Then it is worth giving up some of the margin to make the deal happen.
+    /// </summary>
+    private bool Close(PlayerView view, TradeOffer asked, int limit) =>
+        Net(asked) - limit <= Math.Max(30, 2 * Margin(view, asked));
 
     /// <summary>
     /// How much better off the bot would be, in dollars, if it accepted this offer.
@@ -260,6 +368,12 @@ public partial class EasyBot
         TradeOffer offer = decision.Trade!;
         if (IsGoodForMe(view, offer))
             return new AcceptTrade();
+        // Their last word, and it is close: take it rather than lose the deal, if it still helps.
+        if (decision.CountersLeft == 0 && IsGoodForMe(view, offer, halfway: true)
+            && Close(view, offer.Reversed(), Net(Limit(view, offer.Reversed()))))
+        {
+            return new AcceptTrade();
+        }
 
         string problem = WhatsWrong(view, offer);
         if (decision.CountersLeft == 0)
@@ -394,8 +508,15 @@ public partial class EasyBot
         int ask = Net(asked);
 
         int net;
-        bool final = false;
-        if (ask <= limit)
+        bool final = false, split = false;
+        if (ask > limit && Close(view, asked, limit)
+            && IsGoodForMe(view, WithNet(asked, (int)Math.Floor((limit + ask) / 2.0 / 10) * 10).Reversed(), halfway: true))
+        {
+            // Close: meet in the middle of its limit and their terms, giving up part of its margin.
+            net = (int)Math.Floor((limit + ask) / 2.0 / 10) * 10;
+            final = split = true;
+        }
+        else if (ask <= limit)
         {
             // Their terms are already fine (it dropped what they asked for): share what it would gain.
             net = ask + (limit - ask) / 2 / 10 * 10;
@@ -419,11 +540,12 @@ public partial class EasyBot
         if (view.Player(them).Cash < counter.GetCash + MortgageFees(view, counter.GiveProperties))
             return (null, $"I'd need about ${counter.GetCash} from you, and you don't have that much cash.");
         if (view.Me.Cash - counter.GiveCash + counter.GetCash - MortgageFees(view, counter.GetProperties) < Reserve(view) / 2
-            || !IsGoodForMe(view, counter.Reversed()))
+            || !IsGoodForMe(view, counter.Reversed(), halfway: split))
         {
             return (null, "I can't find a price that works for both of us right now.");
         }
-        string why = final ? "This is my best and final offer." : "Let's meet partway.";
+        string why = split ? "We're close, so let's split the difference."
+            : final ? "This is my best and final offer." : "Let's meet partway.";
         // A small sum can fix a big gap, because cash left over turns into houses (decision #149). Say so, or it looks odd.
         int moved = Math.Abs(net - ask);
         if (moved >= 10 && -Gain(view, asked.Reversed()) > 3 * moved)
@@ -675,7 +797,8 @@ public partial class EasyBot
         CardDefinition card = content.Card(cardId);
         return card.EffectType switch
         {
-            "GetOutOfJailFree" => 40 + (view.Me.InJail ? view.Me.Bail : 0) + (CloseToGoToJail(view) ? 40 : 0),
+            // With free bail (the Lawyer) it is only worth selling.
+            "GetOutOfJailFree" => view.Me.Bail == 0 ? SpareCardWorth : 40 + (view.Me.InJail ? view.Me.Bail : 0) + (CloseToGoToJail(view) ? 40 : 0),
             "CancelCard" => 80,
             "RentMultiplier" => 70,
             "PropertyRentBoost" => Math.Max(30, view.Properties.Values

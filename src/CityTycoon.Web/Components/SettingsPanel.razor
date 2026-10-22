@@ -41,6 +41,7 @@
     <label class="toggle"><input type="checkbox" checked="@S.ReduceMotion" @onchange="SetReduceMotion" /> Reduce motion (your device's setting is always respected too)</label>
     <label class="toggle"><input type="checkbox" checked="@S.FastBots" @onchange="SetFastBots" /> Fast bots: no pause between bot moves</label>
     <label class="toggle"><input type="checkbox" checked="@S.AutoPassReactions" @onchange="SetAutoPass" /> New games: auto-pass Reaction cards for every person</label>
+    <label class="toggle"><input type="checkbox" checked="@S.DeveloperTools" @onchange="SetDeveloperTools" /> Developer tools: a "Download game log" button with every event and the bots' private thinking (it shows bots' secret limits, so it spoils the haggling)</label>
 
     <p class="sample">The quick brown fox jumps over the lazy dog. Pay $1,500 to the bank. 0123456789</p>
 </div>
@@ -62,6 +63,7 @@
     private Task SetAnimation(ChangeEventArgs e) => Change(() => S.Animation = Enum.TryParse(e.Value?.ToString(), out AnimationSpeed speed) ? speed : AnimationSpeed.Slow);
     private Task SetReduceMotion(ChangeEventArgs e) => Change(() => S.ReduceMotion = e.Value is true);
     private Task SetFastBots(ChangeEventArgs e) => Change(() => S.FastBots = e.Value is true);
+    private Task SetDeveloperTools(ChangeEventArgs e) => Change(() => S.DeveloperTools = e.Value is true);
     private Task SetAutoPass(ChangeEventArgs e) => Change(() => S.AutoPassReactions = e.Value is true);
 
     private async Task Change(Action edit)

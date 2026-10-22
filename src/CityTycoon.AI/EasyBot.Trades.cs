@@ -99,9 +99,51 @@ public partial class EasyBot
                     continue;
                 price = Math.Max(price, (int)Math.Ceiling(lastPrice * 1.15 / 10) * 10);
             }
-            return ask with { GiveCash = Math.Min(price, limit) };
+            TradeOffer offer = ask with { GiveCash = Math.Min(price, limit) };
+            Note(view, "Offered", offer, new ProposeTrade(offer));
+            return offer;
         }
         return null;
+    }
+
+    // ----- The bot's private notebook (decision #150) -----
+
+    private readonly List<BotNote> notebook = [];
+
+    /// <summary>
+    /// What the bot was thinking at each trade it offered or answered, oldest first.
+    /// Private to the people making the game (see <see cref="BotNote"/>); the bot only reads it to save it.
+    /// </summary>
+    public IReadOnlyList<BotNote> Notebook => notebook;
+
+    /// <summary>Puts back the notes from a saved game, so the log download still has them after loading.</summary>
+    public void RestoreNotebook(IEnumerable<BotNote> notes)
+    {
+        notebook.Clear();
+        notebook.AddRange(notes);
+    }
+
+    /// <summary>
+    /// Writes down one trade choice with the sums behind it. The offer is written by whoever made it.
+    /// It only reads the bot's own view and never touches the random numbers, so it can't change a game.
+    /// </summary>
+    private void Note(PlayerView view, string kind, TradeOffer offer, GameAction choice)
+    {
+        // The sums are always from the bot's side, as if it were asked to accept the offer as written.
+        bool mine = offer.FromId == view.ViewerId;
+        TradeSums sums = Sums(view, mine ? offer.Reversed() : offer);
+        TradeOffer fromMySide = mine ? offer : offer.Reversed();
+        int limit = Net(Limit(view, fromMySide));
+        var (name, counter, why) = choice switch
+        {
+            ProposeTrade => ("Offer", null, null),
+            AcceptTrade => ("Accept", null, null),
+            CounterTrade c => ("Counter", c.Offer, c.Why),
+            DeclineTrade d => ("Decline", (TradeOffer?)null, d.Why),
+            _ => (choice.GetType().Name, null, null),
+        };
+        notebook.Add(new BotNote(view.Log.Count, view.Round, view.ViewerId, GetType().Name.Replace("Bot", ""), Personality.ToString(),
+            kind, offer, name, counter, why, view.Me.Cash, sums.Basic, sums.Mine, sums.Theirs, limit));
     }
 
     /// <summary>After offering for a property, the bot waits this many rounds before offering for it again.</summary>
@@ -199,6 +241,13 @@ public partial class EasyBot
     /// so the person knows what to change.
     /// </summary>
     private GameAction RespondToTrade(PlayerView view, PendingDecision decision)
+    {
+        GameAction answer = AnswerTrade(view, decision);
+        Note(view, "Answered", decision.Trade!, answer);
+        return answer;
+    }
+
+    private GameAction AnswerTrade(PlayerView view, PendingDecision decision)
     {
         TradeOffer offer = decision.Trade!;
         if (IsGoodForMe(view, offer))

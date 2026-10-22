@@ -40,12 +40,13 @@ Status: Phases 0 to 10 done. Phase 11 (online multiplayer) is on hold by Angel's
 | A bot behavior | The `virtual` methods in `EasyBot` (Reserve, PropertyWorth, SealedAmount, PickBuild, Vote, NudgeThreshold); trades, haggling, color group values and card values in `EasyBot.Trades.cs`; secret personalities (`BotPersonality`, decision #144) in `EasyBot`'s constructor |
 | A screen | `src/CityTycoon.Web/Components/` and `Pages/`; styles in `wwwroot/css/app.css` (colors are variables at the top, Day and Night) |
 | A new event that moves money or changes a property | Also add it to `Events/GameHistory.cs` (money ledger and space history); a test checks every dollar is listed |
+| What a bot writes in its private notebook, or the game log download | `BotNote.cs` and `EasyBot.Note` in `EasyBot.Trades.cs`, `GameLogText.cs`; trade report card in `Events/TradeReport.cs` |
 | How an event is shown (pause, icon, sound, money, token walk) | `src/CityTycoon.Web/Services/Playback.cs`; pictures in `Components/Icon.razor`, sounds in `wwwroot/js/app.js` (`ct.sound`) |
 
 ## Commands
-- Build and test: `dotnet test` (all projects). Last known: 465 engine tests and 87 bot tests, all passing.
+- Build and test: `dotnet test` (all projects). Last known: 467 engine tests and 91 bot tests, all passing.
 - Run the game: `dotnet run --project src/CityTycoon.Web`.
-- Balance Sim: `dotnet run -c Release --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots HardVsEasy --mode timed --characters random --seed 1 --out <NEW folder>`. `--out` must be a folder that does not exist yet. Try other numbers without editing `rules.json` with `--set goSalary=300` (any rules.json name, repeatable) and `--rounds 50`. The report includes pacing: first building, close calls, bankruptcies, money at the end.
+- Balance Sim: `dotnet run -c Release --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots HardVsEasy --mode timed --characters random --seed 1 --out <NEW folder>`. `--out` must be a folder that does not exist yet. Try other numbers without editing `rules.json` with `--set goSalary=300` (any rules.json name, repeatable) and `--rounds 50`. The report includes pacing (first building, close calls, bankruptcies, money at the end), a trade report card and landing odds; it also writes `trades.csv`, `bot-notes.csv` and `landing.csv`.
 - CI (`.github/workflows/ci.yml`) builds and tests on every push and PR.
 
 ## Gotchas that cost time before

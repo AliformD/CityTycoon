@@ -41,6 +41,10 @@
     </table>
     <div class="buttons">
         <button class="big primary" @onclick="OnNewGame">New game</button>
+        @if (OnDownloadLog.HasDelegate)
+        {
+            <button class="big" @onclick="OnDownloadLog"><Icon Name="download" /> Download game log</button>
+        }
     </div>
 </div>
 
@@ -48,6 +52,9 @@
     [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
     [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
     [Parameter] public EventCallback OnNewGame { get; set; }
+
+    /// <summary>Set only when developer tools are on (Settings): shows the "Download game log" button.</summary>
+    [Parameter] public EventCallback OnDownloadLog { get; set; }
 
     private int RentCollected(int playerId) => View.Log.OfType<RentPaid>().Where(r => r.ToId == playerId).Sum(r => r.Amount);
 

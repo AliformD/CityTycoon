@@ -49,6 +49,10 @@ else
             <button class="pill" title="Settings" aria-expanded="@showSettings" @onclick="() => showSettings = !showSettings"><Icon Name="gear" /><span class="label">Settings</span></button>
             <button class="pill" title="Save in this browser" @onclick="SaveNow"><Icon Name="save" /><span class="label">Save</span></button>
             <button class="pill" @onclick="Session.DownloadSaveAsync" title="Download a save file"><Icon Name="download" /><span class="visually-hidden">Download save file</span></button>
+            @if (Settings.Current.DeveloperTools)
+            {
+                <button class="pill" @onclick="Session.DownloadLogAsync" title="Download the game log with the bots' private notes (developer tool)"><Icon Name="book" /><span class="label">Log</span></button>
+            }
             <button class="pill" title="Back to the menu" @onclick='() => Nav.NavigateTo("")'><Icon Name="home" /><span class="label">Menu</span></button>
         </nav>
     </header>
@@ -64,7 +68,14 @@ else
             }
             else if (view.IsOver)
             {
-                <EndScreen View="view" Content="Session.Content" OnNewGame='() => { Session.Quit(); Nav.NavigateTo(""); }' />
+                @if (Settings.Current.DeveloperTools)
+                {
+                    <EndScreen View="view" Content="Session.Content" OnNewGame="NewGame" OnDownloadLog="Session.DownloadLogAsync" />
+                }
+                else
+                {
+                    <EndScreen View="view" Content="Session.Content" OnNewGame="NewGame" />
+                }
             }
             else if (request != null && !Session.ShowPassScreen)
             {
@@ -212,6 +223,12 @@ else
 
     /// <summary>A notice's "Show" button: select that space, so it is outlined on the board and its details open.</summary>
     private void ShowSpace(string spaceId) => selectedSpaceId = spaceId;
+
+    private void NewGame()
+    {
+        Session.Quit();
+        Nav.NavigateTo("");
+    }
 
     private void Answer(GameAction action)
     {

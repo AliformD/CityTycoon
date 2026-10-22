@@ -32,6 +32,9 @@ public sealed class GameSession(SettingsService settings, SoundService sounds, I
     private const string SaveKey = "citytycoon.save";
 
     private readonly Dictionary<int, HumanUiController> humans = [];
+
+    /// <summary>The bots, kept so their private notebooks can be saved and put in the game log download.</summary>
+    private readonly Dictionary<int, EasyBot> bots = [];
     private CancellationTokenSource? stopGame;
 
     public GameEngine? Engine { get; private set; }
@@ -116,6 +119,9 @@ public sealed class GameSession(SettingsService settings, SoundService sounds, I
     {
         var engine = new GameEngine(GameStateSerializer.FromJson(save.State), Content);
         Launch(engine, save.Seats, save.AutoPassReactions);
+        foreach (var (id, notes) in save.Notes ?? [])
+            if (bots.TryGetValue(id, out var bot))
+                bot.RestoreNotebook(notes);
     }
 
     /// <summary>Starts running a game (new or loaded): gives every seat its controller and starts the host.</summary>
@@ -124,6 +130,7 @@ public sealed class GameSession(SettingsService settings, SoundService sounds, I
         Engine = engine;
         Seats = seats;
         humans.Clear();
+        bots.Clear();
         autoPassReactions.Clear();
         foreach (int id in autoPass)
             autoPassReactions.Add(id);
@@ -149,12 +156,14 @@ public sealed class GameSession(SettingsService settings, SoundService sounds, I
             else
             {
                 ulong botSeed = Engine.State.Settings.Seed * 31 + (ulong)id;
-                controllers[id] = kind switch
+                EasyBot bot = kind switch
                 {
                     SeatKind.HardBot => new HardBot(botSeed, Content),
                     SeatKind.NormalBot => new NormalBot(botSeed, Content),
                     _ => new EasyBot(botSeed, Content),
                 };
+                bots[id] = bot;
+                controllers[id] = bot;
             }
         }
 
@@ -264,7 +273,8 @@ public sealed class GameSession(SettingsService settings, SoundService sounds, I
     /// <summary>The game as a save file's text.</summary>
     public string CreateSaveText() =>
         new SavedGame(SavedGame.CurrentVersion, DateTime.Now.ToString("d MMM, HH:mm"), Seats.ToDictionary(s => s.Key, s => s.Value),
-            autoPassReactions.ToList(), GameStateSerializer.ToJson(Engine!.State)).ToJson();
+            autoPassReactions.ToList(), GameStateSerializer.ToJson(Engine!.State),
+            bots.ToDictionary(b => b.Key, b => b.Value.Notebook.ToList())).ToJson();
 
     /// <summary>Saves in the browser. Returns false if the browser refused (full or blocked storage).</summary>
     public async Task<bool> SaveInBrowserAsync() =>
@@ -272,6 +282,23 @@ public sealed class GameSession(SettingsService settings, SoundService sounds, I
 
     public async Task DownloadSaveAsync() =>
         await js.InvokeVoidAsync("ct.download", $"city-tycoon-round-{Engine!.State.Round}.json", CreateSaveText());
+
+    /// <summary>
+    /// The game log download (a developer tool in Settings): every event so far, the bots' private
+    /// notes and a trade report card, as a text file a person can read or send for review.
+    /// </summary>
+    public async Task DownloadLogAsync()
+    {
+        var seats = Seats.ToDictionary(s => s.Key, s => s.Value switch
+        {
+            SeatKind.Human => "Person",
+            SeatKind.HardBot => "Hard bot",
+            SeatKind.NormalBot => "Normal bot",
+            _ => "Easy bot",
+        } + (bots.TryGetValue(s.Key, out var bot) ? $", {bot.Personality}" : ""));
+        string text = GameLogText.Write(Engine!.GetView(viewerId: -1), Content, seats, bots.Values.SelectMany(b => b.Notebook));
+        await js.InvokeVoidAsync("ct.download", $"city-tycoon-log-round-{Engine.State.Round}.txt", text);
+    }
 
     /// <summary>The save kept in the browser, or null if there isn't one (or it can't be read).</summary>
     public async Task<SavedGame?> FindBrowserSaveAsync()

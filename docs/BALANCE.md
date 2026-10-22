@@ -114,3 +114,12 @@ Decision #149. 1000 games each, 4 players, Timed, 40 rounds, random characters, 
 | Mixed: buildings per game | 14.1 | 14.1 |
 
 Identical, as expected: bots only offer cash for the last piece of one group, so the change only shows when a person offers a trade that finishes several groups.
+
+## Trade report card and landing odds (2026-10-22)
+Decision #150 added a trade report card and landing odds to every Sim summary. 300 games, HardVsEasy, 4 players, Timed (the Sim's default 30 rounds), random characters, seed 1:
+
+- Offers: 1,458 (about 5 per game), finished: 29 (2%), 1.6 counter-offers per finished trade.
+- Rent collected afterwards on what each side got (whole color groups): $24 for the side that wrote the final terms (usually the seller, who got cash), $193 for the other side (the buyer, who finished a set).
+- Landing odds by color group (share of all turns that end on one of its spaces): Orange 8.5%, Pink 8.1%, Light Blue 7.9%, Yellow 7.9%, Red 7.3%, Green 6.9%, Brown 4.9%, Dark Blue 4.0%. Per space in `landing.csv`.
+
+Bots almost never agree with each other, because both sides use the same sums: the buyer's limit is usually below the seller's. Making more trades happen is step E of the trading plan.

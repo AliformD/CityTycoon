@@ -37,6 +37,9 @@ public sealed class UserSettings
 
     /// <summary>New games start with everyone's "auto-pass reactions" ticked.</summary>
     public bool AutoPassReactions { get; set; }
+
+    /// <summary>Shows the "Download game log" buttons: every event plus the bots' private notes (decision #150).</summary>
+    public bool DeveloperTools { get; set; }
 }
 
 /// <summary>

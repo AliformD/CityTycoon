@@ -199,6 +199,12 @@ public static class RuleModifiers
     public static int StartPeeks(GameState state, GameContent content, int playerId) =>
         Active(state, content).Sum(m => m.StartPeeks(state, playerId));
 
+    public static bool IgnoresTileFees(GameState state, GameContent content, int playerId, IReadOnlyList<IRuleModifier>? active = null) =>
+        (active ?? Active(state, content)).Any(m => m.IgnoresTileFees(state, playerId));
+
+    public static bool SwapsPeekedTiles(GameState state, GameContent content, int playerId) =>
+        Active(state, content).Any(m => m.SwapsPeekedTiles(state, playerId));
+
     // ----- Momentum -----
 
     /// <summary>The most Momentum tokens this player can hold (Section 7.3).</summary>

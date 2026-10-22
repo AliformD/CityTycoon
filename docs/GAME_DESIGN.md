@@ -169,7 +169,7 @@ Each player picks a **different** character. Each one has a single small ability
 | **The Lawyer** | You never pay Jail bail (leaving early is free). When you're sent to Jail, you still collect half the GO salary. You can't be targeted by Audit. | Jail still halves your rent. |
 | **The Contractor** | Your building costs are 25% lower. | Stacks with other discounts (Section 9.4). |
 | **The Politician** | Your City Council vote is worth 250 influence instead of 100, and each lobbying dollar adds 2 influence instead of 1. **Fundraising:** when an Event or Opportunity card gives you money, the bank gives you the same amount again. | Stronger voice in zoning. |
-| **The City Planner** | At game start, secretly look at 1 hidden Government tile of your choice. Each time you pass GO, secretly look at 1 more that is still hidden. Once per game, after a City Council roll, you may reverse the result. | Information advantage. |
+| **The City Planner** | At game start, secretly look at 1 hidden Government tile of your choice. Each time you pass GO, secretly look at 1 more that is still hidden. After each look, you may swap that tile for a random one that isn't in play, before anyone else learns what it was. Never pays Government tile fees. Once per game, after a City Council roll, you may reverse the result. | Information advantage. |
 | **The Medic** | If you're sent to the Hospital, you pay no bill and roll normally on your next turn. Insured markers are free for you. When anyone else pays a Hospital bill or buys an Insured marker, the money goes to you instead of the bank. | Shrugs off bad luck. |
 
 **Selection:** turn order is decided randomly first. Then players pick characters in **reverse** turn order (the last player picks first), so the first player's advantage is balanced by picking last. AI players pick randomly from what's left. There's also a "Random characters" setup option.
@@ -496,6 +496,7 @@ Government tiles are city-owned spaces that affect the properties right next to 
 - **While a tile is hidden, it has no effects at all:** neither its neighbor effect nor its landing effect.
 - When a tile is revealed, its landing effect applies to the player who landed on it, and its neighbor effect turns on right away for the rest of the game.
 - Some effects let a player **peek** privately (the City Planner and the Inside Source card). Peeking doesn't reveal the tile to anyone else.
+- After a peek, the City Planner may **swap** that hidden tile for a random one of the tiles left out of this game (decision #158). The swapped-out tile leaves play. Everyone sees that a swap happened but not which tiles; anyone who had peeked at the old tile no longer knows what is there.
 
 ### 12.2 Neighbors
 

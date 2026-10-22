@@ -107,6 +107,8 @@ public static class EventDescriber
             RentBoostStarted b => $"{Space(b.PropertyId)}'s rent is ×{b.Multiplier} until {Name(b.PlayerId)}'s next turn.",
             RentBoostEnded b => $"The Grand Opening on {Space(b.PropertyId)} is over.",
             TilePeeked t => $"{Name(t.PlayerId)} secretly peeked at a hidden Government tile.",
+            TileSwapped t => $"{Name(t.PlayerId)} swapped a hidden Government tile for one that wasn't in play. Nobody else knows what either one is.",
+            TileFeeWaived t => $"{Name(t.PlayerId)} paid no {content.GovTile(t.TileId).Name} fee (saved ${t.Amount}).",
             EventsArranged a => $"{Name(a.PlayerId)} looked at the top {a.Count} Event cards and put them back.",
             RecoverySkipped r => $"{Name(r.PlayerId)} skips the Hospital recovery and rolls 2 dice.",
             TileRevealed t => $"{Name(t.PlayerId)} revealed the Government tile: it's the {Tile(t.TileId)}!",

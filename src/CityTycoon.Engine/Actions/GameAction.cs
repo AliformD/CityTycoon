@@ -54,6 +54,7 @@ namespace CityTycoon.Engine.Actions;
 [JsonDerivedType(typeof(RerollDice), nameof(RerollDice))]
 [JsonDerivedType(typeof(KeepCard), nameof(KeepCard))]
 [JsonDerivedType(typeof(PeekAtTile), nameof(PeekAtTile))]
+[JsonDerivedType(typeof(SwapTile), nameof(SwapTile))]
 [JsonDerivedType(typeof(ChooseOrdinance), nameof(ChooseOrdinance))]
 [JsonDerivedType(typeof(ChooseDistrict), nameof(ChooseDistrict))]
 [JsonDerivedType(typeof(CastVote), nameof(CastVote))]
@@ -183,6 +184,9 @@ public sealed record KeepCard(string CardId) : GameAction;
 
 /// <summary>Secretly peek at the hidden Government tile on this space (the City Planner).</summary>
 public sealed record PeekAtTile(string SpaceId) : GameAction;
+
+/// <summary>The City Planner: swap the hidden tile just peeked at for a random one not in play (decision #158).</summary>
+public sealed record SwapTile(string SpaceId) : GameAction;
 
 /// <summary>City Council: the agenda setter picks which of the drawn ordinances to put to a vote (Section 11.2).</summary>
 public sealed record ChooseOrdinance(string OrdinanceId) : GameAction;
@@ -316,6 +320,7 @@ public enum DecisionKind
     CouncilVote,
     RerollMove,
     ReverseCouncilVote,
+    SwapTile,
 }
 
 /// <summary>

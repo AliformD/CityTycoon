@@ -1,3 +1,4 @@
+using CityTycoon.Engine.Modifiers;
 using CityTycoon.Engine.Cards;
 using CityTycoon.Engine.Content;
 using CityTycoon.Engine.Events;
@@ -46,6 +47,11 @@ public static class TileLandings
     /// <summary>A tile fee: pays the bank (toId null) or a player, raising money if needed.</summary>
     public static void Charge(TileLandingContext c, int amount, int? toId = null)
     {
+        if (amount > 0 && RuleModifiers.IgnoresTileFees(c.State, c.Ctx.Content, c.Player.Id))
+        {
+            c.Ctx.Emit(new TileFeeWaived(c.Player.Id, c.Tile.Id, amount));
+            return;
+        }
         if (amount > 0)
             c.Ctx.Push(new PaymentStep { FromId = c.Player.Id, ToId = toId, Amount = amount, Reason = PaymentReason.Tile, TileId = c.Tile.Id });
     }

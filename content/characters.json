@@ -43,8 +43,8 @@
     {
       "id": "city-planner",
       "name": "The City Planner",
-      "text": "At game start, secretly look at 1 hidden Government tile of your choice. Each time you pass GO, secretly look at 1 more that is still hidden. Once per game, after a City Council vote is rolled, you may reverse the result.",
-      "modifiers": [ { "type": "PeekAtStart", "value": 1 }, { "type": "PeekOnGo", "value": 1 }, { "type": "ReverseVote" } ]
+      "text": "At game start, secretly look at 1 hidden Government tile of your choice. Each time you pass GO, secretly look at 1 more that is still hidden. After each look, you may swap that tile for a random one that isn't in play, before anyone else finds out what it was. You never pay Government tile fees. Once per game, after a City Council vote is rolled, you may reverse the result.",
+      "modifiers": [ { "type": "PeekAtStart", "value": 1 }, { "type": "PeekOnGo", "value": 1 }, { "type": "SwapPeekedTile" }, { "type": "TileFeeImmunity" }, { "type": "ReverseVote" } ]
     },
     {
       "id": "medic",

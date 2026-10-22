@@ -33,6 +33,26 @@ public static class TileRules
         ctx.Emit(new TilePeeked(player.Id, spaceId));
     }
 
+    /// <summary>The tile types not on the board this game (decision #158): the pool a City Planner's swap draws from.</summary>
+    public static List<string> UnusedTiles(GameState state, GameContent content) =>
+        content.GovTiles.Select(t => t.Id).Where(id => !state.Board.Any(s => s.TileId == id)).ToList();
+
+    /// <summary>
+    /// Swaps a hidden tile for a random one not in play. The swapper learns the new tile; anyone else who had
+    /// peeked at the old one now knows only that it changed (decision #158).
+    /// </summary>
+    public static void Swap(EngineContext ctx, PlayerState player, string spaceId)
+    {
+        BoardSpace space = ctx.State.Space(spaceId);
+        var pool = UnusedTiles(ctx.State, ctx.Content);
+        space.TileId = pool[ctx.Dice.RollBelow(pool.Count)];
+        foreach (PlayerState other in ctx.State.Players.Where(p => p.Id != player.Id))
+            other.KnownTiles.Remove(spaceId);
+        if (!player.KnownTiles.Contains(spaceId))
+            player.KnownTiles.Add(spaceId);
+        ctx.Emit(new TileSwapped(player.Id, spaceId));
+    }
+
     /// <summary>The revealed Transit Hub next to this property, if there is one and it lets you hop.</summary>
     public static BoardSpace? TransitHubNextTo(GameState state, GameContent content, string propertyId)
     {

@@ -60,6 +60,8 @@ public static class ModifierTypes
         ["ReverseVote"] = new(c => new ReverseVoteModifier(c)),
         ["PeekAtStart"] = new(c => new PeekAtStartModifier(c), NeedsValue: true),
         ["PeekOnGo"] = new(c => new PeekOnGoModifier(c), NeedsValue: true),
+        ["TileFeeImmunity"] = new(c => new TileFeeImmunityModifier(c)),
+        ["SwapPeekedTile"] = new(c => new SwapPeekedTileModifier(c)),
         ["HospitalImmunity"] = new(c => new HospitalImmunityModifier(c)),
         ["HospitalCollector"] = new(c => new HospitalCollectorModifier(c)),
         ["Fundraising"] = new(c => new FundraisingModifier(c), NeedsValue: true),

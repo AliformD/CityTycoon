@@ -250,3 +250,14 @@ Remarks per game: 4.1 warnings, 0.5 sassy, 0.3 threats, 0.2 friendly, 0.1 scoldi
 ## Hustler Casino win bonus (2026-10-22)
 Decision #161. Same Sim settings. Hustler 30.7 % to 31.1 % (within normal run-to-run noise); the bonus is worth about $10 on half of the Hustler's Casino landings. The Hustler stays just over the 30 % target, as it was before.
 
+## Politician vote contracts (2026-10-23)
+Decision #162. 2,000 games, 4 Hard bots, Timed, 30 rounds, random characters, seed 1. "Before" is decision #161.
+
+| | Before | Contracts | Same rules, contracts off |
+| --- | --- | --- | --- |
+| Politician wins | 19.7 % | 21.1 % | 21.1 % |
+| Bids for the Politician's vote per game | (vote deals: 0.4, $16) | 0.3 | 0 |
+| Contracts taken per game | | 0.2 (about $25 each) | 0 |
+| Lobbying per game | $0 | $0 | $0 |
+
+The Politician gained about 1.5 points, but from the other changes (equal votes, no vote deals for the other players, City Hall Momentum), not from contracts: switching contracts off gives the same 21.1 %. Bots rarely bid because they value most ordinances at well under $100 to themselves against the table, and one vote only moves the chance of passing by about 10 to 20 points (public opinion and the other votes are always there). A $10 offer already buys the whole vote, so a bid only pays when an ordinance is worth $100 or more to the bidder. Bidding as if every ordinance were worth twice as much (a test, not kept) raised bids to 0.7 a game and the Politician to about 23 % in 1,000 games. Other characters moved by under a point. Human players may well value votes differently from the bots.

@@ -157,8 +157,14 @@ public interface IRuleModifier
     /// <summary>This player's City Council influence, if this modifier changes it (the Politician). Return 0 for "no change".</summary>
     int VoteInfluence(GameState state, int playerId) => 0;
 
-    /// <summary>Extra influence, in percent, each lobbying dollar buys this player (the Politician: 100 means double).</summary>
-    int LobbyBonusPercent(GameState state, int playerId) => 0;
+    /// <summary>
+    /// Influence, in percent, each dollar paid into this player's vote buys: their own lobbying and the vote contracts
+    /// they take (the Politician: 200 means 2 influence a dollar, decision #162). 0: this player can't lobby or take contracts.
+    /// </summary>
+    int ContractPercent(GameState state, int playerId) => 0;
+
+    /// <summary>True if landing on City Hall fills this player's Momentum tokens up to their limit (the Politician, decision #162).</summary>
+    bool RefillsMomentumAtCityHall(GameState state, int playerId) => false;
 
     /// <summary>True if this player may reverse one City Council result per game (the City Planner).</summary>
     bool CanReverseVote(GameState state, int playerId) => false;

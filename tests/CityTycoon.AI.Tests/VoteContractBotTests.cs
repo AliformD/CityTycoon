@@ -4,15 +4,18 @@ using CityTycoon.Engine.Hosting;
 
 namespace CityTycoon.AI.Tests;
 
-/// <summary>Decision #159: bots weigh ordinances in dollars, lobby when it pays, and make and answer vote deals.</summary>
-public class VoteDealBotTests
+/// <summary>
+/// Decisions #159 and #162: bots weigh ordinances in dollars, the Politician lobbies when it pays, and the others bid
+/// for the Politician's vote, which the Politician takes or turns down.
+/// </summary>
+public class VoteContractBotTests
 {
     /// <summary>Player 0 owns Dark Blue in Uptown, built to hotels. The other three own nothing.</summary>
-    private static GameEngine DarkBlueOwner(string? character = null, int level = 5)
+    private static GameEngine DarkBlueOwner(string? character = null, int level = 5, string second = "lawyer")
     {
         var engine = GameEngine.NewGame(new GameSetup
         {
-            Players = [new("Bot", CharacterId: character), new("B", CharacterId: "lawyer"), new("C", CharacterId: "medic"), new("D", CharacterId: "commuter")],
+            Players = [new("Bot", CharacterId: character), new("B", CharacterId: second), new("C", CharacterId: "medic"), new("D", CharacterId: "commuter")],
             Seed = 3,
             ShuffleTurnOrder = false,
         });
@@ -69,9 +72,19 @@ public class VoteDealBotTests
     }
 
     [Fact]
+    public async Task OnlyThePolitician_Lobbies()
+    {
+        var engine = DarkBlueOwner(level: 6);
+        // Not the Politician: the vote panel offers no lobbying, and the bot asks for none.
+        var decision = VoteOn(0, "tourism-boost", engine) with { MaxLobby = 0 };
+        var vote = Assert.IsType<CastVote>(await new HardBot(1).DecideAsync(engine.GetView(0), decision, [new CastVote(VoteChoice.Yes)]));
+        Assert.Equal(0, vote.Lobby);
+    }
+
+    [Fact]
     public async Task HardBot_TakesFreeMoney_ToVoteItsOwnWay()
     {
-        var engine = DarkBlueOwner();
+        var engine = DarkBlueOwner("politician");
         var decision = new PendingDecision(0, DecisionKind.AnswerVoteDeal, "", OrdinanceId: "tourism-boost", DistrictId: "uptown",
             Deal: new VoteDeal(1, 0, 10, VoteChoice.Yes));
         Assert.IsType<AcceptVoteDeal>(await new HardBot(1).DecideAsync(engine.GetView(0), decision, [new AcceptVoteDeal(), new DeclineVoteDeal()]));
@@ -80,7 +93,7 @@ public class VoteDealBotTests
     [Fact]
     public async Task HardBot_WillNotSellAVoteThatMattersToIt_Cheaply_ButWillForEnough()
     {
-        var engine = DarkBlueOwner();
+        var engine = DarkBlueOwner("politician");
         var cheap = new PendingDecision(0, DecisionKind.AnswerVoteDeal, "", OrdinanceId: "rent-control", DistrictId: "uptown",
             Deal: new VoteDeal(1, 0, 10, VoteChoice.Yes));
         GameAction[] legal = [new AcceptVoteDeal(), new DeclineVoteDeal()];
@@ -90,24 +103,46 @@ public class VoteDealBotTests
         Assert.IsType<AcceptVoteDeal>(await new HardBot(1).DecideAsync(engine.GetView(0), rich, legal));
     }
 
+    /// <summary>The bidding question for player 0, with player 1 as the Politician.</summary>
+    private static PendingDecision BidFor(GameEngine engine, VoteDeal? top = null) =>
+        new(0, DecisionKind.OfferVoteDeal, "", OrdinanceId: "tourism-boost", DistrictId: "uptown",
+            MinBid: top == null ? 10 : top.Amount + 10, MaxBid: engine.State.Player(0).Cash, BidIncrement: 10, OtherPlayerId: 1, Deal: top);
+
     [Fact]
-    public async Task HardBot_OffersADeal_WhenOneMoreVoteIsWorthMoreThanItCosts()
+    public async Task HardBot_BidsForThePoliticiansVote_WhenItIsWorthMoreThanItCosts()
     {
-        // Skyscrapers: a 25% rent boost is worth over $300 to it, and one more Yes vote lifts its chance from 47% to 60%.
-        var engine = DarkBlueOwner("politician", level: 6);
-        var decision = new PendingDecision(0, DecisionKind.OfferVoteDeal, "", OrdinanceId: "tourism-boost", DistrictId: "uptown",
-            MaxBid: engine.State.Player(0).Cash);
-        var offer = Assert.IsType<OfferVoteDeal>(await new HardBot(1).DecideAsync(engine.GetView(0), decision, [new NoThanks()]));
-        Assert.Equal(VoteChoice.Yes, offer.Deal.Choice);
-        Assert.NotEqual(0, offer.Deal.ToId);
-        Assert.InRange(offer.Deal.Amount, 10, 50);
+        // Skyscrapers: a 25% rent boost is worth over $300 to it, and the Politician's vote (plus the money behind it) lifts its chance a lot.
+        var engine = DarkBlueOwner(level: 6, second: "politician");
+        var offer = Assert.IsType<OfferVoteDeal>(await new HardBot(1).DecideAsync(engine.GetView(0), BidFor(engine), [new NoThanks()]));
+        Assert.Equal(new VoteDeal(0, 1, offer.Deal.Amount, VoteChoice.Yes), offer.Deal);
+        Assert.InRange(offer.Deal.Amount, 10, 200);
     }
 
     [Fact]
-    public async Task EasyBot_NeverOffersDeals()
+    public async Task HardBot_OutbidsAnOpposingOffer_ButOnlyUpToWhatTheVoteIsWorth()
     {
-        var engine = DarkBlueOwner();
-        var decision = new PendingDecision(0, DecisionKind.OfferVoteDeal, "", OrdinanceId: "tourism-boost", DistrictId: "uptown", MaxBid: 1000);
-        Assert.IsType<NoThanks>(await new EasyBot(1).DecideAsync(engine.GetView(0), decision, [new NoThanks()]));
+        var engine = DarkBlueOwner(level: 6, second: "politician");
+        var against = new VoteDeal(2, 1, 40, VoteChoice.No);
+        var raise = Assert.IsType<OfferVoteDeal>(await new HardBot(1).DecideAsync(engine.GetView(0), BidFor(engine, against), [new NoThanks()]));
+        Assert.Equal(VoteChoice.Yes, raise.Deal.Choice);
+        Assert.True(raise.Deal.Amount >= 50);
+
+        var tooDear = against with { Amount = 1000 };
+        Assert.IsType<NoThanks>(await new HardBot(1).DecideAsync(engine.GetView(0), BidFor(engine, tooDear), [new NoThanks()]));
+    }
+
+    [Fact]
+    public async Task HardBot_DoesNotBid_WhenTheTopOfferIsAlreadyForItsSide()
+    {
+        var engine = DarkBlueOwner(level: 6, second: "politician");
+        var mine = new VoteDeal(2, 1, 40, VoteChoice.Yes);
+        Assert.IsType<NoThanks>(await new HardBot(1).DecideAsync(engine.GetView(0), BidFor(engine, mine), [new NoThanks()]));
+    }
+
+    [Fact]
+    public async Task EasyBot_NeverBids()
+    {
+        var engine = DarkBlueOwner(second: "politician");
+        Assert.IsType<NoThanks>(await new EasyBot(1).DecideAsync(engine.GetView(0), BidFor(engine), [new NoThanks()]));
     }
 }

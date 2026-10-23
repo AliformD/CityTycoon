@@ -174,11 +174,13 @@ public class CharacterTests
     // ----- The Politician -----
 
     [Fact]
-    public void Politician_HasABiggerVote()
+    public void Politician_HasAnEqualVote_ButTakesVoteContracts()
     {
         var game = With("politician");
-        Assert.Equal(250, RuleModifiers.VoteInfluence(game.State, game.Engine.Content, 0));
+        Assert.Equal(100, RuleModifiers.VoteInfluence(game.State, game.Engine.Content, 0));
         Assert.Equal(100, RuleModifiers.VoteInfluence(game.State, game.Engine.Content, 1));
+        Assert.Equal(200, RuleModifiers.ContractPercent(game.State, game.Engine.Content, 0));
+        Assert.Equal(0, RuleModifiers.ContractPercent(game.State, game.Engine.Content, 1));
     }
 
     // ----- The City Planner -----

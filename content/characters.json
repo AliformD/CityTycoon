@@ -37,8 +37,8 @@
     {
       "id": "politician",
       "name": "The Politician",
-      "text": "Your City Council vote is worth 250 influence instead of 100, and each dollar you spend lobbying buys 2 influence instead of 1. Fundraising: when an Event or Opportunity card gives you money, the bank gives you the same again.",
-      "modifiers": [ { "type": "VoteInfluence", "value": 250 }, { "type": "LobbyBonus", "value": 100 }, { "type": "Fundraising", "value": 100 } ]
+      "text": "Vote contracts: only you can lobby at the City Council, and before each vote the other players bid to pay you to vote their way. The highest offer wins; if you take it, the money is yours and you must vote that way. Every dollar you take or lobby adds 2 influence to your vote. Landing on City Hall fills your Momentum tokens. Fundraising: when an Event or Opportunity card gives you money, the bank gives you the same again.",
+      "modifiers": [ { "type": "VoteContracts", "value": 200 }, { "type": "CityHallMomentum" }, { "type": "Fundraising", "value": 100 } ]
     },
     {
       "id": "city-planner",

@@ -24,7 +24,8 @@ public sealed class CouncilVoteRecord
 
 /// <summary>
 /// A City Council session (Section 11): draw two ordinances, the agenda setter picks one (and a
-/// district if needed), everyone votes in secret and lobbies, then a roll decides.
+/// district if needed), the other players may bid for the Politician's vote, everyone votes in secret
+/// (the Politician may lobby), then a roll decides.
 /// The step moves through its <see cref="Stage"/>s; each time it runs it does the work of the
 /// current stage, and waits for answers where it needs them.
 /// </summary>
@@ -54,13 +55,22 @@ public sealed class CouncilStep : Step
     /// <summary>The City Planner being asked whether to reverse the result, or null.</summary>
     public int? ReverserId { get; set; }
 
-    /// <summary>Who has answered the "offer a vote deal?" question, with their offer (null for none). Decision #159.</summary>
-    public Dictionary<int, VoteDeal?> DealOffers { get; set; } = [];
+    /// <summary>The Politician other players bid to pay for their vote, or null for a plain vote (decision #162).</summary>
+    public int? PoliticianId { get; set; }
 
-    /// <summary>Offers still waiting for an answer, biggest first.</summary>
-    public List<VoteDeal> DealQueue { get; set; } = [];
+    /// <summary>Everyone who may bid for the Politician's vote, in the order they are asked.</summary>
+    public List<int> ContractBidders { get; set; } = [];
 
-    /// <summary>Accepted deals, by the player who must vote that way.</summary>
+    /// <summary>Bidders who passed. Like an open auction, passing means you are out of this bidding.</summary>
+    public List<int> ContractOut { get; set; } = [];
+
+    /// <summary>Where in <see cref="ContractBidders"/> the next question starts.</summary>
+    public int ContractTurn { get; set; }
+
+    /// <summary>The highest offer so far, or null before anyone offers.</summary>
+    public VoteDeal? TopOffer { get; set; }
+
+    /// <summary>Accepted contracts, by the player who must vote that way (only ever the Politician).</summary>
     public Dictionary<int, VoteDeal> Deals { get; set; } = [];
 
     public override StepResult Run(EngineContext ctx)
@@ -82,30 +92,16 @@ public sealed class CouncilStep : Step
                     Districts: effect.Districts(ctx, Definition(ctx)).ToList()));
 
             case CouncilStage.Deals:
-                var offering = ctx.State.ActivePlayers.Where(p => !DealOffers.ContainsKey(p.Id) && p.Cash >= MinDeal).ToList();
-                if (offering.Count == 0 || ctx.State.ActivePlayers.Count() < 2)
-                {
-                    DealQueue = DealOffers.Values.OfType<VoteDeal>().OrderByDescending(d => d.Amount).ThenBy(d => d.FromId).ToList();
-                    Stage = CouncilStage.DealAnswers;
-                    return StepResult.Continue;
-                }
-                return StepResult.WaitFor(offering.Select(p => new PendingDecision(p.Id, DecisionKind.OfferVoteDeal,
-                    $"Before the vote on {Definition(ctx).Name}, you may offer another player cash to vote your way. If they take it, they must vote that way.",
-                    OrdinanceId: OrdinanceId, DistrictId: DistrictId, MaxBid: p.Cash)));
+                return AskForContract(ctx);
 
             case CouncilStage.DealAnswers:
-                while (DealQueue.Count > 0)
+                // The Politician takes the top offer or turns it down (decision #162).
+                if (TopOffer is VoteDeal top && PoliticianId is int politician && !ctx.Player(politician).IsBankrupt
+                    && ctx.Player(top.FromId).Cash >= top.Amount)
                 {
-                    VoteDeal deal = DealQueue[0];
-                    // Someone can only be held to one deal, and the payer must still have the cash.
-                    if (Deals.ContainsKey(deal.ToId) || ctx.Player(deal.FromId).Cash < deal.Amount || ctx.Player(deal.ToId).IsBankrupt)
-                    {
-                        DealQueue.RemoveAt(0);
-                        continue;
-                    }
-                    return StepResult.WaitFor(new PendingDecision(deal.ToId, DecisionKind.AnswerVoteDeal,
-                        $"{ctx.Player(deal.FromId).Name} offers you ${deal.Amount} to vote {deal.Choice.ToString().ToUpperInvariant()} on {Definition(ctx).Name}. If you take it, you must vote that way.",
-                        OrdinanceId: OrdinanceId, DistrictId: DistrictId, OtherPlayerId: deal.FromId, Deal: deal));
+                    return StepResult.WaitFor(new PendingDecision(politician, DecisionKind.AnswerVoteDeal,
+                        $"{ctx.Player(top.FromId).Name} won the bidding: they offer you ${top.Amount} to vote {top.Choice.ToString().ToUpperInvariant()} on {Definition(ctx).Name}. If you take it, the money is yours, you must vote that way, and it adds {top.Amount * ContractPercent(ctx, politician) / 100} influence to your vote.",
+                        OrdinanceId: OrdinanceId, DistrictId: DistrictId, OtherPlayerId: top.FromId, Deal: top));
                 }
                 Stage = CouncilStage.Vote;
                 return StepResult.Continue;
@@ -119,10 +115,12 @@ public sealed class CouncilStep : Step
                 }
                 return StepResult.WaitFor(waiting.Select(p => new PendingDecision(p.Id, DecisionKind.CouncilVote,
                     Deals.TryGetValue(p.Id, out VoteDeal? bound)
-                        ? $"Vote on {Definition(ctx).Name}. You took {ctx.Player(bound.FromId).Name}'s deal, so you vote {bound.Choice.ToString().ToUpperInvariant()}. You may still lobby."
-                        : $"Vote on {Definition(ctx).Name}. Your vote and your lobbying are secret until everyone has voted.",
+                        ? $"Vote on {Definition(ctx).Name}. You took {ctx.Player(bound.FromId).Name}'s contract, so you vote {bound.Choice.ToString().ToUpperInvariant()}. You may still lobby."
+                        : CanLobby(ctx, p.Id)
+                            ? $"Vote on {Definition(ctx).Name}. Your vote and your lobbying are secret until everyone has voted."
+                            : $"Vote on {Definition(ctx).Name}. Your vote is secret until everyone has voted.",
                     OrdinanceId: OrdinanceId, DistrictId: DistrictId,
-                    MaxLobby: Math.Max(0, p.Cash), HasLobbyist: LobbyistIn(ctx, p) != null, Deal: bound)));
+                    MaxLobby: CanLobby(ctx, p.Id) ? Math.Max(0, p.Cash) : 0, HasLobbyist: LobbyistIn(ctx, p) != null, Deal: bound)));
 
             case CouncilStage.Resolve:
                 return Resolve(ctx);
@@ -255,13 +253,70 @@ public sealed class CouncilStep : Step
     private StepResult BeginVote(EngineContext ctx)
     {
         ctx.Emit(new OrdinanceProposed(SetterId, OrdinanceId!, DistrictId));
-        // Vote deals come first (decision #159).
-        Stage = ctx.Rules.VoteDeals ? CouncilStage.Deals : CouncilStage.Vote;
+        // With a Politician in the game, the other players first bid for their vote (decision #162).
+        GameState state = ctx.State;
+        PoliticianId = ctx.Rules.VoteContracts
+            ? state.ActivePlayers.FirstOrDefault(p => ContractPercent(ctx, p.Id) > 0)?.Id
+            : null;
+        Stage = CouncilStage.Vote;
+        if (PoliticianId is int politician)
+        {
+            // Asked in turn order, starting with the player after the Politician.
+            int count = state.Players.Count;
+            int start = state.Players.FindIndex(p => p.Id == politician);
+            ContractBidders = Enumerable.Range(1, count - 1)
+                .Select(i => state.Players[(start + i) % count])
+                .Where(p => !p.IsBankrupt).Select(p => p.Id).ToList();
+            if (ContractBidders.Count > 0)
+                Stage = CouncilStage.Deals;
+        }
         return StepResult.Continue;
     }
 
-    /// <summary>The smallest vote deal, and the step deals go up in.</summary>
+    /// <summary>The smallest vote contract offer, and the step offers go up in.</summary>
     public const int MinDeal = 10;
+
+    /// <summary>The least the next offer can be: $10, or $10 more than the top offer.</summary>
+    public int MinNextOffer => TopOffer == null ? MinDeal : TopOffer.Amount + MinDeal;
+
+    /// <summary>
+    /// Vote contract bidding (decision #162), an open auction for the Politician's vote: in turn, each bidder may beat
+    /// the top offer by at least $10, for either side, or pass and be out. It ends when everyone but the top bidder is out.
+    /// </summary>
+    private StepResult AskForContract(EngineContext ctx)
+    {
+        int politician = PoliticianId!.Value;
+        int count = ContractBidders.Count;
+        for (int i = 0; i < count; i++)
+        {
+            int id = ContractBidders[(ContractTurn + i) % count];
+            if (ContractOut.Contains(id) || id == TopOffer?.FromId)
+                continue;
+            PlayerState player = ctx.Player(id);
+            // Bankrupt, or too little cash to beat the top offer: out without being asked.
+            if (player.IsBankrupt || player.Cash < MinNextOffer)
+            {
+                ContractOut.Add(id);
+                continue;
+            }
+            ContractTurn = (ContractTurn + i) % count;
+            string top = TopOffer is VoteDeal t
+                ? $"The top offer is {ctx.Player(t.FromId).Name}'s ${t.Amount} to vote {t.Choice.ToString().ToUpperInvariant()}. Beat it by at least ${MinDeal}, or pass."
+                : "Nobody has made an offer yet.";
+            return StepResult.WaitFor(new PendingDecision(id, DecisionKind.OfferVoteDeal,
+                $"Before the vote on {Definition(ctx).Name}, you may offer {ctx.Player(politician).Name} (the Politician) cash to vote your way. {top} If you pass, you are out of the bidding.",
+                OrdinanceId: OrdinanceId, DistrictId: DistrictId, MinBid: MinNextOffer, MaxBid: player.Cash, BidIncrement: MinDeal,
+                OtherPlayerId: politician, Deal: TopOffer));
+        }
+        Stage = CouncilStage.DealAnswers;
+        return StepResult.Continue;
+    }
+
+    /// <summary>Influence each dollar paid into this player's vote buys, in percent, or 0 if they can't lobby (decision #162).</summary>
+    private static int ContractPercent(EngineContext ctx, int playerId) => RuleModifiers.ContractPercent(ctx.State, ctx.Content, playerId);
+
+    /// <summary>Only the Politician may lobby (decision #162).</summary>
+    public static bool CanLobby(EngineContext ctx, int playerId) => ContractPercent(ctx, playerId) > 0;
 
     // ---------------------------------------------------------- answers
 
@@ -283,9 +338,8 @@ public sealed class CouncilStep : Step
         if (decision.Kind == DecisionKind.OfferVoteDeal && action is OfferVoteDeal offer)
         {
             VoteDeal d = offer.Deal;
-            return d.FromId == decision.PlayerId && d.ToId != d.FromId
-                && ctx.State.ActivePlayers.Any(p => p.Id == d.ToId)
-                && d.Amount >= MinDeal && d.Amount % MinDeal == 0 && d.Amount <= ctx.Player(d.FromId).Cash
+            return d.FromId == decision.PlayerId && d.ToId == PoliticianId
+                && d.Amount >= MinNextOffer && d.Amount % MinDeal == 0 && d.Amount <= ctx.Player(d.FromId).Cash
                 && d.Choice != VoteChoice.Abstain;
         }
         if (decision.Kind != DecisionKind.CouncilVote)
@@ -295,7 +349,7 @@ public sealed class CouncilStep : Step
         PlayerState player = ctx.Player(decision.PlayerId);
         if (Deals.TryGetValue(decision.PlayerId, out VoteDeal? deal) && vote.Choice != deal.Choice)
             return false;
-        if (vote.Lobby < 0 || vote.Lobby > Math.Max(0, player.Cash))
+        if (vote.Lobby < 0 || vote.Lobby > Math.Max(0, player.Cash) || vote.Lobby > 0 && !CanLobby(ctx, player.Id))
             return false;
         if (vote.PlayLobbyist && LobbyistIn(ctx, player) == null)
             return false;
@@ -334,27 +388,30 @@ public sealed class CouncilStep : Step
                 break;
 
             case OfferVoteDeal offer:
-                DealOffers[decision.PlayerId] = offer.Deal;
+                TopOffer = offer.Deal;
+                ctx.Emit(new VoteContractBid(offer.Deal));
+                ContractTurn = (ContractBidders.IndexOf(decision.PlayerId) + 1) % ContractBidders.Count;
                 break;
 
             case NoThanks when decision.Kind == DecisionKind.OfferVoteDeal:
-                DealOffers[decision.PlayerId] = null;
+                ContractOut.Add(decision.PlayerId);
+                ContractTurn = (ContractBidders.IndexOf(decision.PlayerId) + 1) % ContractBidders.Count;
                 break;
 
             case AcceptVoteDeal:
             {
-                VoteDeal deal = DealQueue[0];
-                DealQueue.RemoveAt(0);
+                VoteDeal deal = TopOffer!;
                 ctx.Player(deal.FromId).Cash -= deal.Amount;
                 ctx.Player(deal.ToId).Cash += deal.Amount;
                 Deals[deal.ToId] = deal;
                 ctx.Emit(new VoteDealMade(deal));
+                Stage = CouncilStage.Vote;
                 break;
             }
 
             case DeclineVoteDeal:
-                ctx.Emit(new VoteDealDeclined(DealQueue[0]));
-                DealQueue.RemoveAt(0);
+                ctx.Emit(new VoteDealDeclined(TopOffer!));
+                Stage = CouncilStage.Vote;
                 break;
 
             case CastVote vote:
@@ -381,11 +438,12 @@ public sealed class CouncilStep : Step
         {
             CouncilVoteRecord vote = Votes[player.Id];
             int influence = 0;
+            int contract = Deals.TryGetValue(player.Id, out VoteDeal? deal) && deal.Choice == vote.Choice ? deal.Amount : 0;
             if (vote.Choice != VoteChoice.Abstain)
             {
-                // Each lobbying dollar is 1 influence (the Politician's is 2).
+                // Every vote counts the same. Each dollar the Politician lobbies or took in a contract adds to theirs (decision #162).
                 influence = RuleModifiers.VoteInfluence(state, ctx.Content, player.Id)
-                    + vote.Lobby * RuleModifiers.LobbyPercent(state, ctx.Content, player.Id) / 100;
+                    + (vote.Lobby + contract) * ContractPercent(ctx, player.Id) / 100;
                 if (vote.LobbyistCardId is string cardId)
                 {
                     influence += ctx.Content.Card(cardId).Int("amount");
@@ -399,7 +457,7 @@ public sealed class CouncilStep : Step
                 else
                     no += influence;
             }
-            reveals.Add(new VoteReveal(player.Id, vote.Choice, vote.Choice == VoteChoice.Abstain ? 0 : vote.Lobby, vote.LobbyistCardId != null, influence));
+            reveals.Add(new VoteReveal(player.Id, vote.Choice, vote.Choice == VoteChoice.Abstain ? 0 : vote.Lobby, vote.LobbyistCardId != null, influence, contract));
         }
 
         int roll = ctx.Dice.RollBelow(yes + no);

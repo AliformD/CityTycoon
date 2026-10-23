@@ -288,7 +288,7 @@ Sealed bids are used because they work the same way for humans on one screen, AI
 ### 8.4 How much you can bid
 
 - **Pay in full:** your bid can't be more than your current cash.
-- **Down payment:** 20% of your bid (rounded up to $10) can't be more than your cash, and you must have a free pending slot (Section 8.5).
+- **Down payment:** 20% of your bid (rounded up to $10) can't be more than your cash, and you must have a free pending slot (Section 8.5). Only silent (sealed) auctions take down payments; open auctions are pay in full (docs/DECISIONS.md #162, house rule `openAuctionDownPayments`).
 - You may take a loan while an auction is open, so you can bid more (Section 15.7).
 
 ### 8.5 Down payments (pending properties)

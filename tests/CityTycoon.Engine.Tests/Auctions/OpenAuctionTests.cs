@@ -143,9 +143,36 @@ public class OpenAuctionTests
     }
 
     [Fact]
-    public void AnOpenBid_CanBeADownPayment()
+    public void AnOpenAuction_TakesNoDownPayments()
+    {
+        // Decision #162: only silent auctions take down payments, so racing for a color group needs real cash.
+        var game = OpenAuction();
+        Assert.Equal(0, game.Engine.GetPendingDecisions()[0].MaxDownPaymentBid);
+        Assert.False(game.Engine.Submit(0, new PlaceBid(200, DownPayment: true)).Accepted);
+        game.Do(0, new PlaceBid(200));
+        Assert.Equal(0, game.Engine.GetPendingDecisions()[0].MaxDownPaymentBid);
+    }
+
+    [Fact]
+    public void AnOpenBidderShortOfCash_CannotStayInWithADownPayment()
     {
         var game = OpenAuction();
+        game.Player(1).Cash = 150;
+        game.Player(1).Loans = 2; // no loans left
+        game.Do(0, new PlaceBid(200));
+        // A $210 down payment would only need $50 now, but open auctions are pay in full, so player 1 drops out.
+        Assert.Equal([2], game.Engine.GetPendingDecisions().Select(d => d.PlayerId));
+        Assert.Contains(game.State.Log, e => e is AuctionPassed { PlayerId: 1 });
+    }
+
+    [Fact]
+    public void WithTheHouseRule_AnOpenBid_CanBeADownPayment()
+    {
+        var content = TestContent.With(new() { ["startingCash"] = 1500, ["goSalary"] = 200, ["catchUpBonus"] = 100,
+            ["casinoLandingFlip"] = 0, ["voteDeals"] = false, ["openAuctionDownPayments"] = true });
+        var game = new TestGame(players: 3, content: content);
+        game.Give(2, "market-street");
+        game.RollOnto(0, "baker-street");
         game.Do(0, new PlaceBid(200, DownPayment: true));
         game.Do(1, new PassBid());
         game.Do(2, new PassBid());

@@ -30,7 +30,7 @@ public enum AuctionKind
 ///
 /// Sealed-bid: Everyone secretly bids or passes at the
 /// same time, then all bids are revealed together and the highest bid wins.
-/// Each bid is either "pay in full" or a down payment (Section 8.4 and 8.5).
+/// Each bid is either "pay in full" or a down payment (Section 8.4 and 8.5). Open auctions are pay in full only (decision #162).
 /// Bidders may take a loan while the auction is open, so they can bid more.
 /// </summary>
 public sealed class AuctionStep : Step
@@ -174,10 +174,14 @@ public sealed class AuctionStep : Step
     /// The deposit (not the whole bid) has to fit in their cash.
     /// </summary>
     private int MaxDownPaymentBidFor(EngineContext ctx, int playerId) =>
-        AllowsDownPayment && HasFreePendingSlot(ctx, playerId) ? MaxDepositBid(ctx.Rules, ctx.Player(playerId).Cash) : 0;
+        AllowsDownPayment(ctx) && HasFreePendingSlot(ctx, playerId) ? MaxDepositBid(ctx.Rules, ctx.Player(playerId).Cash) : 0;
 
-    /// <summary>Forced auctions are paid in full: the money goes straight to the owner (docs/DECISIONS.md).</summary>
-    private bool AllowsDownPayment => Kind != AuctionKind.Forced;
+    /// <summary>
+    /// Forced auctions are paid in full: the money goes straight to the owner (docs/DECISIONS.md).
+    /// Open auctions are paid in full too, unless the house rule allows down payments there (decision #162),
+    /// so only cash and loans count when someone is racing to finish a color group.
+    /// </summary>
+    private bool AllowsDownPayment(EngineContext ctx) => Kind != AuctionKind.Forced && (!Open || ctx.Rules.OpenAuctionDownPayments);
 
     /// <summary>
     /// Can a forced auction be held on this property (Section 8.6)? It must be
@@ -215,7 +219,7 @@ public sealed class AuctionStep : Step
         int loansLeft = Math.Max(0, MoneyRules.MaxLoans(ctx, playerId) - player.Loans);
         int bestCash = player.Cash + loansLeft * ctx.Rules.BiggestLoan;
         int best = MaxFullBid(ctx.Rules, bestCash);
-        if (AllowsDownPayment && HasFreePendingSlot(ctx, playerId))
+        if (AllowsDownPayment(ctx) && HasFreePendingSlot(ctx, playerId))
             best = Math.Max(best, MaxDepositBid(ctx.Rules, bestCash));
         return best >= minimum;
     }
@@ -242,7 +246,7 @@ public sealed class AuctionStep : Step
         // made, because they may have taken a loan since.
         int cash = ctx.Player(decision.PlayerId).Cash;
         return bid.DownPayment
-            ? AllowsDownPayment && HasFreePendingSlot(ctx, decision.PlayerId) && Deposit(ctx.Rules, bid.Amount) <= cash
+            ? AllowsDownPayment(ctx) && HasFreePendingSlot(ctx, decision.PlayerId) && Deposit(ctx.Rules, bid.Amount) <= cash
             : bid.Amount <= cash;
     }
 

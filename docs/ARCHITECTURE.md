@@ -252,7 +252,7 @@ On one shared screen, the board and log are drawn from a **spectator view**: the
 
 - `EasyBot` answers every kind of decision. `NormalBot` and `HardBot` inherit from it and override a few `virtual` methods: `Reserve`, `PropertyWorth`, `SealedAmount`, `PickBuild`, `Vote`, `NudgeThreshold`.
 - The estimates (set bonus, blocking, vote impact) use only the bot's `PlayerView`.
-- Blocking lives in `EasyBot` (`WithBlocking`, `RivalCompleting`, `MostTheyCouldPay`), so every level bids a little extra to stop one opponent finishing a color group (decision #135).
+- Blocking lives in `EasyBot` (`WithBlocking`, `RivalCompleting`, `MostTheyCouldPay`), so every level bids a little extra to stop one opponent finishing a color group (decision #135), and much more while nobody holds a group yet (`NoGroupHeldYet`, `RivalOneShort`, `BlockingLoan`, decision #162).
 - The Sim has mixed-table modes so one kind of bot can be measured against another. Results are written up in `docs/BALANCE.md`.
 - Bot notebook (decision #150): `EasyBot.Note` writes a `BotNote` (`src/CityTycoon.AI/BotNote.cs`) each time the bot offers or answers a trade. `Notebook` reads them and `RestoreNotebook` puts them back after a load. They are private (they hold the bot's limit), so they never enter the game log or a `PlayerView`.
 - `GameLogText.Write` (AI project) turns a game into the "Download game log" text: every event through `EventDescriber`, each note slotted in by its `LogIndex`, then the trade report card. `Events/TradeReport.cs` (Engine) works the report card out from the log alone, like `GameHistory`.

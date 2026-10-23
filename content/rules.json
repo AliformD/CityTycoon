@@ -24,6 +24,7 @@
   "forcedAuctionMinBidPercent": 100,
   "bidIncrement": 10,
   "downPaymentPercent": 20,
+  "openAuctionDownPayments": false,
   "maxPendingProperties": 2,
 
   "mortgagePercent": 50,

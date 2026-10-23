@@ -35,7 +35,7 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
         PropertyDefinition def = content.Property(id);
         double worth = def.AssessedValue * MaxPriceRatio + (SetBonus(view, id) + CharacterFit(view, id)) * TimeLeftFactor(view)
             + PerkBonus(view, id);
-        return WithBlocking(view, id, worth * WorthScale);
+        return WithBlocking(view, decision, worth * WorthScale);
     }
 
     /// <summary>

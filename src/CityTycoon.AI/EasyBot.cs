@@ -73,7 +73,7 @@ public partial class EasyBot : IPlayerController
     {
         GameAction choice = decision.Kind switch
         {
-            DecisionKind.SubmitBid => ChooseBid(view, decision),
+            DecisionKind.SubmitBid => ChooseBid(view, decision, legalActions),
             DecisionKind.RaiseMoney => RaiseMoney(view, decision, legalActions),
             DecisionKind.RespondToTrade => RespondToTrade(view, decision),
             DecisionKind.ChoosePrecisionDice => ChooseBestDice(view, decision),
@@ -350,12 +350,19 @@ public partial class EasyBot : IPlayerController
         return def.Rents[level + 1] - def.Rents[level];
     }
 
-    private GameAction ChooseBid(PlayerView view, PendingDecision decision)
+    private GameAction ChooseBid(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions)
     {
         int inc = decision.BidIncrement;
         int worth = (int)PropertyWorth(view, decision);
-        int affordable = view.Me.Cash - Reserve(view);
+        // Stopping the first color group on the board is worth spending half the safety reserve on (decision #163).
+        bool firstBlock = BlocksFirstGroup(view, decision.PropertyId!);
+        int affordable = view.Me.Cash - (firstBlock ? Reserve(view) / 2 : Reserve(view));
         int limit = Math.Min(affordable, worth) / inc * inc;
+        if (firstBlock && limit < decision.MinBid && worth >= decision.MinBid && BlockingLoan(view, decision, legalActions) is TakeLoan loan)
+        {
+            // Borrow, then this same question comes back with more cash.
+            return loan;
+        }
         if (limit >= decision.MinBid)
         {
             // In an open auction the bot raises one step at a time, so it climbs to its limit and stops.
@@ -384,7 +391,7 @@ public partial class EasyBot : IPlayerController
         double worth = content.Property(id).AssessedValue * MaxPriceRatio;
         if (CompletesAGroup(view, id))
             worth += GroupValue(id) * CompleteShare;
-        return WithBlocking(view, id, worth);
+        return WithBlocking(view, decision, worth);
     }
 
     /// <summary>The share of a color group's value an Easy bot adds to win the last piece of its own group.</summary>
@@ -404,6 +411,47 @@ public partial class EasyBot : IPlayerController
 
     /// <summary>Blocking never takes a bid past this many times the assessed value, so a human can't bait a bot into any price.</summary>
     protected const double MaxBlockRatio = 1.5;
+
+    /// <summary>
+    /// Before anyone holds a whole color group, the first one hurts every other player for the rest of the game, so
+    /// bots fight much harder to stop it (decision #163): a bigger share of the group's value and a higher ceiling.
+    /// </summary>
+    protected const double FirstBlockShare = 1.0;
+    protected const double FirstMaxBlockRatio = 5.0;
+
+    /// <summary>
+    /// Before the first group, bots also push back when a sale would leave one opponent a single piece short of a group
+    /// (the second of three): a smaller share of the group's value, up to this many times the assessed value.
+    /// </summary>
+    protected const double FirstNearShare = 0.3;
+    protected const double FirstNearRatio = 2.0;
+
+    /// <summary>
+    /// The opponent who would be one piece short of a color group by winning this property, when the rest of the group
+    /// is unowned (for example the second of three). Null if there is no such opponent.
+    /// </summary>
+    protected int? RivalOneShort(PlayerView view, string propertyId)
+    {
+        string? group = content.Property(propertyId).Group;
+        if (group == null)
+            return null;
+        var others = content.GroupMembers(group).Where(id => id != propertyId).Select(id => view.Properties[id].OwnerId).ToList();
+        var owners = others.OfType<int>().Distinct().ToList();
+        return owners is [int owner] && owner != view.ViewerId && others.Count(o => o == null) == 1 ? owner : null;
+    }
+
+    /// <summary>True while no player holds every property of any color group (paid off or not).</summary>
+    protected bool NoGroupHeldYet(PlayerView view) =>
+        !content.Groups.Keys.Any(g => content.GroupMembers(g).Select(id => view.Properties[id].OwnerId).Distinct().ToList() is [int]);
+
+    /// <summary>True if winning this property stops an opponent finishing the first color group on the board.</summary>
+    protected bool BlocksFirstGroup(PlayerView view, string propertyId) =>
+        RivalCompleting(view, propertyId) != null && NoGroupHeldYet(view);
+
+    /// <summary>The smallest loan that lets the bot reach the next bid while keeping half its reserve, if one does.</summary>
+    private TakeLoan? BlockingLoan(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions) =>
+        legalActions.OfType<TakeLoan>().OrderBy(l => l.Amount)
+            .FirstOrDefault(l => view.Me.Cash + l.Amount - Reserve(view) / 2 >= decision.MinBid);
 
     /// <summary>
     /// The opponent who would finish a color group by winning this property: they own every
@@ -426,8 +474,7 @@ public partial class EasyBot : IPlayerController
     /// </summary>
     protected int MostTheyCouldPay(PlayerView view, int playerId)
     {
-        PlayerInfo player = view.Players.First(p => p.Id == playerId);
-        int total = player.Cash + Math.Max(0, player.MaxLoans - player.Loans) * content.Rules.BiggestLoan;
+        int total = MostTheyCouldBid(view, playerId);
         foreach (PropertyInfo owned in view.Properties.Values.Where(p => p.OwnerId == playerId))
         {
             PropertyDefinition def = content.Property(owned.Id);
@@ -442,13 +489,34 @@ public partial class EasyBot : IPlayerController
     /// A bot's price for a property, raised to stop an opponent finishing its color group: by a share
     /// of the group's value, but no higher than that opponent could really pay (one step over is enough
     /// to beat them) and never past <see cref="MaxBlockRatio"/> times the assessed value.
+    /// While nobody holds a group yet, it fights much harder, and for the second of three too (decision #163).
     /// </summary>
-    protected double WithBlocking(PlayerView view, string propertyId, double worth)
+    protected double WithBlocking(PlayerView view, PendingDecision decision, double worth)
     {
+        string propertyId = decision.PropertyId!;
+        bool first = NoGroupHeldYet(view);
+        if (first && RivalOneShort(view, propertyId) != null)
+        {
+            double ceiling = content.Property(propertyId).AssessedValue * FirstNearRatio;
+            return Math.Max(worth, Math.Min(worth + GroupValue(propertyId) * FirstNearShare, ceiling));
+        }
         if (RivalCompleting(view, propertyId) is not int rival)
             return worth;
-        double cap = Math.Min(content.Property(propertyId).AssessedValue * MaxBlockRatio, MostTheyCouldPay(view, rival) + content.Rules.BidIncrement);
-        return Math.Max(worth, Math.Min(worth + GroupValue(propertyId) * BlockShare, cap));
+        // An open auction is pay in full (decision #163), so there the rival can only bid the cash and loans they have.
+        int rivalMost = decision.OpenAuction && !content.Rules.OpenAuctionDownPayments ? MostTheyCouldBid(view, rival) : MostTheyCouldPay(view, rival);
+        double cap = Math.Min(content.Property(propertyId).AssessedValue * (first ? FirstMaxBlockRatio : MaxBlockRatio), rivalMost + content.Rules.BidIncrement);
+        double extra = first
+            // The first group: about what the rival would add to win it, the group's value and half its perk to them.
+            ? GroupValue(propertyId) * FirstBlockShare + PerkWorthFor(view, rival, content.Property(propertyId).Group!) * 0.5
+            : GroupValue(propertyId) * BlockShare;
+        return Math.Max(worth, Math.Min(worth + extra, cap));
+    }
+
+    /// <summary>The most this player could bid in a pay-in-full auction: cash plus the loans they could still take.</summary>
+    protected int MostTheyCouldBid(PlayerView view, int playerId)
+    {
+        PlayerInfo player = view.Players.First(p => p.Id == playerId);
+        return player.Cash + Math.Max(0, player.MaxLoans - player.Loans) * content.Rules.BiggestLoan;
     }
 
     /// <summary>What to put in a sealed bid, given the most it is willing to pay.</summary>

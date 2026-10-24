@@ -261,3 +261,24 @@ Decision #162. 2,000 games, 4 Hard bots, Timed, 30 rounds, random characters, se
 | Lobbying per game | $0 | $0 | $0 |
 
 The Politician gained about 1.5 points, but from the other changes (equal votes, no vote deals for the other players, City Hall Momentum), not from contracts: switching contracts off gives the same 21.1 %. Bots rarely bid because they value most ordinances at well under $100 to themselves against the table, and one vote only moves the chance of passing by about 10 to 20 points (public opinion and the other votes are always there). A $10 offer already buys the whole vote, so a bid only pays when an ordinance is worth $100 or more to the bidder. Bidding as if every ordinance were worth twice as much (a test, not kept) raised bids to 0.7 a game and the Politician to about 23 % in 1,000 games. Other characters moved by under a point. Human players may well value votes differently from the bots.
+
+## Down payments only in silent auctions, and blocking the first color group (2026-10-23)
+Decision #163. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, seed 1. The Sim's new "First color group" line counts a group as held when one player has every deed in it (paid off or not).
+
+| | before | down payments silent only | plus first-group blocking (chosen) |
+| --- | --- | --- | --- |
+| First group, median round | 2 | 2 | 8 |
+| Games with a group by round 3 | 78 % | 69 % | 28 % |
+| Games with a group by round 5 | 85 % | 75 % | 32 % |
+| Groups held by round 10 (per game) | 2.3 | 1.7 | 1.0 |
+| First group came from a trade | 1 % | 6 % | 57 % |
+| First building, median round | 2 | 2 | 8 |
+| Building levels standing at the end | 31.0 | 30.5 | 21.9 |
+| Games with a bankruptcy | 68 % | 52 % | 28 % |
+| Average rent payment | $117 | $108 | $73 |
+
+Before, 22 % of first groups were won with a down payment in an open auction. The groups that still form early are mostly Brown (the second brown is the last piece, so there is no "second of three" fight) and Light Blue, and the winner pays 3 to 5 times the assessed value for the last piece, so they have little left to build with.
+
+Stronger settings were tried and dropped: pushing back on the second of three at 50 % (up to 2.5 times) gave median round 9 but only 1.5 players built per game; making bots twice as unwilling to trade away the first group meant 63 % of games never had a group at all and trades nearly stopped.
+
+Side effects: games are slower and calmer (less building, fewer bankruptcies), the cost of fewer early monopolies. Hard against Easy: Hard seats won 79.9 % before, 68.8 % after, because every bot now blocks hard, so overbidding for sets pays off less. Characters: Hustler 31.1 to 32.3 %, Mogul 27.6 to 29.7 %, Lawyer 23.0 to 27.3 %, Contractor 28.4 to 20.4 %, City Planner 19.7 to 21.1 %; the others moved by 2 points or less.

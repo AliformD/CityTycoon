@@ -96,6 +96,8 @@ public sealed record GameStats(
     // Pacing numbers (how soon building starts, close calls, how much money is around).
     /// <summary>The round the first building went up, or null if nobody built.</summary>
     public int? FirstBuildingRound { get; init; }
+    /// <summary>For each color group someone came to hold all of (paid off or not): the round it first happened, and how (an auction with or without a down payment, a trade, or other).</summary>
+    public IReadOnlyList<MonopolyFormed> Monopolies { get; init; } = [];
     /// <summary>Times a player fell below <see cref="SimulationRunner.LowCash"/> and later climbed back to <see cref="SimulationRunner.RecoveredCash"/> without going bankrupt.</summary>
     public int CloseCalls { get; init; }
     /// <summary>How many players built at least once, and the building levels standing at the end.</summary>
@@ -122,6 +124,9 @@ public sealed record GameStats(
     public IReadOnlyDictionary<string, int> Landings { get; init; } = new Dictionary<string, int>();
     public int Turns { get; init; }
 }
+
+/// <summary>The first time one player held every property of a color group: the round, and the move that did it.</summary>
+public sealed record MonopolyFormed(string Group, int Round, string How);
 
 /// <summary>Plays many bot-vs-bot games and gathers statistics (Section 26.3).</summary>
 public static class SimulationRunner
@@ -166,11 +171,13 @@ public static class SimulationRunner
             var host = new GameHost(engine, controllers);
             var low = new HashSet<int>();
             int closeCalls = 0;
+            var monopolies = new List<MonopolyFormed>();
             while (!engine.State.IsOver)
             {
                 if (engine.State.Round > ClassicRoundCap)
-                    return Summarize(game, seed, engine, error: null) with { Stalled = true, CloseCalls = closeCalls };
+                    return Summarize(game, seed, engine, error: null) with { Stalled = true, CloseCalls = closeCalls, Monopolies = monopolies };
                 await host.StepAsync();
+                WatchMonopolies(engine, monopolies);
                 foreach (PlayerState p in engine.State.Players)
                 {
                     if (p.IsBankrupt)
@@ -186,6 +193,7 @@ public static class SimulationRunner
             return Summarize(game, seed, engine, error: null) with
             {
                 CloseCalls = closeCalls,
+                Monopolies = monopolies,
                 Levels = engine.State.Players.Select(p => controllers[p.Id].GetType().Name.Replace("Bot", "")).ToList(),
                 Notes = controllers.Values.OfType<EasyBot>().SelectMany(b => b.Notebook).OrderBy(n => n.LogIndex).ToList(),
                 Personalities = engine.State.Players.Select(p => PersonalityOf(p.Id)).ToList(),
@@ -197,6 +205,23 @@ public static class SimulationRunner
             return engine == null
                 ? new GameStats(game, seed, 0, false, ex.Message, [], [], 0, 0, 0, 0)
                 : Summarize(game, seed, engine, ex.GetType().Name + ": " + ex.Message);
+        }
+    }
+
+    /// <summary>Adds any color group that one player now holds every property of, the first time it happens.</summary>
+    private static void WatchMonopolies(GameEngine engine, List<MonopolyFormed> found)
+    {
+        foreach (string group in engine.Content.Groups.Keys)
+        {
+            if (found.Any(m => m.Group == group))
+                continue;
+            var owners = engine.Content.GroupMembers(group).Select(id => engine.State.Properties[id].OwnerId).Distinct().ToList();
+            if (owners is not [int])
+                continue;
+            // The most recent auction win or trade is what finished the group.
+            GameEvent? last = engine.State.Log.LastOrDefault(e => e is AuctionWon or TradeCompleted);
+            string how = last switch { AuctionWon { DownPayment: true } => "auction with a down payment", AuctionWon => "auction paid in full", TradeCompleted => "trade", _ => "other" };
+            found.Add(new MonopolyFormed(group, engine.State.Round, how));
         }
     }
 

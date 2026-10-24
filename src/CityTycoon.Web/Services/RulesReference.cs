@@ -36,7 +36,7 @@ public static class RulesReference
             new("auctions", "Buying property and auctions", [
                 "When you land on a property nobody owns, it goes to auction. The first property of a color group, the first railroad and the first utility are silent auctions (sealed bids): everyone secretly bids, and the highest bid wins.",
                 $"After that, the rest of the group, the railroads and the utilities are open auctions. Players take turns to raise by at least {money(r.BidIncrement)} or drop out. Once you drop out, you are out for good. The last player left pays their bid.",
-                $"You can pay with a down payment: {r.DownPaymentPercent}% now and the rest when you next pass GO. Until it is paid, the property collects no rent and can't be built on. The minimum bid is {r.AuctionMinBidPercent}% of the property's assessed value.",
+                $"In a {(r.OpenAuctionDownPayments ? "silent or open" : "silent")} auction you can pay with a down payment: {r.DownPaymentPercent}% now and the rest when you next pass GO. Until it is paid, the property collects no rent and can't be built on.{(r.OpenAuctionDownPayments ? "" : " Open auctions are pay in full, so only the cash you have (and loans) counts.")} The minimum bid is {r.AuctionMinBidPercent}% of the property's assessed value.",
             ]),
             new("rent", "Rent", [
                 "When you land on a property someone else owns, you pay them rent. Rent goes up when the owner has the whole color group, and again with each house, hotel and skyscraper. Railroads pay more the more of them one player owns. Utilities pay a multiple of your dice roll.",

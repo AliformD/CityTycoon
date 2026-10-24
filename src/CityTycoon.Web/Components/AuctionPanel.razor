@@ -44,7 +44,7 @@
 
     @if (CanBid)
     {
-        @* Section 8.4: pay the whole bid now, or 20% now and the rest at your next GO. Open auctions are pay in full (decision #162). *@
+        @* Section 8.4: pay the whole bid now, or 20% now and the rest at your next GO. Open auctions are pay in full (decision #163). *@
         @if (Request.Decision.OpenAuction && !Content.Rules.OpenAuctionDownPayments)
         {
             <p class="hint">Open auctions are pay in full: no down payments.</p>

@@ -138,6 +138,7 @@ public static class EventDescriber
             TableTalk t => $"{Name(t.SpeakerId)}: \u201C{t.Text}\u201D",
             VoteDealMade v => $"{Name(v.Deal.ToId)} took ${v.Deal.Amount} from {Name(v.Deal.FromId)} to vote {v.Deal.Choice.ToString().ToUpperInvariant()}.",
             VoteDealDeclined v => $"{Name(v.Deal.ToId)} turned down ${v.Deal.Amount} from {Name(v.Deal.FromId)} to vote {v.Deal.Choice.ToString().ToUpperInvariant()}.",
+            VoteContractBid v => $"{Name(v.Deal.FromId)} offers {Name(v.Deal.ToId)} ${v.Deal.Amount} to vote {v.Deal.Choice.ToString().ToUpperInvariant()}.",
             CouncilReversed r => $"{Name(r.PlayerId)} reversed the City Council result as the City Planner: {content.Ordinance(r.OrdinanceId).Name} now {(r.NowPassed ? "passes" : "fails")}.",
             CardKept k => $"{Name(k.PlayerId)} drew two Opportunity cards and kept one.",
             HospitalShrugged h => $"{Name(h.PlayerId)} shrugged off the Hospital: no bill, and they roll normally next turn.",
@@ -193,7 +194,7 @@ public static class EventDescriber
     {
         string votes = string.Join(", ", r.Votes.Select(v => v.Choice == Actions.VoteChoice.Abstain
             ? $"{name(v.PlayerId)} abstained"
-            : $"{name(v.PlayerId)} {v.Choice.ToString().ToLowerInvariant()}{(v.Lobby > 0 ? $" (lobbied ${v.Lobby})" : "")}{(v.UsedLobbyist ? " + Lobbyist" : "")}"));
+            : $"{name(v.PlayerId)} {v.Choice.ToString().ToLowerInvariant()}{(v.Contract > 0 ? $" (contract ${v.Contract})" : "")}{(v.Lobby > 0 ? $" (lobbied ${v.Lobby})" : "")}{(v.UsedLobbyist ? " + Lobbyist" : "")}"));
         int total = r.YesInfluence + r.NoInfluence;
         double chance = total == 0 ? 0 : 100.0 * r.YesInfluence / total;
         return $"Votes: {votes}. Yes {r.YesInfluence} vs No {r.NoInfluence}: {chance:0.#}% chance. The roll was {r.Roll + 1} of {total}: the ordinance {(r.Passed ? "PASSED" : "FAILED")}.";

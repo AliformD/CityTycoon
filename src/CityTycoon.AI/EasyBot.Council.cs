@@ -7,7 +7,7 @@ namespace CityTycoon.AI;
 
 /// <summary>
 /// City Council in dollars (decision #159): what an ordinance is worth to a player over the rounds it lasts,
-/// how much lobbying that is worth, and vote deals (paying another player to vote your way).
+/// how much lobbying that is worth, and vote contracts (paying the Politician to vote your way, decision #162).
 /// Every number comes from what everyone can see (who owns what, built how high), so a bot can
 /// size up other players the same way it sizes up itself.
 /// </summary>
@@ -17,10 +17,10 @@ public partial class EasyBot
     protected virtual double OrdinanceScore(PlayerView view, string ordinanceId, string? districtId) =>
         Benefit(view, ordinanceId, districtId);
 
-    /// <summary>Offers a vote deal, or not. The Easy bot never does.</summary>
+    /// <summary>Bids for the Politician's vote, or passes. The Easy bot always passes.</summary>
     protected virtual GameAction OfferDeal(PlayerView view, PendingDecision decision) => new NoThanks();
 
-    /// <summary>The Easy bot takes a deal that asks it to vote the way it would anyway (or doesn't care).</summary>
+    /// <summary>As the Politician, the Easy bot takes a contract that asks it to vote the way it would anyway (or doesn't care).</summary>
     protected virtual GameAction AnswerDeal(PlayerView view, PendingDecision decision)
     {
         VoteDeal deal = decision.Deal!;
@@ -29,7 +29,7 @@ public partial class EasyBot
         return agrees ? new AcceptVoteDeal() : new DeclineVoteDeal();
     }
 
-    /// <summary>A vote, held to the deal the bot took (if any): it may still lobby when the deal goes its way.</summary>
+    /// <summary>A vote, held to the contract the bot took (if any): it may still lobby when the contract goes its way.</summary>
     private GameAction VoteWithDeal(PlayerView view, PendingDecision decision)
     {
         GameAction vote = Vote(view, decision);

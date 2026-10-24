@@ -30,7 +30,7 @@ public enum AuctionKind
 ///
 /// Sealed-bid: Everyone secretly bids or passes at the
 /// same time, then all bids are revealed together and the highest bid wins.
-/// Each bid is either "pay in full" or a down payment (Section 8.4 and 8.5). Open auctions are pay in full only (decision #162).
+/// Each bid is either "pay in full" or a down payment (Section 8.4 and 8.5). Open auctions are pay in full only (decision #163).
 /// Bidders may take a loan while the auction is open, so they can bid more.
 /// </summary>
 public sealed class AuctionStep : Step
@@ -178,7 +178,7 @@ public sealed class AuctionStep : Step
 
     /// <summary>
     /// Forced auctions are paid in full: the money goes straight to the owner (docs/DECISIONS.md).
-    /// Open auctions are paid in full too, unless the house rule allows down payments there (decision #162),
+    /// Open auctions are paid in full too, unless the house rule allows down payments there (decision #163),
     /// so only cash and loans count when someone is racing to finish a color group.
     /// </summary>
     private bool AllowsDownPayment(EngineContext ctx) => Kind != AuctionKind.Forced && (!Open || ctx.Rules.OpenAuctionDownPayments);

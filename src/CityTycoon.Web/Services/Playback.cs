@@ -321,7 +321,9 @@ public sealed class Playback(SettingsService settings, SoundService sounds, Game
         CardPlayed p => ("card", "", p.CardId, false, "card"),
         CardCancelled c => ("shield", "", c.CardId, false, "card"),
         MallCardBought or MallCardSold => ("shop", "", null, false, ""),
-        CouncilStarted or OrdinanceProposed or CouncilResolved or CouncilReversed or OrdinanceEnded => ("council", "", null, false, ""),
+        CouncilStarted or OrdinanceProposed or CouncilResolved or CouncilReversed or OrdinanceEnded
+            or VoteContractBid or VoteDealDeclined => ("council", "", null, false, ""),
+        VoteDealMade => ("council", "", null, false, "coin-in"),
         TileRevealed or TileRevealedByCouncil or TilePeeked => ("gov", "", null, false, "card"),
         MomentumGained or PrecisionRolled or Nudged or Detoured => ("star", "", null, false, ""),
         SentToHospital or InsuranceBought or InsuranceUsed or RecoverySkipped or HospitalShrugged => ("medic", "", null, false, ""),
@@ -403,6 +405,7 @@ public sealed class Playback(SettingsService settings, SoundService sounds, Game
             case MallCardSold m: yield return (m.PlayerId, m.Price); break;
             case PerkIncome p: yield return (p.PlayerId, p.Amount); break;
             case PerkPaid p: yield return (p.FromId, -p.Amount); yield return (p.ToId, p.Amount); break;
+            case VoteDealMade v: yield return (v.Deal.FromId, -v.Deal.Amount); yield return (v.Deal.ToId, v.Deal.Amount); break;
             case CouncilPayout c: yield return (c.PlayerId, c.Amount); break;
             case CouncilPaymentMade c: yield return (c.PlayerId, -c.Amount); break;
             case CatchUpPaid c: yield return (c.PlayerId, c.Amount); break;

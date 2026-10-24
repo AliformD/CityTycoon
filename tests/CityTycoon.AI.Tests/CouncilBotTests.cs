@@ -7,11 +7,11 @@ namespace CityTycoon.AI.Tests;
 /// <summary>Bots must be able to set the agenda, pick districts and vote, and a whole game must run with several Council sessions.</summary>
 public class CouncilBotTests
 {
-    private static async Task<GameEngine> Play(ulong seed, Func<int, IPlayerController> bot, int rounds = 40)
+    private static async Task<GameEngine> Play(ulong seed, Func<int, IPlayerController> bot, int rounds = 40, string[]? characters = null)
     {
         var engine = GameEngine.NewGame(new GameSetup
         {
-            Players = Enumerable.Range(0, 4).Select(i => new PlayerSetup($"Bot {i}")).ToList(),
+            Players = Enumerable.Range(0, 4).Select(i => new PlayerSetup($"Bot {i}", CharacterId: characters?[i])).ToList(),
             Seed = seed,
             MaxRounds = rounds,
         });
@@ -42,15 +42,16 @@ public class CouncilBotTests
     }
 
     [Fact]
-    public async Task HardBots_PlayFullGames_WithVoteDeals()
+    public async Task HardBots_PlayFullGames_WithVoteContracts()
     {
-        int deals = 0;
+        int bids = 0, contracts = 0;
         for (ulong seed = 1; seed <= 10; seed++)
         {
-            var engine = await Play(seed, id => new HardBot(seed * 13 + (ulong)id));
-            deals += engine.State.Log.OfType<VoteDealMade>().Count();
+            var engine = await Play(seed, id => new HardBot(seed * 13 + (ulong)id), characters: ["politician", "lawyer", "medic", "mogul"]);
+            bids += engine.State.Log.OfType<VoteContractBid>().Count();
+            contracts += engine.State.Log.OfType<VoteDealMade>().Count();
         }
-        Assert.True(deals > 0);
+        Assert.True(bids > 0 && contracts > 0, $"bids {bids}, contracts {contracts}");
     }
 
     [Fact]

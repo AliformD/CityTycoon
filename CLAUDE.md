@@ -37,14 +37,14 @@ Status: Phases 0 to 10 done. Phase 11 (online multiplayer) is on hold by Angel's
 | A Government tile | `content/govtiles.json`, `Tiles/TileLandings.cs` |
 | A character or perk | `content/characters.json` / `groups.json`, `Modifiers/*Modifiers.cs` |
 | A new action, event or step | Add the type, then register it with `[JsonDerivedType]` on `GameAction`, `GameEvent` or `Step`, describe events in `Events/EventDescriber.cs` |
-| A bot behavior | Government tiles (peek, swap, landing value) in `EasyBot.Tiles.cs`; the `virtual` methods in `EasyBot` (Reserve, PropertyWorth, SealedAmount, PickBuild, Vote, NudgeThreshold); trades, haggling, color group values and card values in `EasyBot.Trades.cs`; secret personalities (`BotPersonality`, decision #144) in `EasyBot`'s constructor; council votes and vote deals in `EasyBot.Council.cs` and `NormalBot`; table talk and temperament (`Mood`) in `EasyBot.Talk.cs` |
+| A bot behavior | Government tiles (peek, swap, landing value) in `EasyBot.Tiles.cs`; the `virtual` methods in `EasyBot` (Reserve, PropertyWorth, SealedAmount, PickBuild, Vote, NudgeThreshold); trades, haggling, color group values and card values in `EasyBot.Trades.cs`; secret personalities (`BotPersonality`, decision #144) in `EasyBot`'s constructor; council votes and Politician vote contracts (decision #162) in `EasyBot.Council.cs` and `NormalBot`; table talk and temperament (`Mood`) in `EasyBot.Talk.cs` |
 | A screen | `src/CityTycoon.Web/Components/` and `Pages/`; styles in `wwwroot/css/app.css` (colors are variables at the top, Day and Night) |
 | A new event that moves money or changes a property | Also add it to `Events/GameHistory.cs` (money ledger and space history); a test checks every dollar is listed |
 | What a bot writes in its private notebook, or the game log download | `BotNote.cs` and `EasyBot.Note` in `EasyBot.Trades.cs`, `GameLogText.cs`; trade report card in `Events/TradeReport.cs` |
 | How an event is shown (pause, icon, sound, money, token walk) | `src/CityTycoon.Web/Services/Playback.cs`; pictures in `Components/Icon.razor`, sounds in `wwwroot/js/app.js` (`ct.sound`) |
 
 ## Commands
-- Build and test: `dotnet test` (all projects). Last known: 524 engine tests and 149 bot tests, all passing.
+- Build and test: `dotnet test` (all projects). Last known: 531 engine tests and 152 bot tests, all passing.
 - Run the game: `dotnet run --project src/CityTycoon.Web`.
 - Balance Sim: `dotnet run -c Release --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots HardVsEasy --mode timed --characters random --seed 1 --out <NEW folder>`. `--out` must be a folder that does not exist yet. Try other numbers without editing `rules.json` with `--set goSalary=300` (any rules.json name, repeatable) and `--rounds 50`. The report includes pacing (first building, first color group held and how, close calls, bankruptcies, money at the end), a trade report card and landing odds; it also writes `trades.csv`, `bot-notes.csv` and `landing.csv`.
 - CI (`.github/workflows/ci.yml`) builds and tests on every push and PR.
@@ -56,7 +56,7 @@ Status: Phases 0 to 10 done. Phase 11 (online multiplayer) is on hold by Angel's
 - Cloud container: install the SDK with `apt` (`dotnet-sdk-10.0`). To check the UI, run Web with `--urls http://localhost:5199` in the background and kill it by PID only. Never `pkill -f` or `ps | grep` with text from your own command line.
 - `TestGame` plays with the old money ($1,500 start, $200 GO, $100 catch-up) from `Helpers/TestContent.cs`, so rebalancing `rules.json` doesn't break rule tests. Bot tests use the real rules.
 - The Sim runs Release builds: rebuild with `dotnet build -c Release` after changing `content/*.json`, or `--no-build` runs the old numbers.
-- Bot tuning: measure in the Sim before and after. Lobbying and blocking bids looked smart but lost games (see `docs/BALANCE.md`); hard blocking of the first color group (#162) is Angel's game-feel choice, not a win-rate one.
+- Bot tuning: measure in the Sim before and after. Lobbying and blocking bids looked smart but lost games (see `docs/BALANCE.md`); hard blocking of the first color group (#163) is Angel's game-feel choice, not a win-rate one.
 
 ## Keeping this file honest
 When you finish a change: update the row in `docs/DECISIONS.md` if you made a rule call, the matching section of `docs/ARCHITECTURE.md` if the structure changed, and this file if a path, command, count or status changed. Keep this file under about 100 lines; link to the other docs instead of copying them.

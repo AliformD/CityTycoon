@@ -354,7 +354,7 @@ public partial class EasyBot : IPlayerController
     {
         int inc = decision.BidIncrement;
         int worth = (int)PropertyWorth(view, decision);
-        // Stopping the first color group on the board is worth spending half the safety reserve on (decision #162).
+        // Stopping the first color group on the board is worth spending half the safety reserve on (decision #163).
         bool firstBlock = BlocksFirstGroup(view, decision.PropertyId!);
         int affordable = view.Me.Cash - (firstBlock ? Reserve(view) / 2 : Reserve(view));
         int limit = Math.Min(affordable, worth) / inc * inc;
@@ -414,7 +414,7 @@ public partial class EasyBot : IPlayerController
 
     /// <summary>
     /// Before anyone holds a whole color group, the first one hurts every other player for the rest of the game, so
-    /// bots fight much harder to stop it (decision #162): a bigger share of the group's value and a higher ceiling.
+    /// bots fight much harder to stop it (decision #163): a bigger share of the group's value and a higher ceiling.
     /// </summary>
     protected const double FirstBlockShare = 1.0;
     protected const double FirstMaxBlockRatio = 5.0;
@@ -489,7 +489,7 @@ public partial class EasyBot : IPlayerController
     /// A bot's price for a property, raised to stop an opponent finishing its color group: by a share
     /// of the group's value, but no higher than that opponent could really pay (one step over is enough
     /// to beat them) and never past <see cref="MaxBlockRatio"/> times the assessed value.
-    /// While nobody holds a group yet, it fights much harder, and for the second of three too (decision #162).
+    /// While nobody holds a group yet, it fights much harder, and for the second of three too (decision #163).
     /// </summary>
     protected double WithBlocking(PlayerView view, PendingDecision decision, double worth)
     {
@@ -502,7 +502,7 @@ public partial class EasyBot : IPlayerController
         }
         if (RivalCompleting(view, propertyId) is not int rival)
             return worth;
-        // An open auction is pay in full (decision #162), so there the rival can only bid the cash and loans they have.
+        // An open auction is pay in full (decision #163), so there the rival can only bid the cash and loans they have.
         int rivalMost = decision.OpenAuction && !content.Rules.OpenAuctionDownPayments ? MostTheyCouldBid(view, rival) : MostTheyCouldPay(view, rival);
         double cap = Math.Min(content.Property(propertyId).AssessedValue * (first ? FirstMaxBlockRatio : MaxBlockRatio), rivalMost + content.Rules.BidIncrement);
         double extra = first

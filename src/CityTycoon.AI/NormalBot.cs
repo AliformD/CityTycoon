@@ -10,8 +10,8 @@ namespace CityTycoon.AI;
 /// <summary>
 /// The Normal bot (Section 23.2). It plays like the Easy bot, but it uses simple estimates:
 /// what a property is worth to it (a big bonus when it completes a color group), which building
-/// pays back fastest, and how much an ordinance is worth in dollars, so it lobbies when a vote
-/// clearly helps or hurts it.
+/// pays back fastest, and how much an ordinance is worth in dollars, so it bids for the Politician's
+/// vote (or lobbies, as the Politician) when a vote clearly helps or hurts it.
 ///
 /// Everything here only uses the bot's own <see cref="PlayerView"/>, so it can't see hidden tiles,
 /// other players' cards or sealed bids (Section 23.1).
@@ -153,8 +153,8 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
         OrdinanceWorth(view, view.ViewerId, ordinanceId, districtId);
 
     /// <summary>
-    /// Votes for what is worth money to it, and lobbies only as far as the extra chance of winning the vote
-    /// pays for itself (decision #159). Each lobbying dollar buys more for the Politician, so it lobbies more.
+    /// Votes for what is worth money to it. Only the Politician may lobby (decision #162), and it lobbies only as far
+    /// as the extra chance of winning the vote pays for itself.
     /// </summary>
     protected override GameAction Vote(PlayerView view, PendingDecision decision)
     {
@@ -165,13 +165,16 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
             return decision.Deal is VoteDeal held ? new CastVote(held.Choice) : new CastVote(VoteChoice.Abstain);
 
         VoteChoice side = worth > 0 ? VoteChoice.Yes : VoteChoice.No;
+        bool useLobbyist = decision.HasLobbyist && Math.Abs(worth) >= 100;
+        double e = view.Me.ContractPercent / 100.0;
+        if (e <= 0 || decision.MaxLobby <= 0)
+            return new CastVote(side, 0, useLobbyist);
+
         var (mine, theirs) = Influence(view, decision, view.ViewerId, side);
-        double e = view.Me.LobbyPercent / 100.0;
         // The lobby L that makes |worth| x chance(L) - L biggest: chance = (mine + eL) / (mine + theirs + eL).
         double best = (Math.Sqrt(Math.Abs(worth) * e * theirs) - (mine + theirs)) / e;
         int spare = Math.Max(0, view.Me.Cash - Reserve(view) * LobbyReserveFactor);
         int lobby = (int)Math.Clamp(best, 0, Math.Min(decision.MaxLobby, spare * LobbyShare)) / 10 * 10;
-        bool useLobbyist = decision.HasLobbyist && Math.Abs(worth) >= 100;
         return new CastVote(side, lobby, useLobbyist);
     }
 
@@ -184,46 +187,54 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
 
     /// <summary>
     /// Expected influence on the bot's side and against it, if <paramref name="voterId"/> votes <paramref name="side"/>:
-    /// public opinion on both, each other player voting the way their holdings suggest (or as a deal holds them).
+    /// public opinion on both, each other player voting the way their holdings suggest, and the Politician held to a
+    /// contract (one already taken this session, or the <paramref name="contract"/> being weighed), with the
+    /// contract money adding to their vote (decision #162).
     /// </summary>
     private (double Mine, double Theirs) Influence(PlayerView view, PendingDecision decision, int voterId, VoteChoice side,
-        int? switchedId = null, VoteChoice switchedTo = VoteChoice.Abstain)
+        VoteDeal? contract = null)
     {
         double mine = content.Rules.PublicOpinionInfluence, theirs = content.Rules.PublicOpinionInfluence;
         var deals = DealsThisSession(view);
+        if (contract != null)
+            deals[contract.ToId] = contract;
         foreach (PlayerInfo p in view.Players.Where(p => !p.IsBankrupt))
         {
             VoteChoice vote;
+            deals.TryGetValue(p.Id, out VoteDeal? held);
             if (p.Id == voterId)
                 vote = side;
-            else if (p.Id == switchedId)
-                vote = switchedTo;
-            else if (deals.TryGetValue(p.Id, out VoteChoice dealt))
-                vote = dealt;
+            else if (held != null)
+                vote = held.Choice;
             else
-            {
-                double w = OrdinanceWorth(view, p.Id, decision.OrdinanceId!, decision.DistrictId);
-                vote = Math.Abs(w) < MinVoteWorth ? VoteChoice.Abstain : w > 0 ? VoteChoice.Yes : VoteChoice.No;
-            }
+                vote = Preference(view, decision, p.Id);
             if (vote == VoteChoice.Abstain)
                 continue;
-            if (vote == side) mine += VoteOf(view, p.Id);
-            else theirs += VoteOf(view, p.Id);
+            double weight = VoteOf(view, p.Id) + (held?.Choice == vote ? held.Amount * p.ContractPercent / 100.0 : 0);
+            if (vote == side) mine += weight;
+            else theirs += weight;
         }
         return (mine, theirs);
     }
 
-    /// <summary>A player's vote influence (100, the Politician 250).</summary>
+    /// <summary>How a player would vote on their own, from what the ordinance is worth to them.</summary>
+    private VoteChoice Preference(PlayerView view, PendingDecision decision, int playerId)
+    {
+        double w = OrdinanceWorth(view, playerId, decision.OrdinanceId!, decision.DistrictId);
+        return Math.Abs(w) < MinVoteWorth ? VoteChoice.Abstain : w > 0 ? VoteChoice.Yes : VoteChoice.No;
+    }
+
+    /// <summary>A player's vote influence (100 for everyone since decision #162).</summary>
     private int VoteOf(PlayerView view, int playerId) =>
         Math.Max(content.Rules.VoteInfluence, CharacterModifier(view, playerId, "VoteInfluence"));
 
-    /// <summary>Deals made in this session so far, read from the log: who must vote which way.</summary>
-    private static Dictionary<int, VoteChoice> DealsThisSession(PlayerView view)
+    /// <summary>Contracts taken in this session so far, read from the log: who must vote which way, and for how much.</summary>
+    private static Dictionary<int, VoteDeal> DealsThisSession(PlayerView view)
     {
-        var deals = new Dictionary<int, VoteChoice>();
+        var deals = new Dictionary<int, VoteDeal>();
         for (int i = view.Log.Count - 1; i >= 0 && view.Log[i] is not OrdinanceProposed; i--)
             if (view.Log[i] is VoteDealMade made)
-                deals[made.Deal.ToId] = made.Deal.Choice;
+                deals[made.Deal.ToId] = made.Deal;
         return deals;
     }
 
@@ -231,44 +242,70 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
     private static double Chance((double Mine, double Theirs) x) => x.Mine / Math.Max(1, x.Mine + x.Theirs);
 
     /// <summary>
-    /// Offers a vote deal (decision #159) when buying one player's vote raises its chance of winning the vote
-    /// by more than the deal costs: it pays a little to someone who doesn't care, and more to someone who would
-    /// vote against it, as much as that vote is worth to them plus $10, if the vote matters enough.
+    /// Bids for the Politician's vote (decision #162). If the top offer is already for its side, it waits. Otherwise it
+    /// works out, for each offer it could make, how much more likely its side wins compared with letting the top offer
+    /// stand (or the Politician voting freely), times what the vote is worth to it, minus the offer. It makes the offer
+    /// that leaves it furthest ahead, but never less than the Politician would need to take it.
     /// </summary>
     protected override GameAction OfferDeal(PlayerView view, PendingDecision decision)
     {
         double worth = OrdinanceWorth(view, view.ViewerId, decision.OrdinanceId!, decision.DistrictId);
-        if (Math.Abs(worth) < MinVoteWorth * 5)
+        if (Math.Abs(worth) < MinVoteWorth || decision.OtherPlayerId is not int politician)
             return new NoThanks();
         VoteChoice side = worth > 0 ? VoteChoice.Yes : VoteChoice.No;
-        double now = Chance(Influence(view, decision, view.ViewerId, side));
-        var deals = DealsThisSession(view);
-        int spare = Math.Max(0, view.Me.Cash - Reserve(view));
+        VoteDeal? top = decision.Deal;
+        if (top?.Choice == side)
+            return new NoThanks();
 
-        VoteDeal? best = null;
-        double bestProfit = DealProfitNeeded;
-        foreach (PlayerInfo p in view.Players.Where(p => !p.IsBankrupt && p.Id != view.ViewerId && !deals.ContainsKey(p.Id)))
+        double now = Chance(Influence(view, decision, view.ViewerId, side, top));
+        int spare = Math.Max(0, Math.Min(decision.MaxBid, view.Me.Cash - Reserve(view)));
+        int floor = Math.Max(decision.MinBid, PoliticianPrice(view, decision, politician, side));
+        int step = Engine.Steps.CouncilStep.MinDeal;
+
+        int bestAmount = 0;
+        double bestProfit = DealProfitNeeded, last = double.MinValue;
+        for (int amount = (floor + step - 1) / step * step; amount <= spare; amount += step)
         {
-            double gain = Math.Abs(worth) * (Chance(Influence(view, decision, view.ViewerId, side, p.Id, side)) - now);
-            double theirWorth = OrdinanceWorth(view, p.Id, decision.OrdinanceId!, decision.DistrictId);
-            bool against = Math.Abs(theirWorth) >= MinVoteWorth && (theirWorth > 0) != (side == VoteChoice.Yes);
-            double cost = against ? Math.Abs(theirWorth) * (Chance(Influence(view, decision, view.ViewerId, side, p.Id, side)) - now) : 0;
-            int price = Math.Max(Engine.Steps.CouncilStep.MinDeal, (int)Math.Ceiling((cost + 10) / 10) * 10);
-            if (price <= spare && gain - price > bestProfit)
+            double chance = Chance(Influence(view, decision, view.ViewerId, side, new VoteDeal(view.ViewerId, politician, amount, side)));
+            double profit = Math.Abs(worth) * (chance - now) - amount;
+            if (profit > bestProfit)
             {
-                bestProfit = gain - price;
-                best = new VoteDeal(view.ViewerId, p.Id, price, side);
+                bestProfit = profit;
+                bestAmount = amount;
             }
+            // Each extra dollar buys a little less chance, so once the profit falls it only keeps falling.
+            if (profit < last)
+                break;
+            last = profit;
         }
-        return best != null ? new OfferVoteDeal(best) : new NoThanks();
+        return bestAmount > 0 ? new OfferVoteDeal(new VoteDeal(view.ViewerId, politician, bestAmount, side)) : new NoThanks();
     }
 
-    /// <summary>A vote deal must leave the bot this many dollars ahead before it offers one.</summary>
-    protected const double DealProfitNeeded = 10;
+    /// <summary>
+    /// A contract must leave the bot this many dollars ahead before it offers one. Low on purpose: a $10 offer
+    /// already buys the Politician's whole vote, and the Sim showed bots hardly bid with a higher bar (decision #162).
+    /// </summary>
+    protected const double DealProfitNeeded = 5;
 
     /// <summary>
-    /// Takes a deal that asks it to vote the way it would anyway (free money), or one that pays more than its
-    /// own vote is worth to it: the change in its chance of getting its way, times what the vote means to it.
+    /// About the least the Politician would take to vote <paramref name="side"/>: nothing extra if they would vote that
+    /// way anyway, otherwise what giving up their own side costs them (see <see cref="AnswerDeal"/>).
+    /// </summary>
+    private int PoliticianPrice(PlayerView view, PendingDecision decision, int politician, VoteChoice side)
+    {
+        double theirWorth = OrdinanceWorth(view, politician, decision.OrdinanceId!, decision.DistrictId);
+        if (Math.Abs(theirWorth) < MinVoteWorth || (theirWorth > 0) == (side == VoteChoice.Yes))
+            return 0;
+        VoteChoice theirSide = theirWorth > 0 ? VoteChoice.Yes : VoteChoice.No;
+        double free = Chance(Influence(view, decision, politician, theirSide));
+        // A contract at the price adds to their vote too, but the price isn't known yet, so this counts the vote alone.
+        double sold = 1 - Chance(Influence(view, decision, politician, side));
+        return (int)Math.Ceiling(Math.Abs(theirWorth) * (free - sold) + 10);
+    }
+
+    /// <summary>
+    /// The Politician takes a contract that asks it to vote the way it would anyway (free money), or one that pays more
+    /// than its own side is worth to it: the drop in its chance of getting its way, times what the vote means to it.
     /// </summary>
     protected override GameAction AnswerDeal(PlayerView view, PendingDecision decision)
     {
@@ -279,8 +316,8 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
             return new AcceptVoteDeal();
         VoteChoice mySide = worth > 0 ? VoteChoice.Yes : VoteChoice.No;
         double withMe = Chance(Influence(view, decision, view.ViewerId, mySide));
-        // Voting their way: its own side's chance is what's left after theirs.
-        double sold = 1 - Chance(Influence(view, decision, view.ViewerId, deal.Choice));
+        // Voting their way, with their money behind it: its own side's chance is what's left.
+        double sold = 1 - Chance(Influence(view, decision, view.ViewerId, deal.Choice, deal));
         double cost = Math.Abs(worth) * (withMe - sold);
         return deal.Amount >= cost + 10 ? new AcceptVoteDeal() : new DeclineVoteDeal();
     }

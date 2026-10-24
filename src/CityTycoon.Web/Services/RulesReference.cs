@@ -48,8 +48,9 @@ public static class RulesReference
             ]),
             new("council", "The City Council", [
                 $"At the end of every {r.CouncilEveryNRounds}th round, the City Council meets. The player with the lowest net worth sets the agenda. They draw two ordinances, and choose one to put to a vote. If it needs a district, they choose that too.",
-                $"Everyone who isn't bankrupt votes in secret: Yes, No, or Abstain. Each vote is worth {r.VoteInfluence} influence. You can also lobby: every dollar you give the bank adds one influence to your side. Public opinion adds {r.PublicOpinionInfluence} to each side, so nothing is certain.",
-                "The chance an ordinance passes is the Yes influence divided by the Yes plus No influence. A roll decides. Lobbying money goes to the bank, whether the ordinance passes or fails. A Lobbyist card, ticked on your vote, adds 200 free influence to your side.",
+                $"Everyone who isn't bankrupt votes in secret: Yes, No, or Abstain. Every vote is worth the same, {r.VoteInfluence} influence. Public opinion adds {r.PublicOpinionInfluence} to each side, so nothing is certain. A Lobbyist card, ticked on your vote, adds 200 free influence to your side.",
+                "Money only talks through the Politician. If one is playing, before the vote the other players bid, like an open auction, to pay the Politician to vote their way: beat the top offer by at least $10 for either side, or pass and you are out. The Politician may take the winning offer: the money is theirs, they must vote that way, and every dollar adds 2 influence to their vote. Only the Politician may lobby (pay the bank to make their own vote bigger). With no Politician, it is a plain vote.",
+                "The chance an ordinance passes is the Yes influence divided by the Yes plus No influence. A roll decides. Lobbying money goes to the bank, whether the ordinance passes or fails.",
                 "Landing on a revealed City Hall tile, or drawing the Emergency Session card, calls an Emergency session straight away. The player who caused it sets the agenda.",
             ]),
             new("jail", "Jail", [

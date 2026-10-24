@@ -79,7 +79,7 @@ public sealed record PlayerView(
             TakeoverReady = !p.TakeoverUsed && modifiers.Any(m => m.CanHostileTakeover(state, p.Id)),
             NudgeMaxSpaces = RuleModifiers.NudgeMaxSpaces(state, content, p.Id, modifiers),
             InsuredMarkerCost = RuleModifiers.InsuredMarkerCost(state, content, p.Id, modifiers),
-            LobbyPercent = RuleModifiers.LobbyPercent(state, content, p.Id, modifiers),
+            ContractPercent = RuleModifiers.ContractPercent(state, content, p.Id, modifiers),
             MoveRerollReady = !p.MoveRerollUsed && RuleModifiers.MoveReroll(state, content, p.Id, modifiers) != null,
             VoteReversalReady = !p.VoteReversalUsed && RuleModifiers.VoteReversal(state, content, p.Id, modifiers) != null,
         }).ToList();
@@ -173,8 +173,11 @@ public sealed record PlayerInfo(
     /// <summary>What an Insured marker costs them at the Hospital ($0 for the Medic).</summary>
     public int InsuredMarkerCost { get; init; } = 50;
 
-    /// <summary>Influence one lobbying dollar buys them, in percent (100, the Politician 200).</summary>
-    public int LobbyPercent { get; init; } = 100;
+    /// <summary>
+    /// Influence each dollar paid into their vote buys, in percent (the Politician 200), or 0 if they can't lobby
+    /// or take vote contracts (decision #162).
+    /// </summary>
+    public int ContractPercent { get; init; }
 
     /// <summary>True if they are the Hustler and haven't used this lap's movement reroll yet.</summary>
     public bool MoveRerollReady { get; init; }

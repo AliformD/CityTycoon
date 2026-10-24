@@ -243,7 +243,8 @@ static void AddPerkReport(List<string> lines, List<GameStats> finished, SimOptio
         + $"{(sessions == 0 ? 0 : (double)finished.Sum(r => r.OrdinancesPassed) / sessions):P0} passed, "
         + $"${finished.Average(r => r.LobbyingSpent):0} spent lobbying (Politician ${finished.Average(r => r.PoliticianLobbying):0}), "
         + $"{finished.Average(r => r.CouncilCancelled):0.00} sessions cancelled, "
-        + $"{finished.Average(r => r.VoteDeals):0.0} vote deals worth ${finished.Average(r => r.VoteDealMoney):0}.");
+        + $"{finished.Average(r => r.ContractBids):0.0} bids for the Politician's vote, "
+        + $"{finished.Average(r => r.VoteDeals):0.0} contracts taken worth ${finished.Average(r => r.VoteDealMoney):0}.");
     lines.Add("Table talk per game: " + string.Join(", ", Enum.GetValues<TalkTone>()
         .Select(t => $"{finished.Average(r => r.Remarks.GetValueOrDefault(t)):0.0} {t.ToString().ToLowerInvariant()}")) + ".");
     var passedByOrdinance = finished.SelectMany(r => r.OrdinanceCounts).GroupBy(kv => kv.Key).ToDictionary(g => g.Key, g => g.Sum(kv => kv.Value));

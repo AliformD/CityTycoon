@@ -6,7 +6,7 @@ namespace CityTycoon.AI.Tests;
 
 /// <summary>
 /// Bots bid to stop one opponent finishing a color group (docs/DECISIONS.md #135), and much harder
-/// while nobody holds a whole group yet (decision #162).
+/// while nobody holds a whole group yet (decision #163).
 /// The table from Angel's game: Cal (player 3) owns Summit Avenue and Crown Street, and the
 /// last green, Grand Plaza ($300), is in an open auction. Dee (player 2) has plenty of cash.
 /// Unless a test says otherwise, player 1 already holds both browns, so this would not be the first group.
@@ -109,7 +109,7 @@ public class BlockingBidTests
         }
     }
 
-    // ----- The first group on the board (decision #162) -----
+    // ----- The first group on the board (decision #163) -----
 
     /// <summary>Before anyone holds a group, every bot fights far past 150% to stop the first one.</summary>
     [Fact]

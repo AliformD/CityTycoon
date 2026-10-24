@@ -14,32 +14,34 @@ public class CouncilTests
 {
     // ---------------------------------------------------------- the influence math (Section 11.3)
 
+    /// <summary>Player 0 is the Politician, the only one who may lobby (decision #162).</summary>
+    private static TestGame WithPolitician() => new(3, characters: ["politician", "lawyer", "mogul"]);
+
     [Fact]
-    public void TheSectionExample_GivesYes500_No300_AndA62Point5PercentChance()
+    public void ThePoliticiansLobbying_CountsTwice_AndEveryVoteIsEqual()
     {
-        // Ana votes Yes and lobbies $300. Ben votes No and lobbies $100. Cal abstains.
-        var game = new TestGame(3);
+        // The Politician votes Yes and lobbies $100. Ben votes No. Cal abstains.
+        var game = WithPolitician();
         game.ConveneAndPropose("public-works");
-        game.Dice.AddCouncilRoll(499);
-        game.Vote(0, VoteChoice.Yes, lobby: 300);
-        game.Vote(1, VoteChoice.No, lobby: 100);
+        game.Dice.AddCouncilRoll(399);
+        game.Vote(0, VoteChoice.Yes, lobby: 100);
+        game.Vote(1, VoteChoice.No);
         game.Vote(2, VoteChoice.Abstain);
 
         CouncilResolved result = game.LastResolved();
-        Assert.Equal(500, result.YesInfluence);   // 100 vote + 300 lobbying + 100 public opinion
-        Assert.Equal(300, result.NoInfluence);    // 100 vote + 100 lobbying + 100 public opinion
-        Assert.Equal(62.5, 100.0 * result.YesInfluence / (result.YesInfluence + result.NoInfluence));
-        Assert.True(result.Passed);   // roll 499 is inside the Yes part (0-499)
+        Assert.Equal(400, result.YesInfluence);   // 100 vote + 200 lobbying + 100 public opinion
+        Assert.Equal(200, result.NoInfluence);    // 100 vote + 100 public opinion
+        Assert.True(result.Passed);   // roll 399 is inside the Yes part (0-399)
     }
 
     [Fact]
     public void ARollJustOutsideTheYesPart_Fails()
     {
-        var game = new TestGame(3);
+        var game = WithPolitician();
         game.ConveneAndPropose("public-works");
-        game.Dice.AddCouncilRoll(500);
-        game.Vote(0, VoteChoice.Yes, lobby: 300);
-        game.Vote(1, VoteChoice.No, lobby: 100);
+        game.Dice.AddCouncilRoll(400);
+        game.Vote(0, VoteChoice.Yes, lobby: 100);
+        game.Vote(1, VoteChoice.No);
         game.Vote(2, VoteChoice.Abstain);
         Assert.False(game.LastResolved().Passed);
     }
@@ -49,16 +51,35 @@ public class CouncilTests
     {
         foreach (bool pass in new[] { true, false })
         {
-            var game = new TestGame(3);
+            var game = WithPolitician();
             game.ConveneAndPropose("public-works");
-            game.Dice.AddCouncilRoll(pass ? 0 : 799);
+            game.Dice.AddCouncilRoll(pass ? 0 : 599);
             game.Vote(0, VoteChoice.Yes, lobby: 300);
-            game.Vote(1, VoteChoice.No, lobby: 100);
+            game.Vote(1, VoteChoice.No);
             game.Vote(2, VoteChoice.Abstain);
             Assert.Equal(1200, game.Player(0).Cash);
-            Assert.Equal(1400, game.Player(1).Cash);
-            Assert.Equal(1500, game.Player(2).Cash);
+            Assert.Equal(1500, game.Player(1).Cash);
         }
+    }
+
+    [Fact]
+    public void OnlyThePolitician_MayLobby()
+    {
+        var game = WithPolitician();
+        game.ConveneAndPropose("public-works");
+        Assert.Equal(0, game.DecisionFor(1)!.MaxLobby);
+        Assert.False(game.Engine.Submit(1, new CastVote(VoteChoice.No, 50)).Accepted);
+        Assert.True(game.Engine.Submit(1, new CastVote(VoteChoice.No)).Accepted);
+        Assert.Equal(1500, game.DecisionFor(0)!.MaxLobby);
+    }
+
+    [Fact]
+    public void WithoutAPolitician_NobodyMayLobby()
+    {
+        var game = new TestGame(2);
+        game.ConveneAndPropose("public-works");
+        Assert.False(game.Engine.Submit(0, new CastVote(VoteChoice.Yes, 50)).Accepted);
+        Assert.True(game.Engine.Submit(0, new CastVote(VoteChoice.Yes)).Accepted);
     }
 
     [Fact]
@@ -75,7 +96,7 @@ public class CouncilTests
     }
 
     [Fact]
-    public void ThePolitician_VoteIsWorth250()
+    public void ThePoliticiansVote_IsWorthTheSameAsEveryoneElses()
     {
         var game = new TestGame(2, characters: ["politician", "lawyer"]);
         game.ConveneAndPropose("public-works");
@@ -83,7 +104,7 @@ public class CouncilTests
         game.Vote(0, VoteChoice.Yes);
         game.Vote(1, VoteChoice.No);
         CouncilResolved result = game.LastResolved();
-        Assert.Equal(350, result.YesInfluence);   // 250 + 100 public opinion
+        Assert.Equal(200, result.YesInfluence);   // 100 + 100 public opinion
         Assert.Equal(200, result.NoInfluence);    // 100 + 100 public opinion
     }
 
@@ -118,7 +139,7 @@ public class CouncilTests
     [Fact]
     public void YouCannotLobbyMoreThanYourCash_OrPlayALobbyistYouDontHold()
     {
-        var game = new TestGame(2);
+        var game = new TestGame(2, characters: ["politician", "lawyer"]);
         game.ConveneAndPropose("public-works");
         Assert.False(game.Engine.Submit(0, new CastVote(VoteChoice.Yes, 1501)).Accepted);
         Assert.False(game.Engine.Submit(0, new CastVote(VoteChoice.Yes, -5)).Accepted);
@@ -129,10 +150,10 @@ public class CouncilTests
     [Fact]
     public void VotesAreSecret_UntilEveryoneHasVoted()
     {
-        var game = new TestGame(3);
+        var game = WithPolitician();
         game.ConveneAndPropose("public-works");
         game.Vote(0, VoteChoice.Yes, 100);
-        game.Vote(1, VoteChoice.No, 100);
+        game.Vote(1, VoteChoice.No);
         Assert.DoesNotContain(game.State.Log, e => e is CouncilResolved);
         Assert.NotNull(game.DecisionFor(2));
         Assert.Equal(1500, game.Player(0).Cash);   // the money is only taken at the reveal
@@ -313,7 +334,7 @@ public class CouncilTests
     [Fact]
     public void ASessionSurvivesBeingSavedAndLoaded()
     {
-        var game = new TestGame(2);
+        var game = new TestGame(2, characters: ["politician", "lawyer"]);
         game.ConveneAndPropose("stimulus-check");
         game.Vote(0, VoteChoice.Yes, 50);
 
@@ -325,7 +346,7 @@ public class CouncilTests
 
         Assert.True(engine.Submit(1, new CastVote(VoteChoice.No)).Accepted);
         CouncilResolved result = loaded.Log.OfType<CouncilResolved>().Last();
-        Assert.Equal(250, result.YesInfluence);   // 100 vote + 50 lobbying + 100 public opinion
+        Assert.Equal(300, result.YesInfluence);   // 100 vote + 100 for the Politician's $50 lobbying + 100 public opinion
         Assert.True(result.Passed);
     }
 }

@@ -82,9 +82,11 @@ public sealed record GameStats(
     public int OrdinancesPassed { get; init; }
     public int LobbyingSpent { get; init; }
     public int CouncilCancelled { get; init; }
-    /// <summary>Lobbying money the Politician spent (decision #159).</summary>
+    /// <summary>Lobbying money the Politician spent (decision #159; only the Politician lobbies since #162).</summary>
     public int PoliticianLobbying { get; init; }
-    /// <summary>Vote deals taken and the money they moved (decision #159).</summary>
+    /// <summary>Offers made in the bidding for the Politician's vote (decision #162).</summary>
+    public int ContractBids { get; init; }
+    /// <summary>Vote contracts the Politician took and the money they moved (decision #162).</summary>
     public int VoteDeals { get; init; }
     public int VoteDealMoney { get; init; }
     /// <summary>Remarks bots made at the table, by tone (decision #160).</summary>
@@ -336,6 +338,7 @@ public static class SimulationRunner
             CouncilCancelled = log.OfType<CouncilCancelled>().Count(),
             PoliticianLobbying = log.OfType<CouncilResolved>().SelectMany(r => r.Votes)
                 .Where(v => state.Player(v.PlayerId).CharacterId == "politician").Sum(v => v.Lobby),
+            ContractBids = log.OfType<VoteContractBid>().Count(),
             VoteDeals = log.OfType<VoteDealMade>().Count(),
             VoteDealMoney = log.OfType<VoteDealMade>().Sum(d => d.Deal.Amount),
             Remarks = log.OfType<TableTalk>().GroupBy(t => t.Tone).ToDictionary(g => g.Key, g => g.Count()),

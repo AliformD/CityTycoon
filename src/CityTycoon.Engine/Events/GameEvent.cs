@@ -138,7 +138,7 @@ public sealed record DiceRolled(int PlayerId, int Die1, int Die2) : GameEvent
 public sealed record PlayerMoved(int PlayerId, int From, int To) : GameEvent;
 public sealed record PassedGo(int PlayerId, int Salary) : GameEvent;
 public sealed record LandedOn(int PlayerId, string SpaceId) : GameEvent;
-public sealed record AuctionStarted(string PropertyId, int MinBid, bool Open = false) : GameEvent;
+public sealed record AuctionStarted(string PropertyId, int MinBid, bool Open = false, bool FixedPrice = false) : GameEvent;
 
 /// <summary>In an open auction, a player raised the bid.</summary>
 public sealed record BidRaised(string PropertyId, int PlayerId, int Amount, bool DownPayment = false) : GameEvent;

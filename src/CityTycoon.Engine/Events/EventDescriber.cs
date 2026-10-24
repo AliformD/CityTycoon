@@ -33,6 +33,7 @@ public static class EventDescriber
             PlayerMoved m => $"{Name(m.PlayerId)} moved to {SpaceAt(m.To)}.",
             PassedGo g => $"{Name(g.PlayerId)} passed GO and collected ${g.Salary}.",
             LandedOn _ => "",
+            AuctionStarted { FixedPrice: true } a => $"{Space(a.PropertyId)} is offered at its listed price of ${a.MinBid} (first lap).",
             AuctionStarted { Open: true } a => $"Open auction for {Space(a.PropertyId)} (opening bid ${a.MinBid}). Players take turns to raise or drop out.",
             AuctionStarted a => $"Silent auction for {Space(a.PropertyId)} (minimum bid ${a.MinBid}). Everyone bids in secret at the same time.",
             BidRaised r => $"{Name(r.PlayerId)} bid ${r.Amount}{(r.DownPayment ? " with a down payment" : "")}.",

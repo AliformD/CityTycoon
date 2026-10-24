@@ -21,6 +21,9 @@ public enum AuctionKind
 
     /// <summary>A Hostile Bid forces an auction on another player's property (Section 8.6).</summary>
     Forced,
+
+    /// <summary>First-lap house rule: only the player who landed is asked, and the price is the listed one. Saying no starts a normal auction.</summary>
+    FixedPrice,
 }
 
 /// <summary>
@@ -85,7 +88,9 @@ public sealed class AuctionStep : Step
         {
             string name = ctx.Content.Property(PropertyId).Name;
             return StepResult.WaitFor(waitingOn.Select(id => new PendingDecision(
-                id, DecisionKind.SubmitBid, $"Silent auction for {name}: bid in secret (minimum ${MinBid}) or pass.",
+                id, DecisionKind.SubmitBid, Kind == AuctionKind.FixedPrice
+                    ? $"First lap: buy {name} at its listed price of ${MinBid}? Any bid buys it at that price; pass to send it to auction."
+                    : $"Silent auction for {name}: bid in secret (minimum ${MinBid}) or pass.",
                 PropertyId, MinBid, MaxBidFor(ctx, id), ctx.Rules.BidIncrement,
                 MaxDownPaymentBid: MaxDownPaymentBidFor(ctx, id),
                 // Taking a loan is the only other thing you can do mid-auction (Section 8.4).
@@ -101,6 +106,16 @@ public sealed class AuctionStep : Step
         Started = true;
         PropertyDefinition def = ctx.Content.Property(PropertyId);
         MinBid = MinimumBid(ctx.Rules, def.AssessedValue, Kind);
+
+        if (Kind == AuctionKind.FixedPrice)
+        {
+            MinBid = def.AssessedValue;
+            Bidders = [TieBreakStartId];
+            if (!CouldEverBid(ctx, TieBreakStartId))
+                Bids[TieBreakStartId] = null;
+            ctx.Emit(new AuctionStarted(PropertyId, MinBid, FixedPrice: true));
+            return;
+        }
 
         // Every player who isn't bankrupt may bid, including players in Jail.
         Bidders = ctx.State.ActivePlayers.Where(p => p.Id != ExcludedPlayerId).Select(p => p.Id).ToList();
@@ -134,11 +149,29 @@ public sealed class AuctionStep : Step
     {
         if (kind != AuctionKind.Normal)
             return false;
+        var others = SetMates(ctx, propertyId);
+        bool anyOwned = others.Any(p => ctx.State.Properties[p.Id].OwnerId != null);
+        bool lastPiece = others.All(p => ctx.State.Properties[p.Id].OwnerId != null);
+        return ctx.Rules.SilentAuctionFor switch
+        {
+            "lastOfSet" => !lastPiece,
+            "firstAndLast" => anyOwned && !lastPiece,
+            _ => anyOwned,
+        };
+    }
+
+    /// <summary>The other properties in this property's set (its color group, the other railroads, or the other utility).</summary>
+    private static List<PropertyDefinition> SetMates(EngineContext ctx, string propertyId)
+    {
         PropertyDefinition def = ctx.Content.Property(propertyId);
         return ctx.Content.Properties.Values
             .Where(p => p.Id != propertyId && (def.Group != null ? p.Group == def.Group : p.Group == null && p.Type == def.Type))
-            .Any(p => ctx.State.Properties[p.Id].OwnerId != null);
+            .ToList();
     }
+
+    /// <summary>True when every other property of this one's set already has an owner.</summary>
+    public static bool IsLastPiece(EngineContext ctx, string propertyId) =>
+        SetMates(ctx, propertyId).All(p => ctx.State.Properties[p.Id].OwnerId != null);
 
     /// <summary>The minimum bid, rounded up to the bid step (Section 8.3).</summary>
     public static int MinimumBid(RulesConfig rules, int assessedValue, AuctionKind kind)
@@ -181,7 +214,9 @@ public sealed class AuctionStep : Step
     /// Open auctions are paid in full too, unless the house rule allows down payments there (decision #163),
     /// so only cash and loans count when someone is racing to finish a color group.
     /// </summary>
-    private bool AllowsDownPayment(EngineContext ctx) => Kind != AuctionKind.Forced && (!Open || ctx.Rules.OpenAuctionDownPayments);
+    private bool AllowsDownPayment(EngineContext ctx) => Kind != AuctionKind.Forced && Kind != AuctionKind.FixedPrice
+        && (!Open || ctx.Rules.OpenAuctionDownPayments)
+        && (Open || Kind != AuctionKind.Normal || ctx.Rules.LastPieceDownPayments || !IsLastPiece(ctx, PropertyId));
 
     /// <summary>
     /// Can a forced auction be held on this property (Section 8.6)? It must be
@@ -268,6 +303,15 @@ public sealed class AuctionStep : Step
         ctx.Emit(new BidsRevealed(PropertyId, Bidders.Select(id => new RevealedBid(id, Bids[id])).ToList()));
 
         var realBids = Bids.Where(b => b.Value != null).ToList();
+        if (Kind == AuctionKind.FixedPrice)
+        {
+            // Any bid means "yes, I'll buy it", at the listed price. No means everyone gets to bid for it.
+            if (realBids.Count > 0)
+                Award(ctx, TieBreakStartId, MinBid);
+            else
+                ctx.Push(new AuctionStep { PropertyId = PropertyId, Kind = AuctionKind.Normal, TieBreakStartId = TieBreakStartId });
+            return;
+        }
         if (realBids.Count == 0)
         {
             // Nobody bid: the property stays with the bank (Section 8.2, rule 7),

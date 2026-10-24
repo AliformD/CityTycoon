@@ -334,12 +334,12 @@ public static class RuleModifiers
     public static string? DiceTieBreaker(GameState state, GameContent content, int playerId) =>
         Active(state, content).FirstOrDefault(m => m.WinsDiceTies(state, playerId))?.Source;
 
-    public static bool CasinoReroll(GameState state, GameContent content, int playerId) =>
-        Active(state, content).Any(m => m.CasinoReroll(state, playerId));
-
-    /// <summary>Extra percent on a Casino coin-flip win for this player (the Hustler 50).</summary>
-    public static int CasinoWinBonus(GameState state, GameContent content, int playerId) =>
-        Active(state, content).Select(m => m.CasinoWinBonus(state, playerId)).DefaultIfEmpty(0).Max();
+    /// <summary>The free Casino chip for this player (decision #164): the rules.json amount, 50% more for the Hustler.</summary>
+    public static int CasinoFreeChip(GameState state, GameContent content, int playerId)
+    {
+        int bonus = Active(state, content).Select(m => m.CasinoChipBonus(state, playerId)).DefaultIfEmpty(0).Max();
+        return content.Rules.CasinoFreeChip * (100 + bonus) / 100;
+    }
 
     /// <summary>How many times over a Stadium boost picked by this player multiplies rent (2, the Hustler 3).</summary>
     public static int StadiumMultiplier(GameState state, GameContent content, int playerId) =>

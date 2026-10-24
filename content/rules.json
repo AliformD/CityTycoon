@@ -88,11 +88,13 @@
   "maxTradeCounters": 3,
 
   "precisionRollDice": 3,
-  "casinoLowMax": 6,
-  "casinoHighMin": 8,
-  "casinoDoublesPayout": 2,
-  // Landing on the Casino flips a coin: win or lose this much (decision #153).
-  "casinoLandingFlip": 20,
+  // Dice Poker at the Casino (decision #164). Everyone who lands gets a free chip; a hand pays this much
+  // back per $100 riding on it (300 = 3 times). With perfect play a dollar of your own returns about 98 cents.
+  "casinoFreeChip": 40,
+  "casinoPays": { "fiveOfAKind": 1000, "fourOfAKind": 300, "straight": 300, "fullHouse": 200, "threeOfAKind": 50 },
+  // A Showdown: each side puts in this much; the challenged player may fold and pay this instead.
+  "showdownStake": 100,
+  "showdownFoldPayment": 25,
   // Before a council vote, players may bid to pay the Politician to vote their way (decision #162).
   "voteContracts": true,
   "stadiumRentMultiplier": 2,

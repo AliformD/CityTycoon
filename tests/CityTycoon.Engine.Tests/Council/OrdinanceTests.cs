@@ -296,7 +296,7 @@ public class OrdinanceTests
     }
 
     [Fact]
-    public void CasinoRegulation_CapsBetsAndDuelStakes_At200()
+    public void CasinoRegulation_CapsYourOwnMoneyOnACasinoHand_At200()
     {
         var game = Game();
         Activate(game, "casino-regulation", rounds: 4);
@@ -304,22 +304,9 @@ public class OrdinanceTests
         var ask = game.DecisionFor(0)!;
         Assert.Equal(DecisionKind.CasinoBet, ask.Kind);
         Assert.Equal(200, ask.MaxBet);
-        Assert.False(game.Engine.Submit(0, new BetHighLow(201, true)).Accepted);
-        Assert.False(game.Engine.Submit(0, new ChallengeDuel(1, 201)).Accepted);
-        game.Dice.Add(6, 5);
-        Assert.True(game.Engine.Submit(0, new BetHighLow(200, true)).Accepted);
-    }
-
-    [Fact]
-    public void CasinoRegulation_AlsoCapsTheDiceDuelCard()
-    {
-        var game = Game();
-        game.GiveCard(0, "dice-duel");
-        var play = new PlayCard("dice-duel", TargetPlayerId: 1, Number: 300);
-        Assert.Contains(play, game.Engine.GetLegalActions(0).Concat(new[] { (GameAction)play }));   // sanity: the type exists
-        Activate(game, "casino-regulation", rounds: 4);
-        Assert.False(game.Engine.Submit(0, play).Accepted);
-        Assert.True(game.Engine.Submit(0, play with { Number = 200 }).Accepted);
+        Assert.False(game.Engine.Submit(0, new PlayDicePoker(201)).Accepted);
+        game.Dice.Add(6, 5, 4, 3, 2);
+        Assert.True(game.Engine.Submit(0, new PlayDicePoker(200)).Accepted);
     }
 
     [Fact]

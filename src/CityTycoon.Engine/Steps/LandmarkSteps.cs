@@ -1,6 +1,7 @@
 using CityTycoon.Engine.Actions;
 using CityTycoon.Engine.Events;
 using CityTycoon.Engine.Modifiers;
+using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.State;
 
 namespace CityTycoon.Engine.Steps;
@@ -48,151 +49,284 @@ public sealed class HospitalVisitStep : Step
 }
 
 /// <summary>
-/// The Casino (Section 15.3): one optional bet, with no maximum. Either
-/// High/Low against the bank, or a Dice Duel against another player who may say no.
+/// The Casino (Section 15.3, decision #164): Dice Poker. The house puts a free chip on the player's hand, and they may
+/// add their own money to it. They roll 5 dice, keep any, roll the rest once more, and the pay table pays the hand.
+/// Then, if someone is worth more than them, they may call that player to a Showdown with the hand they made.
 /// </summary>
 public sealed class CasinoStep : Step
 {
     public int PlayerId { get; set; }
 
-    /// <summary>The bet chosen, or null while waiting (and after "no thanks").</summary>
-    public BetHighLow? HighLow { get; set; }
-    public ChallengeDuel? Duel { get; set; }
-
+    /// <summary>True once the player has said how much of their own money goes on the hand (or walked on by).</summary>
     public bool Answered { get; set; }
+    public bool WalkedAway { get; set; }
+    public int Stake { get; set; }
 
-    /// <summary>The High/Low roll, once made (0 means not rolled yet). A losing Hustler may reroll it once.</summary>
-    public int Die1 { get; set; }
-    public int Die2 { get; set; }
-
-    /// <summary>True once the coin has been flipped for landing here (decision #153).</summary>
-    public bool Flipped { get; set; }
-
-    /// <summary>True once the Hustler has been asked about a reroll, so they are asked at most once per visit.</summary>
-    public bool RerollOffered { get; set; }
+    /// <summary>The hand, once rolled (empty before).</summary>
+    public List<int> Dice { get; set; } = [];
+    public bool Rerolled { get; set; }
+    public bool Paid { get; set; }
+    public bool ShowdownAsked { get; set; }
 
     public override StepResult Run(EngineContext ctx)
     {
         PlayerState player = ctx.Player(PlayerId);
-        if (!Flipped)
-        {
-            Flipped = true;
-            FlipCoin(ctx, player);
-        }
+        int chip = RuleModifiers.CasinoFreeChip(ctx.State, ctx.Content, PlayerId);
         if (!Answered)
         {
-            if (player.Cash <= 0)
-                return StepResult.Done;
-            return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.CasinoBet,
-                "Welcome to the Casino. Make one bet, or walk on by.", MaxBet: StakeLimit(ctx, player.Cash)));
+            // Nothing to stake: play the free chip without asking.
+            if (player.Cash > 0)
+                return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.CasinoBet,
+                    $"Welcome to the Casino! The house gives you a free ${chip} chip for a hand of Dice Poker. Add some of your own money to it?",
+                    MaxBet: StakeLimit(ctx, player.Cash), FreeChip: chip));
+            Answered = true;
+        }
+        if (WalkedAway)
+            return StepResult.Done;
+
+        if (Dice.Count == 0)
+            Dice = PokerDice.RollAll(ctx, PlayerId);
+        if (!Rerolled)
+            return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.KeepDice,
+                $"You rolled {DicePoker.Describe(DicePoker.Score(Dice))}. Pick the dice to keep, then roll the rest once more.",
+                Dice: Dice.ToList(), FreeChip: chip, Stake: Stake));
+
+        if (!Paid)
+        {
+            Paid = true;
+            Pay(ctx, player, chip);
         }
 
-        if (HighLow is { } bet)
+        if (!ShowdownAsked)
         {
-            if (Die1 == 0)
-            {
-                Die1 = ctx.Dice.RollDie();
-                Die2 = ctx.Dice.RollDie();
-            }
-            // The Hustler may roll again, but only if this roll lost (Section 5). They are asked once.
-            if (!RerollOffered && !IsRight(ctx, bet) && RuleModifiers.CasinoReroll(ctx.State, ctx.Content, PlayerId))
-            {
-                RerollOffered = true;
-                return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.ChooseReroll,
-                    $"You bet {(bet.High ? "High" : "Low")} and rolled {Die1} + {Die2} = {Die1 + Die2}, which loses. Use your Hustler reroll?",
-                    Dice: [Die1, Die2]));
-            }
-            PlayHighLow(ctx, player, bet);
-        }
-        else if (Duel is { } duel)
-        {
-            ctx.Push(new DiceDuelStep { ChallengerId = PlayerId, OpponentId = duel.OpponentId, Stake = duel.Amount });
+            ShowdownAsked = true;
+            if (ShowdownTargets(ctx).Any())
+                return StepResult.WaitFor(new PendingDecision(PlayerId, DecisionKind.CallShowdown,
+                    $"You made {DicePoker.Describe(DicePoker.Score(Dice))}. Call a Showdown against someone worth more than you? They must beat your hand or fold.",
+                    Dice: Dice.ToList()));
         }
         return StepResult.Done;
     }
 
-    /// <summary>
-    /// Landing on the Casino flips a coin (decision #153): an even die wins the player a little from the bank,
-    /// an odd one loses it. A player with less cash than that loses only what they have, so it never forces a sale.
-    /// </summary>
-    private static void FlipCoin(EngineContext ctx, PlayerState player)
+    /// <summary>The chip and the stake ride on the hand together; the pay table says how much comes back.</summary>
+    private void Pay(EngineContext ctx, PlayerState player, int chip)
     {
-        int amount = ctx.Rules.CasinoLandingFlip;
-        if (amount <= 0)
-            return;
-        // The Hustler wins half as much again (decision #161).
-        int win = amount + amount * RuleModifiers.CasinoWinBonus(ctx.State, ctx.Content, player.Id) / 100;
-        int net = ctx.Dice.RollDie() % 2 == 0 ? win : -Math.Min(amount, player.Cash);
-        if (net == 0)
-            return;
+        int stake = Math.Min(Stake, player.Cash);   // nothing can lower cash in between, but stay safe
+        PokerHand hand = DicePoker.Score(Dice);
+        int payout = (chip + stake) * DicePoker.PayPercent(ctx.Rules, hand) / 100;
+        int net = payout - stake;
         player.Cash += net;
-        ctx.Emit(new CasinoCoinFlip(player.Id, net));
+        ctx.Emit(new CasinoHandPaid(PlayerId, Dice.ToList(), hand, chip, stake, net));
     }
 
     /// <summary>The most this player can stake: their cash, or the Casino Regulation cap if one is in force.</summary>
-    private static int StakeLimit(EngineContext ctx, int cash) =>
+    internal static int StakeLimit(EngineContext ctx, int cash) =>
         Math.Min(cash, RuleModifiers.MaxCasinoStake(ctx.State, ctx.Content) ?? int.MaxValue);
 
-    private bool IsRight(EngineContext ctx, BetHighLow bet) =>
-        bet.High ? Die1 + Die2 >= ctx.Rules.CasinoHighMin : Die1 + Die2 <= ctx.Rules.CasinoLowMax;
-
-    private void PlayHighLow(EngineContext ctx, PlayerState player, BetHighLow bet)
+    /// <summary>
+    /// Who can be called to a Showdown from the Casino: players still in, with cash, who are worth more than this player.
+    /// The rule keeps a Showdown a comeback move, so the leader can't pick on players who are behind.
+    /// </summary>
+    private IEnumerable<PlayerState> ShowdownTargets(EngineContext ctx)
     {
-        int net = !IsRight(ctx, bet) ? -bet.Amount
-            : Die1 == Die2 ? bet.Amount * ctx.Rules.CasinoDoublesPayout
-            : bet.Amount;
-        player.Cash += net;
-        ctx.Emit(new CasinoHighLow(PlayerId, bet.Amount, bet.High, Die1, Die2, net));
+        if (ctx.Player(PlayerId).Cash <= 0)
+            return [];
+        int mine = NetWorth.Calculate(ctx.State, ctx.Content, PlayerId);
+        return ctx.State.ActivePlayers.Where(p => p.Id != PlayerId && p.Cash > 0 && NetWorth.Calculate(ctx.State, ctx.Content, p.Id) > mine);
     }
 
-    public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision)
+    public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision) => decision.Kind switch
     {
-        if (decision.Kind == DecisionKind.ChooseReroll)
-            return [new RerollDice(), new NoThanks()];
-        // Any whole-dollar amount up to the limit is legal too (see IsLegal).
-        // These are just examples, so bots and the screen have something to start from.
-        int example = Math.Min(10, decision.MaxBet);
-        var actions = new List<GameAction> { new NoThanks(), new BetHighLow(example, High: true), new BetHighLow(example, High: false) };
-        foreach (PlayerState other in Opponents(ctx))
-            actions.Add(new ChallengeDuel(other.Id, Math.Min(example, other.Cash)));
-        return actions;
-    }
+        // Any whole-dollar stake up to the limit is legal too (see IsLegal). These are just examples.
+        DecisionKind.CasinoBet => [new PlayDicePoker(0), new PlayDicePoker(Math.Min(10, decision.MaxBet)), new NoThanks()],
+        DecisionKind.KeepDice => PokerDice.KeepExamples,
+        _ => [.. ShowdownTargets(ctx).Select(p => (GameAction)new CallShowdown(p.Id)), new NoThanks()],
+    };
 
-    public override bool IsLegal(EngineContext ctx, PendingDecision decision, GameAction action)
+    public override bool IsLegal(EngineContext ctx, PendingDecision decision, GameAction action) => decision.Kind switch
     {
-        if (decision.Kind == DecisionKind.ChooseReroll)
-            return action is RerollDice or NoThanks;
-        int cash = ctx.Player(PlayerId).Cash;
-        return action switch
-        {
-            NoThanks => true,
-            BetHighLow bet => bet.Amount >= 1 && bet.Amount <= StakeLimit(ctx, cash),
-            // Both players put in the same amount, up to whoever has less cash.
-            ChallengeDuel duel => Opponents(ctx).Any(p => p.Id == duel.OpponentId)
-                && duel.Amount >= 1 && duel.Amount <= StakeLimit(ctx, Math.Min(cash, ctx.Player(duel.OpponentId).Cash)),
-            _ => false,
-        };
-    }
+        DecisionKind.CasinoBet => action is NoThanks
+            || action is PlayDicePoker play && play.Stake >= 0 && play.Stake <= StakeLimit(ctx, ctx.Player(PlayerId).Cash),
+        DecisionKind.KeepDice => PokerDice.IsLegalKeep(action),
+        _ => base.IsLegal(ctx, decision, action),
+    };
 
     public override void Receive(EngineContext ctx, PendingDecision decision, GameAction action)
     {
-        if (decision.Kind == DecisionKind.ChooseReroll)
+        switch (decision.Kind)
         {
-            if (action is RerollDice)
-            {
-                ctx.Emit(new CasinoRerolled(PlayerId, "High/Low roll"));
-                Die1 = Die2 = 0;   // Run rolls again
-            }
-            return;
+            case DecisionKind.CasinoBet:
+                Answered = true;
+                WalkedAway = action is NoThanks;
+                Stake = action is PlayDicePoker play ? play.Stake : 0;
+                break;
+            case DecisionKind.KeepDice:
+                PokerDice.Reroll(ctx, PlayerId, Dice, ((KeepDice)action).Keep);
+                Rerolled = true;
+                break;
+            default:
+                if (action is CallShowdown call)
+                    ctx.Push(new ShowdownStep
+                    {
+                        ChallengerId = PlayerId,
+                        OpponentId = call.OpponentId,
+                        Stake = ShowdownStep.StakeFor(ctx, PlayerId, call.OpponentId),
+                        ChallengerDice = Dice.ToList(),
+                        ChallengerDone = true,
+                    });
+                break;
         }
-        Answered = true;
-        HighLow = action as BetHighLow;
-        Duel = action as ChallengeDuel;
+    }
+}
+
+/// <summary>
+/// A Showdown (decision #164): the challenger's Dice Poker hand against another player's. The challenged player
+/// can't say no, but they see the hand first and may fold, paying a little instead. If they play, they roll
+/// 5 dice, keep any and roll the rest once, and the better hand takes the stake from the other player.
+/// From the Casino the challenger already has a hand; from the Showdown card they roll one first.
+/// </summary>
+public sealed class ShowdownStep : Step
+{
+    public int ChallengerId { get; set; }
+    public int OpponentId { get; set; }
+    public int Stake { get; set; }
+
+    public List<int> ChallengerDice { get; set; } = [];
+    /// <summary>True once the challenger's hand is final (from the start, when it was made at the Casino).</summary>
+    public bool ChallengerDone { get; set; }
+    public bool Announced { get; set; }
+
+    /// <summary>The challenged player's answer: null while waiting.</summary>
+    public bool? Plays { get; set; }
+    public List<int> OpponentDice { get; set; } = [];
+    public bool OpponentRerolled { get; set; }
+
+    /// <summary>What each side puts in: the Showdown stake, but no more than either has, or the Casino Regulation cap.</summary>
+    public static int StakeFor(EngineContext ctx, int challengerId, int opponentId) =>
+        Math.Min(Math.Min(ctx.Rules.ShowdownStake, RuleModifiers.MaxCasinoStake(ctx.State, ctx.Content) ?? int.MaxValue),
+            Math.Min(ctx.Player(challengerId).Cash, ctx.Player(opponentId).Cash));
+
+    public override StepResult Run(EngineContext ctx)
+    {
+        // The Showdown card: the challenger rolls their hand here first.
+        if (ChallengerDice.Count == 0)
+            ChallengerDice = PokerDice.RollAll(ctx, ChallengerId);
+        if (!ChallengerDone)
+            return StepResult.WaitFor(new PendingDecision(ChallengerId, DecisionKind.KeepDice,
+                $"Showdown against {ctx.Player(OpponentId).Name}! You rolled {DicePoker.Describe(DicePoker.Score(ChallengerDice))}. Pick the dice to keep, then roll the rest once more.",
+                Dice: ChallengerDice.ToList()));
+
+        if (!Announced)
+        {
+            Announced = true;
+            ctx.Emit(new ShowdownCalled(ChallengerId, OpponentId, Stake, ChallengerDice.ToList(), DicePoker.Score(ChallengerDice)));
+        }
+
+        int fold = Math.Min(ctx.Rules.ShowdownFoldPayment, Stake);
+        var challenge = new ShowdownChallenge(ChallengerId, OpponentId, Stake, fold, ChallengerDice.ToList());
+        if (Plays == null)
+            return StepResult.WaitFor(new PendingDecision(OpponentId, DecisionKind.RespondToShowdown,
+                $"{ctx.Player(ChallengerId).Name} calls you to a ${Stake} Showdown with {DicePoker.Describe(DicePoker.Score(ChallengerDice))}. Beat it, or fold and pay ${fold}.",
+                Showdown: challenge));
+
+        if (Plays == false)
+        {
+            int paid = Math.Min(fold, ctx.Player(OpponentId).Cash);
+            ctx.Player(OpponentId).Cash -= paid;
+            ctx.Player(ChallengerId).Cash += paid;
+            ctx.Emit(new ShowdownFolded(ChallengerId, OpponentId, paid));
+            return StepResult.Done;
+        }
+
+        if (OpponentDice.Count == 0)
+            OpponentDice = PokerDice.RollAll(ctx, OpponentId);
+        if (!OpponentRerolled)
+            return StepResult.WaitFor(new PendingDecision(OpponentId, DecisionKind.KeepDice,
+                $"You rolled {DicePoker.Describe(DicePoker.Score(OpponentDice))} against {DicePoker.Describe(DicePoker.Score(ChallengerDice))}. Pick the dice to keep, then roll the rest once more.",
+                Dice: OpponentDice.ToList(), Showdown: challenge));
+
+        Settle(ctx);
+        return StepResult.Done;
     }
 
-    /// <summary>Players who can be challenged: still in the game, with some cash.</summary>
-    private IEnumerable<PlayerState> Opponents(EngineContext ctx) =>
-        ctx.State.ActivePlayers.Where(p => p.Id != PlayerId && p.Cash > 0);
+    private void Settle(EngineContext ctx)
+    {
+        int result = DicePoker.Compare(ChallengerDice, OpponentDice);
+        if (result == 0)
+        {
+            // An exact tie pays nobody, unless someone wins ties (the Mogul, decision #93).
+            string? challengerEdge = RuleModifiers.DiceTieBreaker(ctx.State, ctx.Content, ChallengerId);
+            string? opponentEdge = RuleModifiers.DiceTieBreaker(ctx.State, ctx.Content, OpponentId);
+            if (challengerEdge == null && opponentEdge == null)
+            {
+                ctx.Emit(new ShowdownTied(ChallengerId, OpponentId, DicePoker.Score(ChallengerDice)));
+                return;
+            }
+            result = challengerEdge != null ? 1 : -1;
+            ctx.Emit(new DiceTieWon(result > 0 ? ChallengerId : OpponentId, (challengerEdge ?? opponentEdge)!));
+        }
+
+        int winnerId = result > 0 ? ChallengerId : OpponentId;
+        int loserId = result > 0 ? OpponentId : ChallengerId;
+        // The stake may not be affordable any more; then it shrinks to what both have.
+        int stake = Math.Min(Stake, Math.Min(ctx.Player(ChallengerId).Cash, ctx.Player(OpponentId).Cash));
+        ctx.Player(winnerId).Cash += stake;
+        ctx.Player(loserId).Cash -= stake;
+        PokerHand challengerHand = DicePoker.Score(ChallengerDice), opponentHand = DicePoker.Score(OpponentDice);
+        ctx.Emit(new ShowdownWon(winnerId, loserId, stake,
+            result > 0 ? challengerHand : opponentHand, result > 0 ? opponentHand : challengerHand));
+    }
+
+    public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision) =>
+        decision.Kind == DecisionKind.KeepDice ? PokerDice.KeepExamples : [new PlayShowdown(), new FoldShowdown()];
+
+    public override bool IsLegal(EngineContext ctx, PendingDecision decision, GameAction action) =>
+        decision.Kind == DecisionKind.KeepDice ? PokerDice.IsLegalKeep(action) : base.IsLegal(ctx, decision, action);
+
+    public override void Receive(EngineContext ctx, PendingDecision decision, GameAction action)
+    {
+        if (decision.Kind == DecisionKind.RespondToShowdown)
+        {
+            Plays = action is PlayShowdown;
+            return;
+        }
+        if (decision.PlayerId == ChallengerId && !ChallengerDone)
+        {
+            PokerDice.Reroll(ctx, ChallengerId, ChallengerDice, ((KeepDice)action).Keep);
+            ChallengerDone = true;
+        }
+        else
+        {
+            PokerDice.Reroll(ctx, OpponentId, OpponentDice, ((KeepDice)action).Keep);
+            OpponentRerolled = true;
+        }
+    }
+}
+
+/// <summary>Rolling Dice Poker dice: the first roll of 5, and the one reroll of the dice not kept.</summary>
+internal static class PokerDice
+{
+    public static List<int> RollAll(EngineContext ctx, int playerId)
+    {
+        var dice = Enumerable.Range(0, DicePoker.DiceCount).Select(_ => ctx.Dice.RollDie()).ToList();
+        ctx.Emit(new PokerDiceRolled(playerId, dice.ToList()));
+        return dice;
+    }
+
+    /// <summary>Rolls every die whose position is not in <paramref name="keep"/>, first to last.</summary>
+    public static void Reroll(EngineContext ctx, int playerId, List<int> dice, IReadOnlyList<int> keep)
+    {
+        for (int i = 0; i < dice.Count; i++)
+            if (!keep.Contains(i))
+                dice[i] = ctx.Dice.RollDie();
+        ctx.Emit(new PokerDiceRolled(playerId, dice.ToList(), keep.Order().ToList()));
+    }
+
+    /// <summary>Every set of positions 0-4 is a legal keep, each named at most once (see IsLegalKeep). These are examples.</summary>
+    public static readonly IReadOnlyList<GameAction> KeepExamples = [new KeepDice([0, 1, 2, 3, 4]), new KeepDice([])];
+
+    public static bool IsLegalKeep(GameAction action) =>
+        action is KeepDice keep && keep.Keep.All(i => i >= 0 && i < DicePoker.DiceCount) && keep.Keep.Distinct().Count() == keep.Keep.Count;
 }
 
 /// <summary>

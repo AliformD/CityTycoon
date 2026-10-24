@@ -1,4 +1,5 @@
 using CityTycoon.Engine.Content;
+using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.Views;
 
 namespace CityTycoon.Engine.Events;
@@ -158,6 +159,15 @@ public static class GameHistory
                     break;
                 case DuelWon d:
                     Move(d.LoserId, d.WinnerId, d.Stake, MoneyKind.Casino, $"Lost a Dice Duel to {Name(d.WinnerId)}", $"Won a Dice Duel against {Name(d.LoserId)}");
+                    break;
+                case CasinoHandPaid p:
+                    Add(p.PlayerId, p.Net, MoneyKind.Casino, $"Casino Dice Poker: {DicePoker.Describe(p.Hand)}");
+                    break;
+                case ShowdownFolded f:
+                    Move(f.OpponentId, f.ChallengerId, f.Amount, MoneyKind.Casino, $"Folded in a Showdown with {Name(f.ChallengerId)}", $"{Name(f.OpponentId)} folded in a Showdown");
+                    break;
+                case ShowdownWon w:
+                    Move(w.LoserId, w.WinnerId, w.Stake, MoneyKind.Casino, $"Lost a Showdown to {Name(w.WinnerId)}", $"Won a Showdown against {Name(w.LoserId)}");
                     break;
                 case MallCardBought b:
                     Add(b.PlayerId, -b.Price, MoneyKind.Mall, $"Bought {Card(b.CardId)} at the Mall");

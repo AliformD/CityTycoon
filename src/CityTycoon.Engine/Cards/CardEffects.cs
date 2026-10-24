@@ -41,7 +41,7 @@ public static class CardEffects
         new ForceAuctionEffect(),
         new ConstructionPermitEffect(),
         new GetOutOfJailFreeEffect(),
-        new DiceDuelEffect(),
+        new ShowdownEffect(),
         new ArrangeEventsEffect(),
         new PropertyRentBoostEffect(),
         new PeekTileEffect(),
@@ -546,28 +546,20 @@ public sealed class GetOutOfJailFreeEffect : ICardEffect
     }
 }
 
-/// <summary>Dice Duel card: challenge any player to a Dice Duel from anywhere (Section 15.3).</summary>
-public sealed class DiceDuelEffect : ICardEffect
+/// <summary>Showdown card (decision #164): call any player with cash to a Showdown from anywhere. The challenger rolls a hand first.</summary>
+public sealed class ShowdownEffect : ICardEffect
 {
-    public string Type => "DiceDuel";
+    public string Type => "Showdown";
 
-    public IEnumerable<PlayCard> Plays(EngineContext ctx, PlayerState player, CardDefinition card)
+    public IEnumerable<PlayCard> Plays(EngineContext ctx, PlayerState player, CardDefinition card) =>
+        player.Cash <= 0 ? []
+        : CardEffects.OthersInTurnOrder(ctx.State, player.Id).Where(p => p.Cash > 0).Select(p => new PlayCard(card.Id, TargetPlayerId: p.Id));
+
+    public void Apply(CardEffectContext c)
     {
-        if (player.Cash <= 0)
-            return [];
-        // Any stake from $1 up to the smaller cash pile is legal (see IsLegalPlay). These are examples.
-        return CardEffects.OthersInTurnOrder(ctx.State, player.Id)
-            .Where(p => p.Cash > 0)
-            .Select(p => new PlayCard(card.Id, TargetPlayerId: p.Id, Number: Math.Min(10, Math.Min(player.Cash, p.Cash))));
+        int opponentId = c.Play.TargetPlayerId!.Value;
+        c.Ctx.Push(new ShowdownStep { ChallengerId = c.Player.Id, OpponentId = opponentId, Stake = ShowdownStep.StakeFor(c.Ctx, c.Player.Id, opponentId) });
     }
-
-    public bool IsLegalPlay(EngineContext ctx, PlayerState player, CardDefinition card, PlayCard play) =>
-        play.TargetPlayerId is int id
-        && CardEffects.OthersInTurnOrder(ctx.State, player.Id).Any(p => p.Id == id)
-        && play.Number >= 1 && play.Number <= Math.Min(Math.Min(player.Cash, ctx.Player(id).Cash), RuleModifiers.MaxCasinoStake(ctx.State, ctx.Content) ?? int.MaxValue);
-
-    public void Apply(CardEffectContext c) =>
-        c.Ctx.Push(new DiceDuelStep { ChallengerId = c.Player.Id, OpponentId = c.Play.TargetPlayerId!.Value, Stake = c.Play.Number });
 }
 
 /// <summary>Tip-Off: look at the top Event cards and put them back in any order.</summary>

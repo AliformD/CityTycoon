@@ -31,7 +31,7 @@ namespace CityTycoon.Engine.Steps;
 [JsonDerivedType(typeof(MallStep), nameof(MallStep))]
 [JsonDerivedType(typeof(ChooseFirePropertyStep), nameof(ChooseFirePropertyStep))]
 [JsonDerivedType(typeof(ArrangeEventsStep), nameof(ArrangeEventsStep))]
-[JsonDerivedType(typeof(DiceDuelStep), nameof(DiceDuelStep))]
+[JsonDerivedType(typeof(ShowdownStep), nameof(ShowdownStep))]
 [JsonDerivedType(typeof(HandLimitStep), nameof(HandLimitStep))]
 [JsonDerivedType(typeof(TransitHopStep), nameof(TransitHopStep))]
 [JsonDerivedType(typeof(TransitRideStep), nameof(TransitRideStep))]

@@ -1,53 +1,103 @@
-@* The Casino (Section 13.2): one bet per visit. Bet on High/Low against the bank, challenge someone to a Dice Duel, or walk on by. *@
+@* The Casino (Section 15.3, decision #164): Dice Poker with a free chip, and the Showdown.
+   One panel for every Casino question: how much of your own money to add, which dice to keep,
+   whether to call a Showdown, and (for the player called out) fold or play. *@
+@using CityTycoon.Engine.Rules
 <div class="decision casino">
-    <h2>@Me.Name, welcome to the Casino</h2>
-    <p>
-        Roll two dice. <strong>High</strong> wins on @Content.Rules.CasinoHighMin or more, <strong>Low</strong> wins on @Content.Rules.CasinoLowMax or less, and a 7 always loses.
-        Call it right with doubles and you win @(Content.Rules.CasinoDoublesPayout)× your bet. You have <strong>@UiHelpers.Money(Me.Cash)</strong>.
-    </p>
-
-    <div class="bid-entry">
-        <label>
-            Bet $<input type="number" min="1" max="@Request.Decision.MaxBet" step="1" @bind="bet" @bind:event="oninput" />
-        </label>
-        <button class="small" @onclick="() => bet = Math.Max(1, Request.Decision.MaxBet / 10)">10%</button>
-        <button class="small" @onclick="() => bet = Math.Max(1, Request.Decision.MaxBet / 2)">Half</button>
-        <button class="small" @onclick="() => bet = Request.Decision.MaxBet">All in</button>
-    </div>
-    @if (BetProblem is string problem)
+    @if (Decision.Kind == DecisionKind.CasinoBet)
     {
-        <p class="error" role="alert">@problem</p>
-    }
-    <div class="buttons">
-        <button class="big" disabled="@(BetProblem != null)" @onclick="() => OnAnswer.InvokeAsync(new BetHighLow(bet, true))">Bet @UiHelpers.Money(bet) on High</button>
-        <button class="big" disabled="@(BetProblem != null)" @onclick="() => OnAnswer.InvokeAsync(new BetHighLow(bet, false))">Bet @UiHelpers.Money(bet) on Low</button>
-    </div>
-
-    @if (Opponents.Count > 0)
-    {
-        <fieldset class="duel-setup">
-            <legend>Or challenge someone to a Dice Duel</legend>
+        <h2>@Me.Name, welcome to the Casino</h2>
+        <p>
+            The house gives you a free <strong>@UiHelpers.Money(Decision.FreeChip)</strong> chip. Roll 5 dice, keep the ones you like,
+            and roll the rest once more. Your hand is paid from the table below. You can add your own money to the chip:
+            it rides on the same hand. You have <strong>@UiHelpers.Money(Me.Cash)</strong>.
+        </p>
+        <PayTable Content="Content" Riding="@(Decision.FreeChip + stake)" />
+        <div class="bid-entry">
             <label>
-                Opponent
-                <select @bind="opponentId">
-                    @foreach (var p in Opponents)
-                    {
-                        <option value="@p.Id">@p.Name (@UiHelpers.Money(p.Cash))</option>
-                    }
-                </select>
+                Add $<input type="number" min="0" max="@Decision.MaxBet" step="1" @bind="stake" @bind:event="oninput" />
             </label>
-            <p class="hint">The stake can be up to @UiHelpers.Money(DuelMax), the smaller of your two cash piles. They can say no.</p>
-            <button class="big" disabled="@(DuelProblem != null)" @onclick="() => OnAnswer.InvokeAsync(new ChallengeDuel(opponentId, bet))">Duel for @UiHelpers.Money(bet)</button>
-            @if (DuelProblem is string duelProblem)
-            {
-                <p class="hint">@duelProblem</p>
-            }
-        </fieldset>
+            <button class="small" @onclick="() => stake = 0">Nothing</button>
+            <button class="small" @onclick="() => stake = Decision.MaxBet / 10">10%</button>
+            <button class="small" @onclick="() => stake = Decision.MaxBet / 2">Half</button>
+            <button class="small" @onclick="() => stake = Decision.MaxBet">All in</button>
+        </div>
+        @if (StakeProblem is string problem)
+        {
+            <p class="error" role="alert">@problem</p>
+        }
+        <div class="buttons">
+            <button class="big primary" disabled="@(StakeProblem != null)" @onclick="Roll">@RollLabel()</button>
+            <button class="big" @onclick="() => OnAnswer.InvokeAsync(new NoThanks())">Walk on by</button>
+        </div>
     }
-
-    <div class="buttons">
-        <button class="big primary" @onclick="() => OnAnswer.InvokeAsync(new NoThanks())">No thanks</button>
-    </div>
+    else if (Decision.Kind == DecisionKind.KeepDice)
+    {
+        <h2>@Me.Name, @HandLine(Decision.Dice!, "you rolled")</h2>
+        @if (Decision.Showdown is { } showdown && showdown.OpponentId == Me.Id)
+        {
+            <div class="hand-to-beat">
+                <span>To beat:</span>
+                <PokerDice Dice="showdown.ChallengerDice" />
+                <strong>@DicePoker.Describe(DicePoker.Score(showdown.ChallengerDice))</strong>
+            </div>
+        }
+        <p>Tap the dice you want to <strong>keep</strong>. The others are rolled once more.</p>
+        <div class="poker-dice" role="group" aria-label="Your dice">
+            @for (int i = 0; i < Decision.Dice!.Count; i++)
+            {
+                int index = i;
+                int value = Decision.Dice[index];
+                <button class="poker-die @(kept.Contains(index) ? "kept" : "")" aria-pressed="@(kept.Contains(index) ? "true" : "false")"
+                        aria-label="@DieLabel(index, value)" @onclick="() => Toggle(index)">
+                    <Die Value="value" />
+                    <small>@(kept.Contains(index) ? "Keep" : "Reroll")</small>
+                </button>
+            }
+        </div>
+        @if (Decision.Showdown == null && Decision.FreeChip > 0)
+        {
+            <PayTable Content="Content" Riding="@(Decision.FreeChip + Decision.Stake)" Current="DicePoker.Score(Decision.Dice!)" />
+        }
+        <div class="buttons">
+            <button class="big primary" @onclick="RollTheRest">@RerollLabel()</button>
+            <button class="big" @onclick="() => OnAnswer.InvokeAsync(new KeepDice([0, 1, 2, 3, 4]))">Keep all 5</button>
+        </div>
+    }
+    else if (Decision.Kind == DecisionKind.CallShowdown)
+    {
+        <h2>@Me.Name, @HandLine(Decision.Dice!, "you made")</h2>
+        <PokerDice Dice="Decision.Dice!" />
+        <p>
+            Call a <strong>Showdown</strong>? You each put in up to <strong>@UiHelpers.Money(Content.Rules.ShowdownStake)</strong>.
+            They see your hand and choose: fold and pay you @UiHelpers.Money(Content.Rules.ShowdownFoldPayment), or roll 5 dice
+            (keep any, reroll once) to beat it. The better hand takes the stake. A strong hand makes them fold; a weak one gets beaten.
+        </p>
+        <div class="buttons">
+            @foreach (var call in Request.LegalActions.OfType<CallShowdown>())
+            {
+                var target = Request.View.Player(call.OpponentId);
+                <button class="big" @onclick="() => OnAnswer.InvokeAsync(call)">Call out @target.Name <small>(worth @UiHelpers.Money(target.NetWorth))</small></button>
+            }
+            <button class="big primary" @onclick="() => OnAnswer.InvokeAsync(new NoThanks())">No thanks</button>
+        </div>
+    }
+    else if (Decision.Kind == DecisionKind.RespondToShowdown && Decision.Showdown is { } called)
+    {
+        <h2>@Me.Name, @Request.View.Player(called.ChallengerId).Name calls you to a Showdown!</h2>
+        <div class="hand-to-beat">
+            <span>Their hand:</span>
+            <PokerDice Dice="called.ChallengerDice" />
+            <strong>@DicePoker.Describe(DicePoker.Score(called.ChallengerDice))</strong>
+        </div>
+        <p>
+            Play: roll 5 dice, keep any, and roll the rest once. If your hand is better you win <strong>@UiHelpers.Money(called.Stake)</strong>
+            from them; if it's worse you pay it. Or fold now and pay just <strong>@UiHelpers.Money(called.FoldPayment)</strong>.
+        </p>
+        <div class="buttons">
+            <button class="big primary" @onclick="() => OnAnswer.InvokeAsync(new PlayShowdown())">Play: try to beat it</button>
+            <button class="big" @onclick="() => OnAnswer.InvokeAsync(new FoldShowdown())">Fold and pay @UiHelpers.Money(called.FoldPayment)</button>
+        </div>
+    }
 </div>
 
 @code {
@@ -55,35 +105,62 @@
     [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
     [Parameter] public EventCallback<GameAction> OnAnswer { get; set; }
 
-    private int bet;
-    private int opponentId;
+    private int stake;
+    private readonly HashSet<int> kept = [];
     private HumanRequest? shownFor;
 
     private PlayerInfo Me => Request.View.Me;
+    private PendingDecision Decision => Request.Decision;
 
-    // The legal list names every player you may challenge.
-    private List<PlayerInfo> Opponents =>
-        Request.LegalActions.OfType<ChallengeDuel>().Select(d => Request.View.Player(d.OpponentId)).ToList();
-
-    private int DuelMax => Math.Min(Me.Cash, Opponents.FirstOrDefault(p => p.Id == opponentId)?.Cash ?? 0);
-
-    private string? BetProblem =>
-        bet < 1 ? "Bets start at $1."
-        : bet > Request.Decision.MaxBet ? $"You only have {UiHelpers.Money(Request.Decision.MaxBet)}."
+    private string? StakeProblem =>
+        stake < 0 ? "You can't add less than nothing."
+        : stake > Decision.MaxBet ? $"You can add at most {UiHelpers.Money(Decision.MaxBet)}."
         : null;
 
-    private string? DuelProblem =>
-        bet < 1 ? "Stakes start at $1."
-        : bet > DuelMax ? $"Lower the amount to {UiHelpers.Money(DuelMax)} or less to duel this player."
-        : null;
+    private string RollLabel() => stake > 0
+        ? $"Roll with {UiHelpers.Money(Decision.FreeChip + stake)} riding"
+        : $"Roll with the free {UiHelpers.Money(Decision.FreeChip)} chip";
+
+    private string RerollLabel() => kept.Count switch
+    {
+        5 => "Keep all 5",
+        0 => "Roll all 5 again",
+        _ => $"Keep {kept.Count}, roll {5 - kept.Count}",
+    };
+
+    private static string HandLine(IReadOnlyList<int> dice, string verb) => $"{verb} {DicePoker.Describe(DicePoker.Score(dice))}";
+
+    private string DieLabel(int index, int value) => $"Die {index + 1}: {value}, {(kept.Contains(index) ? "kept" : "will be rolled again")}";
+
+    private void Toggle(int index)
+    {
+        if (!kept.Remove(index))
+            kept.Add(index);
+    }
+
+    private Task Roll() => OnAnswer.InvokeAsync(new PlayDicePoker(stake));
+
+    private Task RollTheRest() => OnAnswer.InvokeAsync(new KeepDice([.. kept.Order()]));
 
     protected override void OnParametersSet()
     {
         if (!ReferenceEquals(shownFor, Request))
         {
             shownFor = Request;
-            bet = Math.Min(10, Request.Decision.MaxBet);
-            opponentId = Opponents.FirstOrDefault()?.Id ?? 0;
+            stake = 0;
+            kept.Clear();
+            // Start with the dice that are already part of the hand picked, so a beginner sees a sensible keep.
+            if (Decision.Kind == DecisionKind.KeepDice && Decision.Dice is { } dice)
+                foreach (int i in SuggestedKeep(dice))
+                    kept.Add(i);
         }
+    }
+
+    /// <summary>A starting keep: a made straight, full house or five of a kind whole; otherwise every die that matches another.</summary>
+    private static IEnumerable<int> SuggestedKeep(IReadOnlyList<int> dice)
+    {
+        if (DicePoker.Score(dice) is PokerHand.Straight or PokerHand.FullHouse or PokerHand.FiveOfAKind)
+            return Enumerable.Range(0, dice.Count);
+        return Enumerable.Range(0, dice.Count).Where(i => dice.Count(d => d == dice[i]) >= 2);
     }
 }

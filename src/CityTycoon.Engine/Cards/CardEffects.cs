@@ -546,7 +546,10 @@ public sealed class GetOutOfJailFreeEffect : ICardEffect
     }
 }
 
-/// <summary>Showdown card (decision #164): call any player with cash to a Showdown from anywhere. The challenger rolls a hand first.</summary>
+/// <summary>
+/// Showdown card (decision #164): call any player with cash to a Showdown from anywhere. The challenger rolls a hand
+/// first, then decides whether to go ahead with it.
+/// </summary>
 public sealed class ShowdownEffect : ICardEffect
 {
     public string Type => "Showdown";
@@ -558,7 +561,7 @@ public sealed class ShowdownEffect : ICardEffect
     public void Apply(CardEffectContext c)
     {
         int opponentId = c.Play.TargetPlayerId!.Value;
-        c.Ctx.Push(new ShowdownStep { ChallengerId = c.Player.Id, OpponentId = opponentId, Stake = ShowdownStep.StakeFor(c.Ctx, c.Player.Id, opponentId) });
+        c.Ctx.Push(new ShowdownStep { ChallengerId = c.Player.Id, OpponentId = opponentId, Stake = ShowdownStep.StakeFor(c.Ctx, c.Player.Id, opponentId), Confirmed = false });
     }
 }
 

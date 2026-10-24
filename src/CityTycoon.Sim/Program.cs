@@ -250,7 +250,6 @@ static void AddPerkReport(List<string> lines, List<GameStats> finished, SimOptio
     var passedByOrdinance = finished.SelectMany(r => r.OrdinanceCounts).GroupBy(kv => kv.Key).ToDictionary(g => g.Key, g => g.Sum(kv => kv.Value));
     foreach (var ordinance in content.Ordinances)
         lines.Add($"  {ordinance.Name,-28} passed {(double)passedByOrdinance.GetValueOrDefault(ordinance.Id) / finished.Count:0.00} times per game");
-    lines.Add($"Dice Duels in all {finished.Count} games: {finished.Sum(r => r.Duels)}.");
 }
 
 static string Summarize(List<GameStats> results, SimOptions options, TimeSpan elapsed)
@@ -289,12 +288,14 @@ static string Summarize(List<GameStats> results, SimOptions options, TimeSpan el
             + $"{finished.Average(r => r.LoansTaken):0.0} loans, {finished.Average(r => r.TradesCompleted):0.0} trades, "
             + $"{finished.Average(r => r.DownPaymentWins):0.0} down-payment wins, {finished.Average(r => r.Forfeits):0.00} forfeits");
         lines.Add($"Per game: {finished.Average(r => r.Nudges):0.0} Nudges, {finished.Average(r => r.PrecisionRolls):0.0} Precision Rolls, "
-            + $"{finished.Average(r => r.InsuranceBought):0.0} Insured markers bought, {finished.Average(r => r.Duels):0.0} Dice Duels");
+            + $"{finished.Average(r => r.InsuranceBought):0.0} Insured markers bought");
         lines.Add($"Cards per game: {finished.Average(r => r.EventsDrawn):0.0} Events drawn, {finished.Average(r => r.OpportunitiesDrawn):0.0} Opportunity cards drawn, "
             + $"{finished.Average(r => r.MallBuys):0.0} bought at the Mall, {finished.Average(r => r.CardsPlayed):0.0} played, "
             + $"{finished.Average(r => r.CardsCancelled):0.00} cancelled by Insurance, {finished.Average(r => r.Reshuffles):0.0} reshuffles");
-        int bets = finished.Sum(r => r.CasinoBets);
-        lines.Add($"Casino: {(double)bets / finished.Count:0.0} High/Low bets per game, players' total result {finished.Sum(r => r.CasinoNet):N0} dollars");
+        lines.Add($"Casino: {finished.Average(r => r.CasinoHands):0.0} Dice Poker hands per game, paying players {finished.Average(r => r.CasinoNet):0} dollars per game in total. "
+            + $"Hands with the player's own money on them: {finished.Average(r => r.CasinoBets):0.00} per game, that money's result {finished.Sum(r => r.CasinoStakeNet):N0} dollars over all games.");
+        int showdowns = finished.Sum(r => r.Showdowns);
+        lines.Add($"Showdowns: {(double)showdowns / finished.Count:0.00} per game, {(showdowns == 0 ? 0 : (double)finished.Sum(r => r.ShowdownFolds) / showdowns):P0} of them folded.");
         lines.Add("Win rate by turn position (1 = goes first). Even share would be " + (1.0 / options.Players).ToString("P0") + ":");
         for (int pos = 0; pos < options.Players; pos++)
         {

@@ -173,6 +173,7 @@ public sealed class CasinoStep : Step
                         Stake = ShowdownStep.StakeFor(ctx, PlayerId, call.OpponentId),
                         ChallengerDice = Dice.ToList(),
                         ChallengerDone = true,
+                        Confirmed = true,
                     });
                 break;
         }
@@ -183,7 +184,8 @@ public sealed class CasinoStep : Step
 /// A Showdown (decision #164): the challenger's Dice Poker hand against another player's. The challenged player
 /// can't say no, but they see the hand first and may fold, paying a little instead. If they play, they roll
 /// 5 dice, keep any and roll the rest once, and the better hand takes the stake from the other player.
-/// From the Casino the challenger already has a hand; from the Showdown card they roll one first.
+/// From the Casino the challenger already has a hand. From the Showdown card they roll one first, and then decide
+/// whether to go ahead with it (the card is used up either way).
 /// </summary>
 public sealed class ShowdownStep : Step
 {
@@ -194,6 +196,8 @@ public sealed class ShowdownStep : Step
     public List<int> ChallengerDice { get; set; } = [];
     /// <summary>True once the challenger's hand is final (from the start, when it was made at the Casino).</summary>
     public bool ChallengerDone { get; set; }
+    /// <summary>True once the challenger has gone ahead with the Showdown (from the start, at the Casino). Null: they called it off.</summary>
+    public bool? Confirmed { get; set; }
     public bool Announced { get; set; }
 
     /// <summary>The challenged player's answer: null while waiting.</summary>
@@ -215,6 +219,16 @@ public sealed class ShowdownStep : Step
             return StepResult.WaitFor(new PendingDecision(ChallengerId, DecisionKind.KeepDice,
                 $"Showdown against {ctx.Player(OpponentId).Name}! You rolled {DicePoker.Describe(DicePoker.Score(ChallengerDice))}. Pick the dice to keep, then roll the rest once more.",
                 Dice: ChallengerDice.ToList()));
+
+        if (Confirmed == false)
+            return StepResult.WaitFor(new PendingDecision(ChallengerId, DecisionKind.CallShowdown,
+                $"You made {DicePoker.Describe(DicePoker.Score(ChallengerDice))}. Go ahead with the Showdown against {ctx.Player(OpponentId).Name}? They must beat it or fold.",
+                Dice: ChallengerDice.ToList()));
+        if (Confirmed == null)
+        {
+            ctx.Emit(new ShowdownCalledOff(ChallengerId, OpponentId));
+            return StepResult.Done;
+        }
 
         if (!Announced)
         {
@@ -277,8 +291,12 @@ public sealed class ShowdownStep : Step
             result > 0 ? challengerHand : opponentHand, result > 0 ? opponentHand : challengerHand));
     }
 
-    public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision) =>
-        decision.Kind == DecisionKind.KeepDice ? PokerDice.KeepExamples : [new PlayShowdown(), new FoldShowdown()];
+    public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision) => decision.Kind switch
+    {
+        DecisionKind.KeepDice => PokerDice.KeepExamples,
+        DecisionKind.CallShowdown => [new CallShowdown(OpponentId), new NoThanks()],
+        _ => [new PlayShowdown(), new FoldShowdown()],
+    };
 
     public override bool IsLegal(EngineContext ctx, PendingDecision decision, GameAction action) =>
         decision.Kind == DecisionKind.KeepDice ? PokerDice.IsLegalKeep(action) : base.IsLegal(ctx, decision, action);
@@ -288,6 +306,11 @@ public sealed class ShowdownStep : Step
         if (decision.Kind == DecisionKind.RespondToShowdown)
         {
             Plays = action is PlayShowdown;
+            return;
+        }
+        if (decision.Kind == DecisionKind.CallShowdown)
+        {
+            Confirmed = action is CallShowdown ? true : null;
             return;
         }
         if (decision.PlayerId == ChallengerId && !ChallengerDone)

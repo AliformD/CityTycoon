@@ -44,10 +44,15 @@ public sealed record GameStats(
     // Phase 4 numbers: Momentum and landmarks.
     public int Nudges { get; init; }
     public int PrecisionRolls { get; init; }
+    /// <summary>Dice Poker hands played at the Casino, and how many had the player's own money on them too (decision #164).</summary>
+    public int CasinoHands { get; init; }
     public int CasinoBets { get; init; }
-    /// <summary>What players won (positive) or lost (negative) at High/Low in total.</summary>
+    /// <summary>What players won (positive) or lost (negative) at the Casino in total, free chips included.</summary>
     public int CasinoNet { get; init; }
-    public int Duels { get; init; }
+    /// <summary>What players' own money on Casino hands won or lost, leaving out what the free chip alone would have paid.</summary>
+    public int CasinoStakeNet { get; init; }
+    public int Showdowns { get; init; }
+    public int ShowdownFolds { get; init; }
     public int InsuranceBought { get; init; }
 
     // Phase 5 numbers: cards.
@@ -310,9 +315,12 @@ public static class SimulationRunner
             TradesCompleted = log.OfType<TradeCompleted>().Count(),
             Nudges = log.OfType<Nudged>().Count(),
             PrecisionRolls = log.OfType<PrecisionRolled>().Count(),
-            CasinoBets = log.OfType<CasinoHighLow>().Count(),
-            CasinoNet = log.OfType<CasinoHighLow>().Sum(c => c.Net),
-            Duels = log.OfType<DuelWon>().Count(),
+            CasinoHands = log.OfType<CasinoHandPaid>().Count(),
+            CasinoBets = log.OfType<CasinoHandPaid>().Count(c => c.Stake > 0),
+            CasinoNet = log.OfType<CasinoHandPaid>().Sum(c => c.Net),
+            CasinoStakeNet = log.OfType<CasinoHandPaid>().Sum(c => c.Net - c.Chip * (c.Net + c.Stake) / Math.Max(1, c.Chip + c.Stake)),
+            Showdowns = log.OfType<ShowdownCalled>().Count(),
+            ShowdownFolds = log.OfType<ShowdownFolded>().Count(),
             InsuranceBought = log.OfType<InsuranceBought>().Count(),
             CardsPlayed = log.OfType<CardPlayed>().Count(),
             CardsCancelled = log.OfType<CardCancelled>().Count(),

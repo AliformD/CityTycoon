@@ -92,6 +92,7 @@ public static class EventDescriber
             ShowdownCalled s => $"{Name(s.ChallengerId)} calls {Name(s.OpponentId)} to a ${s.Stake} Showdown with {DicePoker.Describe(s.Hand)}.",
             ShowdownFolded f => $"{Name(f.OpponentId)} folded and paid {Name(f.ChallengerId)} ${f.Amount}.",
             ShowdownWon w => $"{Name(w.WinnerId)}'s {DicePoker.Describe(w.WinnerHand)} beats {DicePoker.Describe(w.LoserHand)}: {Name(w.WinnerId)} takes ${w.Stake} from {Name(w.LoserId)}.",
+            ShowdownCalledOff o => $"{Name(o.ChallengerId)} decided not to call {Name(o.OpponentId)} to a Showdown after all.",
             ShowdownTied t => $"The Showdown is an exact tie ({DicePoker.Describe(t.Hand)}), so nobody pays.",
             StadiumChosen s => $"{Name(s.PlayerId)} filled the Stadium: {GroupName(s.GroupId)} rent is doubled until their next turn.",
             StadiumEnded s => $"The Stadium boost on {GroupName(s.GroupId)} is over.",

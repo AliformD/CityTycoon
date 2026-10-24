@@ -63,6 +63,7 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(ShowdownFolded), nameof(ShowdownFolded))]
 [JsonDerivedType(typeof(ShowdownWon), nameof(ShowdownWon))]
 [JsonDerivedType(typeof(ShowdownTied), nameof(ShowdownTied))]
+[JsonDerivedType(typeof(ShowdownCalledOff), nameof(ShowdownCalledOff))]
 [JsonDerivedType(typeof(StadiumChosen), nameof(StadiumChosen))]
 [JsonDerivedType(typeof(StadiumEnded), nameof(StadiumEnded))]
 [JsonDerivedType(typeof(OpportunityDrawn), nameof(OpportunityDrawn))]
@@ -259,6 +260,9 @@ public sealed record ShowdownFolded(int ChallengerId, int OpponentId, int Amount
 
 /// <summary>A Showdown was played out, and the better hand took <paramref name="Stake"/> from the other player.</summary>
 public sealed record ShowdownWon(int WinnerId, int LoserId, int Stake, PokerHand WinnerHand, PokerHand LoserHand) : GameEvent;
+
+/// <summary>After rolling a hand with the Showdown card, the challenger decided not to go ahead.</summary>
+public sealed record ShowdownCalledOff(int ChallengerId, int OpponentId) : GameEvent;
 
 /// <summary>A Showdown ended in an exact tie, so nobody paid.</summary>
 public sealed record ShowdownTied(int ChallengerId, int OpponentId, PokerHand Hand) : GameEvent;

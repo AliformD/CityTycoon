@@ -327,7 +327,10 @@ public sealed class Playback(SettingsService settings, SoundService sounds, Game
         TileRevealed or TileRevealedByCouncil or TilePeeked => ("gov", "", null, false, "card"),
         MomentumGained or PrecisionRolled or Nudged or Detoured => ("star", "", null, false, ""),
         SentToHospital or InsuranceBought or InsuranceUsed or RecoverySkipped or HospitalShrugged => ("medic", "", null, false, ""),
-        CasinoHighLow or CasinoCoinFlip or CasinoRerolled or MoveRerolled or DuelChallenged or DuelDeclined or DuelRolled or DuelWon or LotteryRolled or LotteryWon => ("dice", "", null, false, "dice"),
+        CasinoHighLow or CasinoCoinFlip or CasinoRerolled or MoveRerolled or DuelChallenged or DuelDeclined or DuelRolled or DuelWon or LotteryRolled or LotteryWon
+            or PokerDiceRolled or ShowdownCalled or ShowdownCalledOff or ShowdownTied => ("dice", "", null, false, "dice"),
+        CasinoHandPaid p => ("dice", p.Net > 0 ? "good" : p.Net < 0 ? "bad" : "", null, false, p.Net > 0 ? "coin-in" : "dice"),
+        ShowdownFolded or ShowdownWon => ("dice", "", null, false, "coin-in"),
         StadiumChosen or StadiumEnded => ("stadium", "", null, false, ""),
         RoadWorkStarted or RoadWorkCleared => ("cone", "", null, false, ""),
         RentBoostStarted or RentBoostEnded => ("party", "", null, false, ""),
@@ -391,6 +394,9 @@ public sealed class Playback(SettingsService settings, SoundService sounds, Game
             case CasinoCoinFlip f: yield return (f.PlayerId, f.Net); break;
             case CasinoHighLow c when c.Net != 0: yield return (c.PlayerId, c.Net); break;
             case DuelWon d: yield return (d.WinnerId, d.Stake); yield return (d.LoserId, -d.Stake); break;
+            case CasinoHandPaid c when c.Net != 0: yield return (c.PlayerId, c.Net); break;
+            case ShowdownFolded f: yield return (f.ChallengerId, f.Amount); yield return (f.OpponentId, -f.Amount); break;
+            case ShowdownWon w: yield return (w.WinnerId, w.Stake); yield return (w.LoserId, -w.Stake); break;
             case CashFromBank c: yield return (c.PlayerId, c.Amount); break;
             case CashToBank c: yield return (c.PlayerId, -c.Amount); break;
             case CardPaymentMade p:

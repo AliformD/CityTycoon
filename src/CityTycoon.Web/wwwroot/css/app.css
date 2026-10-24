@@ -657,7 +657,22 @@ button.primary small { color: inherit; }
 .buttons.groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); }
 .group-choice { display: flex; flex-direction: column; align-items: stretch; gap: 0.25rem; padding: 0.45rem; text-align: left; }
 .group-choice .band { height: 0.7rem; border-radius: 4px; }
-.duel-setup { margin: 0.6rem 0; border: 2px solid var(--soft-line); border-radius: 12px; }
+/* The Casino: Dice Poker (decision #164). Tap a die to keep it; kept dice are lifted and outlined. */
+.poker-dice { display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 0.4rem 0 0.7rem; }
+.poker-dice.small { display: inline-flex; gap: 0.3rem; margin: 0; vertical-align: middle; }
+.poker-dice.small .die { width: 2.1rem; padding: 4px; border-width: 2px; box-shadow: 0 2px 0 #2B2D42; }
+.poker-die { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.35rem 0.45rem 0.3rem; background: var(--panel-2); }
+.poker-die .die { width: 3.2rem; }
+.poker-die small { font-weight: 700; color: var(--muted); }
+.poker-die.kept { background: var(--highlight); transform: translateY(-4px); }
+.poker-die.kept small { color: var(--text); }
+.hand-to-beat { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin: 0.3rem 0 0.6rem; }
+.pay-table { border-collapse: collapse; margin: 0.4rem 0 0.8rem; font-size: 0.95rem; }
+.pay-table caption { text-align: left; font-weight: 700; color: var(--muted); padding-bottom: 0.2rem; }
+.pay-table th, .pay-table td { padding: 0.15rem 0.7rem 0.15rem 0; text-align: left; }
+.pay-table td:last-child { text-align: right; font-weight: 700; }
+.pay-table tr.current { background: var(--highlight); color: #2B2D42; }
+.pay-table tr.current th { padding-left: 0.3rem; }
 
 /* ---------- Cards ---------- */
 

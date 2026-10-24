@@ -81,10 +81,11 @@ public partial class EasyBot : IPlayerController
             // Insurance only when there's plenty of spare cash.
             // (A free one, for the Medic, is always worth taking: it still covers a Fire!.)
             DecisionKind.HospitalVisit => view.Me.InsuredMarkerCost == 0 || view.Me.Cash - view.Me.InsuredMarkerCost >= Reserve(view) * 2 ? new BuyInsurance() : new NoThanks(),
-            // The Casino loses money on average, so bots only bet when desperate.
-            DecisionKind.CasinoBet => CasinoChoice(view, decision),
-            // A duel is a coin flip: fine for pocket change only.
-            DecisionKind.RespondToDuel => decision.Duel!.Stake <= view.Me.Cash / 20 ? new AcceptDuel() : new DeclineDuel(),
+            // Dice Poker at the Casino (decision #164): see EasyBot.Casino.cs.
+            DecisionKind.CasinoBet => CasinoStake(view, decision),
+            DecisionKind.KeepDice => KeepDiceChoice(view, decision),
+            DecisionKind.CallShowdown => ShowdownCall(view, decision, legalActions),
+            DecisionKind.RespondToShowdown => ShowdownAnswer(view, decision),
             DecisionKind.ChooseStadiumGroup => new PickStadiumGroup(BestStadiumGroup(view)),
             // A card is usually worth more than one token, while there's room in the hand.
             DecisionKind.CityParkChoice => view.MyHand.Count < view.Me.HandLimit ? new DrawOpportunity() : new TakeMomentum(),
@@ -97,8 +98,6 @@ public partial class EasyBot : IPlayerController
             DecisionKind.TransitRide => new NoThanks(),
             // "AI players pick randomly from what's left" (Section 5).
             DecisionKind.ChooseCharacter => legalActions[rng.NextInt(legalActions.Count)],
-            // A reroll is only offered when the roll is bad, so always take it.
-            DecisionKind.ChooseReroll => new RerollDice(),
             DecisionKind.RerollMove => ChooseMoveReroll(view, decision, legalActions),
             DecisionKind.ReverseCouncilVote => ReverseCouncilVote(view, decision),
             DecisionKind.KeepCard => new KeepCard(decision.Cards!.MaxBy(CardValue)!),
@@ -598,19 +597,7 @@ public partial class EasyBot : IPlayerController
         return best.Action != null && now < best.Average - RerollMargin ? best.Action : new NoThanks();
     }
 
-    // ----- The Casino (decision #153) -----
-
-    /// <summary>
-    /// High/Low loses a little on average, so a bot only bets when it is desperate: far behind with the
-    /// end in sight, a gamble is its best hope of catching up. It bets a third of its cash.
-    /// </summary>
-    private GameAction CasinoChoice(PlayerView view, PendingDecision decision)
-    {
-        if (!IsDesperate(view))
-            return new NoThanks();
-        int bet = Math.Min(decision.MaxBet, view.Me.Cash / 3) / 10 * 10;
-        return bet >= 10 ? new BetHighLow(bet, High: true) : new NoThanks();
-    }
+    // ----- Desperate times -----
 
     /// <summary>True late in the game (the last 10 rounds of a Timed game, or from round 30 in Classic) when the bot is worth under 60% of the richest opponent.</summary>
     protected static bool IsDesperate(PlayerView view)
@@ -646,6 +633,7 @@ public partial class EasyBot : IPlayerController
             SpaceKind.Tax => -(space.Id == "income-tax" ? content.Rules.IncomeTax : content.Rules.LuxuryTax),
             SpaceKind.GoToJail => -100,
             SpaceKind.CityPark => TokenValue,
+            SpaceKind.Landmark when space.Id == "casino" => CasinoLandingValue(view),
             SpaceKind.GovernmentTile => TileLandingScore(view, space),
             _ => 0,
         };
@@ -716,6 +704,7 @@ public partial class EasyBot : IPlayerController
         "PayPercentOfCash" => 5,
         "Detour" => 4,
         "ConstructionPermit" => 4,
+        "Showdown" => 3,
         "PeekTile" => 2,
         _ => 1,
     };
@@ -756,6 +745,14 @@ public partial class EasyBot : IPlayerController
             && legalActions.OfType<Build>().Any(b => NextBuildCost(view, b.PropertyId) * 3 <= view.Me.Cash - Reserve(view)))
         {
             return permit;
+        }
+
+        // A Showdown card costs nothing to try: the bot rolls its hand first and only goes ahead if it is good enough.
+        var showdowns = plays.Where(p => content.Card(p.CardId).EffectType == "Showdown" && p.TargetPlayerId != null).ToList();
+        if (showdowns.MaxBy(p => view.Player(p.TargetPlayerId!.Value).NetWorth) is PlayCard showdown
+            && view.Player(showdown.TargetPlayerId!.Value).Cash >= content.Rules.ShowdownStake && view.Me.Cash >= content.Rules.ShowdownStake)
+        {
+            return showdown;
         }
 
         return Find("PeekTile");

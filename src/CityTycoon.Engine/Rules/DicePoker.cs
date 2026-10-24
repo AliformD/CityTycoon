@@ -56,15 +56,17 @@ public static class DicePoker
         dice.GroupBy(d => d).OrderByDescending(g => g.Count()).ThenByDescending(g => g.Key).Select(g => g.Key).ToArray();
 
     /// <summary>How much this hand pays back for every $100 riding on it (the stake included). 0 loses it all.</summary>
-    public static int PayPercent(RulesConfig rules, PokerHand hand) => hand switch
+    public static int PayPercent(RulesConfig rules, PokerHand hand) => PayPercent(rules.CasinoPays, hand);
+
+    public static int PayPercent(CasinoPayTable pays, PokerHand hand) => hand switch
     {
-        PokerHand.FiveOfAKind => rules.CasinoPays.FiveOfAKind,
-        PokerHand.FourOfAKind => rules.CasinoPays.FourOfAKind,
-        PokerHand.FullHouse => rules.CasinoPays.FullHouse,
-        PokerHand.Straight => rules.CasinoPays.Straight,
-        PokerHand.ThreeOfAKind => rules.CasinoPays.ThreeOfAKind,
-        PokerHand.TwoPair => rules.CasinoPays.TwoPair,
-        PokerHand.Pair => rules.CasinoPays.Pair,
+        PokerHand.FiveOfAKind => pays.FiveOfAKind,
+        PokerHand.FourOfAKind => pays.FourOfAKind,
+        PokerHand.FullHouse => pays.FullHouse,
+        PokerHand.Straight => pays.Straight,
+        PokerHand.ThreeOfAKind => pays.ThreeOfAKind,
+        PokerHand.TwoPair => pays.TwoPair,
+        PokerHand.Pair => pays.Pair,
         _ => 0,
     };
 

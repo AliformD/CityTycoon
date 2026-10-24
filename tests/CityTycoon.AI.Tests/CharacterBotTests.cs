@@ -73,15 +73,6 @@ public class CharacterBotTests
     }
 
     [Fact]
-    public async Task EasyBot_RerollsALosingRoll()
-    {
-        var engine = GameEngine.NewGame(new GameSetup { Players = [new("A"), new("B")], Seed = 3 });
-        var action = await new EasyBot(1).DecideAsync(engine.GetView(0),
-            new PendingDecision(0, DecisionKind.ChooseReroll, ""), [new RerollDice(), new NoThanks()]);
-        Assert.IsType<RerollDice>(action);
-    }
-
-    [Fact]
     public async Task EasyBot_InAnOpenAuction_RaisesOneStepAtATime()
     {
         var engine = GameEngine.NewGame(new GameSetup { Players = [new("A"), new("B")], Seed = 3 });

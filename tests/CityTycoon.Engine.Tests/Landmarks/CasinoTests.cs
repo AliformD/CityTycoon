@@ -278,12 +278,32 @@ public class CasinoTests
 
         game.Dice.Add(6, 6, 6);
         game.Do(0, new KeepDice([0, 1]));
+        Assert.Equal(DecisionKind.CallShowdown, game.DecisionFor(0)!.Kind);   // go ahead, now the hand is known?
+        game.Do(0, new CallShowdown(1));
         var ask = game.DecisionFor(1)!;
         Assert.Equal(DecisionKind.RespondToShowdown, ask.Kind);
         Assert.Equal([6, 6, 6, 6, 6], ask.Showdown!.ChallengerDice);
 
         game.Do(1, new FoldShowdown());
         Assert.Equal(1525, game.Player(0).Cash);
+    }
+
+    [Fact]
+    public void WithTheShowdownCard_YouMayCallItOff_AfterSeeingYourHand()
+    {
+        var game = new TestGame(2);
+        game.GiveCard(0, "dice-duel");
+        game.Dice.Add(1, 2, 3, 4, 6);
+        game.Do(0, new PlayCard("dice-duel", TargetPlayerId: 1));
+        game.Dice.Add(6);
+        game.Do(0, new KeepDice([0, 1, 2, 3]));
+        Assert.False(game.Engine.Submit(0, new CallShowdown(1) with { OpponentId = 0 }).Accepted);
+        game.Do(0, new NoThanks());
+
+        Assert.Contains(game.State.Log, e => e is ShowdownCalledOff);
+        Assert.Null(game.DecisionFor(1));
+        Assert.DoesNotContain("dice-duel", game.Player(0).Hand);   // the card is used up
+        Assert.Equal(1500, game.Player(0).Cash);
     }
 
     // ----- Scoring hands -----

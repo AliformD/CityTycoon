@@ -234,6 +234,14 @@ static void AddPerkReport(List<string> lines, List<GameStats> finished, SimOptio
     }
     lines.Add($"Perks and bonuses per game: {finished.Average(r => r.PerkPayments):0.0} perk payments, "
         + $"{finished.Average(r => r.ExpressLines):0.00} Express Line jumps, {finished.Average(r => r.HostileTakeovers):0.00} Hostile Takeovers");
+    int takeovers = finished.Sum(r => r.HostileTakeovers);
+    if (takeovers > 0)
+    {
+        int buybacks = finished.Sum(r => r.TakeoverBuybacks), sales = finished.Sum(r => r.TakeoverSales);
+        lines.Add($"Hostile Takeover results: {takeovers} used, {finished.Sum(r => r.TakeoverNoBids)} nobody bid, "
+            + $"{buybacks} owner bought it back (avg ${(buybacks == 0 ? 0 : finished.Sum(r => r.TakeoverBuybackMoney) / buybacks)}), "
+            + $"{sales} sold (avg ${(sales == 0 ? 0 : finished.Sum(r => r.TakeoverSaleMoney) / sales)})");
+    }
     int sealedAuctions = finished.Sum(r => r.SealedAuctions);
     lines.Add($"Auctions per game: {finished.Average(r => r.SealedAuctions):0.0} sealed, {finished.Average(r => r.OpenAuctions):0.0} open. "
         + $"Sealed auctions with a tied top bid: {(sealedAuctions == 0 ? 0 : (double)finished.Sum(r => r.TiedSealedAuctions) / sealedAuctions):P1}. "

@@ -40,6 +40,10 @@
             Minimum bid <strong>@UiHelpers.Money(Request.Decision.MinBid)</strong>.
             You have <strong>@UiHelpers.Money(Request.View.Me.Cash)</strong>.
         </p>
+        @if (Request.Decision.MustBid)
+        {
+            <p class="hint">You started this with Hostile Takeover, so you must bid at least the minimum.</p>
+        }
     }
 
     @if (CanBid)
@@ -92,7 +96,10 @@
         {
             <button class="big primary" disabled="@(Problem != null)" @onclick="() => OnAnswer.InvokeAsync(new PlaceBid(bid, downPayment))">@(Request.Decision.OpenAuction ? "Raise to" : "Bid") @UiHelpers.Money(bid)@(downPayment ? " (down payment)" : "")</button>
         }
-        <button class="big" @onclick="() => OnAnswer.InvokeAsync(new PassBid())">@(Request.Decision.OpenAuction ? "Drop out" : "Pass")</button>
+        @if (!Request.Decision.MustBid)
+        {
+            <button class="big" @onclick="() => OnAnswer.InvokeAsync(new PassBid())">@(Request.Decision.OpenAuction ? "Drop out" : "Pass")</button>
+        }
     </div>
 
     @* The property's details last: the same card shows in the side panel when you click a space. *@

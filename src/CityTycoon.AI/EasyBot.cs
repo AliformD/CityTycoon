@@ -377,7 +377,8 @@ public partial class EasyBot : IPlayerController
             return new PlaceBid(decision.MinBid, DownPayment: true);
         }
 
-        return new PassBid();
+        // It started a Hostile Takeover, so it must bid (decision #164).
+        return decision.MustBid ? new PlaceBid(decision.MinBid) : new PassBid();
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CityTycoon.Engine.Rules;
 
 namespace CityTycoon.Engine.Events;
 
@@ -56,6 +57,13 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(DuelDeclined), nameof(DuelDeclined))]
 [JsonDerivedType(typeof(DuelRolled), nameof(DuelRolled))]
 [JsonDerivedType(typeof(DuelWon), nameof(DuelWon))]
+[JsonDerivedType(typeof(PokerDiceRolled), nameof(PokerDiceRolled))]
+[JsonDerivedType(typeof(CasinoHandPaid), nameof(CasinoHandPaid))]
+[JsonDerivedType(typeof(ShowdownCalled), nameof(ShowdownCalled))]
+[JsonDerivedType(typeof(ShowdownFolded), nameof(ShowdownFolded))]
+[JsonDerivedType(typeof(ShowdownWon), nameof(ShowdownWon))]
+[JsonDerivedType(typeof(ShowdownTied), nameof(ShowdownTied))]
+[JsonDerivedType(typeof(ShowdownCalledOff), nameof(ShowdownCalledOff))]
 [JsonDerivedType(typeof(StadiumChosen), nameof(StadiumChosen))]
 [JsonDerivedType(typeof(StadiumEnded), nameof(StadiumEnded))]
 [JsonDerivedType(typeof(OpportunityDrawn), nameof(OpportunityDrawn))]
@@ -211,7 +219,10 @@ public sealed record SentToHospital(int PlayerId, string Reason) : GameEvent;
 /// <summary>A Hospital bill was paid. <paramref name="ToId"/> is who got the money: the Medic (decision #153), or null for the bank.</summary>
 public sealed record HospitalBillPaid(int PlayerId, int Amount, int? ToId = null) : GameEvent;
 
-/// <summary>Landing on the Casino flips a coin (decision #153): the player wins or loses a little. <paramref name="Net"/> is plus or minus.</summary>
+// ----- The Casino before Dice Poker (decision #164). Nothing makes these any more;
+// they stay so the log of an older saved game still loads and reads the same. -----
+
+/// <summary>Landing on the Casino flipped a coin (decision #153): the player won or lost a little. <paramref name="Net"/> is plus or minus.</summary>
 public sealed record CasinoCoinFlip(int PlayerId, int Net) : GameEvent;
 
 /// <summary>A High/Low bet at the Casino. <paramref name="Net"/> is what the player won (or lost, if negative).</summary>
@@ -226,6 +237,35 @@ public sealed record DuelDeclined(int ChallengerId, int OpponentId) : GameEvent;
 /// <summary>One round of Dice Duel rolls. Ties roll again, so there can be several.</summary>
 public sealed record DuelRolled(int ChallengerId, int ChallengerTotal, int OpponentId, int OpponentTotal) : GameEvent;
 public sealed record DuelWon(int WinnerId, int LoserId, int Stake) : GameEvent;
+
+// ----- Dice Poker and the Showdown (Section 15.3, decision #164) -----
+
+/// <summary>
+/// Someone rolled Dice Poker dice. <paramref name="Dice"/> is the whole hand afterwards. <paramref name="Kept"/> is null
+/// for the first roll of 5; for the reroll it lists the positions that were kept (the others were rolled again).
+/// </summary>
+public sealed record PokerDiceRolled(int PlayerId, IReadOnlyList<int> Dice, IReadOnlyList<int>? Kept = null) : GameEvent;
+
+/// <summary>
+/// A Casino hand was paid. <paramref name="Chip"/> is the house's free chip and <paramref name="Stake"/> the player's own money
+/// on it. <paramref name="Net"/> is how the player's cash changed: the payout less the stake (negative when the hand lost the stake).
+/// </summary>
+public sealed record CasinoHandPaid(int PlayerId, IReadOnlyList<int> Dice, PokerHand Hand, int Chip, int Stake, int Net) : GameEvent;
+
+/// <summary>A Showdown was called: <paramref name="OpponentId"/> must beat this hand, or fold.</summary>
+public sealed record ShowdownCalled(int ChallengerId, int OpponentId, int Stake, IReadOnlyList<int> Dice, PokerHand Hand) : GameEvent;
+
+/// <summary>The challenged player folded and paid <paramref name="Amount"/> to the challenger.</summary>
+public sealed record ShowdownFolded(int ChallengerId, int OpponentId, int Amount) : GameEvent;
+
+/// <summary>A Showdown was played out, and the better hand took <paramref name="Stake"/> from the other player.</summary>
+public sealed record ShowdownWon(int WinnerId, int LoserId, int Stake, PokerHand WinnerHand, PokerHand LoserHand) : GameEvent;
+
+/// <summary>After rolling a hand with the Showdown card, the challenger decided not to go ahead.</summary>
+public sealed record ShowdownCalledOff(int ChallengerId, int OpponentId) : GameEvent;
+
+/// <summary>A Showdown ended in an exact tie, so nobody paid.</summary>
+public sealed record ShowdownTied(int ChallengerId, int OpponentId, PokerHand Hand) : GameEvent;
 
 public sealed record StadiumChosen(int PlayerId, string GroupId) : GameEvent;
 public sealed record StadiumEnded(int PlayerId, string GroupId) : GameEvent;
@@ -334,7 +374,7 @@ public sealed record PerkIncome(int PlayerId, int Amount, string Perk) : GameEve
 /// <summary>A perk made one player pay another (Utility Bill, Neighborhood Watch, Power Grid).</summary>
 public sealed record PerkPaid(int FromId, int ToId, int Amount, string Perk) : GameEvent;
 
-/// <summary>The Hustler used their one reroll. <paramref name="What"/> says what was rerolled.</summary>
+/// <summary>The Hustler used their Casino reroll (before decision #153; kept so old saves load). <paramref name="What"/> says what was rerolled.</summary>
 public sealed record CasinoRerolled(int PlayerId, string What) : GameEvent;
 
 /// <summary>

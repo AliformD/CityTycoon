@@ -13,7 +13,7 @@ public class VoteContractTests
     /// <summary>Ana (seat 0) is the Politician; Ben (1) and Cal (2) may bid, in that order.</summary>
     private static TestGame NewGame(params string[] characters) =>
         new(3, characters: characters.Length > 0 ? characters : ["politician", "lawyer", "mogul"],
-            content: TestContent.With(new() { ["startingCash"] = 1500, ["goSalary"] = 200, ["casinoLandingFlip"] = 0, ["voteContracts"] = true }));
+            content: TestContent.With(new() { ["startingCash"] = 1500, ["goSalary"] = 200, ["voteContracts"] = true }));
 
     private static void Pass(TestGame game, int playerId) => Assert.True(game.Do(playerId, new NoThanks()).Accepted);
 

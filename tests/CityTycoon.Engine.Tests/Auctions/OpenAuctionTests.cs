@@ -169,7 +169,7 @@ public class OpenAuctionTests
     public void WithTheHouseRule_AnOpenBid_CanBeADownPayment()
     {
         var content = TestContent.With(new() { ["startingCash"] = 1500, ["goSalary"] = 200, ["catchUpBonus"] = 100,
-            ["casinoLandingFlip"] = 0, ["voteContracts"] = false, ["openAuctionDownPayments"] = true });
+            ["voteContracts"] = false, ["openAuctionDownPayments"] = true });
         var game = new TestGame(players: 3, content: content);
         game.Give(2, "market-street");
         game.RollOnto(0, "baker-street");

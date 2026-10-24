@@ -817,7 +817,7 @@ public partial class EasyBot
             "Detour" => 30,
             "ArrangeEvents" => 25,
             "PeekTile" => 15,
-            "DiceDuel" => 10,
+            "Showdown" => 20,
             _ => 20,
         };
     }

@@ -128,7 +128,7 @@ Every rule that can say "no" has a `WhyCant...` method that returns a plain-Engl
 
 A turn now has a few more stages in `TurnStep`: choose how to move (normal roll or Precision Roll), keep two of three dice if it was a Precision Roll, then choose a Nudge (−2 to +2, or 0 for no Nudge), then move. Each stage is just another question the step asks and waits on, the same pattern as everything else.
 
-Each landmark that asks a question is its own small step in `Steps/LandmarkSteps.cs` (`HospitalVisitStep`, `CasinoStep`, `StadiumStep`). `ResolveSpaceStep` pushes the right one onto the stack when you land. A Dice Duel is the one place where the Casino asks a **different** player a question (the opponent), and that works because a `PendingDecision` always names who must answer.
+Each landmark that asks a question is its own small step in `Steps/LandmarkSteps.cs` (`HospitalVisitStep`, `CasinoStep`, `StadiumStep`). `ResolveSpaceStep` pushes the right one onto the stack when you land. The Casino plays Dice Poker (decision #164): `Rules/DicePoker.cs` scores and compares hands, `CasinoStep` asks for a stake, rolls, asks which dice to keep and pays the table, and a Showdown (`ShowdownStep`, also started by the Showdown card) asks a **different** player a question (fold or play, then their own keep). That works because a `PendingDecision` always names who must answer.
 
 Rent changes from the Stadium (×2) and Jail (×½) live in `RentCalculator`, so every place that charges rent gets them for free.
 
@@ -145,7 +145,7 @@ So adding a card is usually just JSON. Audit and a made-up "Tax Inspector" (20% 
 | `Cards/CardRules.cs` | Decks, shuffling, drawing, discarding, and which cards can be played right now. |
 | `Cards/ReactionWindow.cs` | A Reaction moment (Rent Strike, Insurance, Detour). Only players holding a matching card are asked, one at a time. |
 | `Steps/CardPlayStep.cs` | Plays one card: first it opens an Insurance window if the card hurts someone, then it applies the effect. |
-| `Steps/CardSteps.cs` | The questions cards ask: City Park, the Mall, Fire!, Tip-Off, the Dice Duel and the hand limit. |
+| `Steps/CardSteps.cs` | The questions cards ask: City Park, the Mall, Fire!, Tip-Off and the hand limit. |
 
 Some effects need to change the thing they react to. Rent Strike halves a rent payment that's already being asked for, and Detour changes a move that's about to happen (it also undoes the mover's Nudge, so its numbers are counted from the dice roll). The effect gets a `Parent`: the step it was played under (the `PaymentStep` or the `TurnStep`), and changes that.
 
@@ -185,7 +185,7 @@ Abilities you can use only so often keep a plain flag on `PlayerState`, next to 
 
 `RuleModifiers` is still the only place the rest of the engine asks questions ("how many loans may this player hold?"). Because it is asked all the time, it keeps its answer until something changes: who owns what, which tiles are revealed, or who is bankrupt (`ModifierCache`).
 
-New things the player is asked, each a step on the resolution stack: `CharacterPickStep` (reverse turn order), `PeekTileStep` (City Planner), `KeepOneCardStep` (Pink), plus the Hustler's reroll question inside the Casino and Dice Duel steps. Express Line and Hostile Takeover are extra choices at the start of a turn (`TurnStep.MoveChoices`).
+New things the player is asked, each a step on the resolution stack: `CharacterPickStep` (reverse turn order), `PeekTileStep` (City Planner), `KeepOneCardStep` (Pink), plus the Hustler's movement reroll question in `TurnStep`. Express Line and Hostile Takeover are extra choices at the start of a turn (`TurnStep.MoveChoices`).
 
 The Sim (`--characters none|random`) prints a win rate for each character and flags any that wins more than 5 points above fair share.
 
@@ -219,7 +219,7 @@ The Web project draws the game and passes clicks to the engine. It never changes
 | `Services/HumanUiController.cs` | The controller for a person. |
 | `Components/PropertyActions.razor` | Build, sell, mortgage and unmortgage buttons for one of your properties (Phase 3). |
 | `Components/TradeBuilder.razor` | The "offer a trade" form (Phase 3). With `CounterTo` set it builds a counter-offer instead, starting from the offer being answered. |
-| `Components/CasinoPanel.razor` | The Casino: bet High/Low or challenge someone to a Dice Duel (Phase 4). |
+| `Components/CasinoPanel.razor` | The Casino (decision #164): add money to the free chip, tap dice to keep, call a Showdown, or fold or play one. `PayTable.razor` and `PokerDice.razor` draw the pay table and a row of 5 dice. |
 | `Components/HandPanel.razor`, `CardView.razor` | Your Opportunity cards with their Play buttons, and how one card looks (Phase 5). |
 
 While you choose a Nudge or Precision dice, `Play.razor` works out every space you could land on and gives them to the board, which outlines them. Pointing at a button outlines its space more strongly, so you can see where you'd land before you click.

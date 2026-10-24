@@ -47,10 +47,11 @@
       "timing": "ownTurn",
       "effect": { "type": "GetOutOfJailFree" } },
 
-    { "id": "dice-duel", "deck": "opportunity", "polarity": "negative", "name": "Dice Duel", "copies": 1,
-      "text": "Challenge any player to a Dice Duel from anywhere on the board.",
+    // The id is the old Dice Duel card's, so a saved game with it in someone's hand still loads (decision #164).
+    { "id": "dice-duel", "deck": "opportunity", "polarity": "negative", "name": "Showdown", "copies": 1,
+      "text": "Call any player to a Dice Poker Showdown from anywhere on the board. Roll your hand first; they must beat it or fold.",
       "timing": "ownTurn", "target": "opponent",
-      "effect": { "type": "DiceDuel" } },
+      "effect": { "type": "Showdown" } },
 
     { "id": "tip-off", "deck": "opportunity", "polarity": "helpful", "name": "Tip-Off", "copies": 1,
       "text": "Look at the top 3 Event cards and put them back in any order.",

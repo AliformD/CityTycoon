@@ -359,7 +359,7 @@ public sealed class TurnStep : Step
             case RerollDice reroll:
                 // The Hustler rolls one die of this roll again (decisions #152 and #153). It's used up until the next GO.
                 player.MoveRerollUsed = true;
-                RerolledDie = reroll.Die ?? 0;
+                RerolledDie = reroll.Die;
                 ctx.Emit(new MoveRerolled(PlayerId, Die1, Die2, RerolledDie));
                 Stage = TurnStage.RerollOne;
                 break;

@@ -113,13 +113,13 @@ public sealed class RulesConfig
     // Section 7.3 and 15.3: Precision Roll and landmarks.
     /// <summary>How many dice a Precision Roll rolls (you keep 2).</summary>
     public required int PrecisionRollDice { get; init; }
-    /// <summary>High/Low at the Casino: "Low" is 2 up to this total, "High" is this total up to 12. Anything between loses.</summary>
-    public required int CasinoLowMax { get; init; }
-    public required int CasinoHighMin { get; init; }
-    /// <summary>A right High/Low call with doubles wins this many times the bet.</summary>
-    public required int CasinoDoublesPayout { get; init; }
-    /// <summary>Landing on the Casino flips a coin: win or lose this much (decision #153). 0 turns it off.</summary>
-    public int CasinoLandingFlip { get; init; }
+    /// <summary>Dice Poker at the Casino (decision #164): the free chip the house gives everyone who lands there.</summary>
+    public required int CasinoFreeChip { get; init; }
+    /// <summary>What each Dice Poker hand pays back for every $100 riding on it (the stake included).</summary>
+    public required CasinoPayTable CasinoPays { get; init; }
+    /// <summary>A Showdown (decision #164): what each player puts in, and what the challenged player pays to fold instead.</summary>
+    public required int ShowdownStake { get; init; }
+    public required int ShowdownFoldPayment { get; init; }
     /// <summary>House rule: allow down payments in open auctions too. Off by default, so only silent auctions take them (decision #163).</summary>
     public bool OpenAuctionDownPayments { get; init; }
     /// <summary>
@@ -154,4 +154,19 @@ public sealed record LoanTerms(int Amount, int Repay)
 {
     /// <summary>What the loan costs on top of the money borrowed.</summary>
     public int Interest => Repay - Amount;
+}
+
+/// <summary>
+/// The Dice Poker pay table, as dollars paid back for every $100 on the hand (300 means 3 times).
+/// Hands left out pay nothing.
+/// </summary>
+public sealed record CasinoPayTable
+{
+    public int FiveOfAKind { get; init; }
+    public int FourOfAKind { get; init; }
+    public int FullHouse { get; init; }
+    public int Straight { get; init; }
+    public int ThreeOfAKind { get; init; }
+    public int TwoPair { get; init; }
+    public int Pair { get; init; }
 }

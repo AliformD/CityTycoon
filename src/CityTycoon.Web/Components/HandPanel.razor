@@ -12,23 +12,11 @@
             {
                 var copies = view.MyHand.Count(c => c == cardId);
                 var cardPlays = plays.Where(p => p.CardId == cardId).ToList();
-                var effect = Content.Card(cardId).EffectType;
                 <CardView CardId="@cardId" Content="Content">
                     @if (copies > 1) { <span class="copies">×@copies</span> }
                     @if (cardPlays.Count == 0)
                     {
                         <small class="hint">@(Content.Card(cardId).Timing == CardTiming.Reaction ? "You'll be asked when it can be used." : "Can't be played right now.")</small>
-                    }
-                    else if (effect == "DiceDuel")
-                    {
-                        @* A Dice Duel needs a stake as well as an opponent. *@
-                        <label class="stake">Stake $<input type="number" min="1" step="1" @bind="duelStake" @bind:event="oninput" /></label>
-                        @foreach (var play in cardPlays)
-                        {
-                            int max = Math.Min(view.Me.Cash, view.Player(play.TargetPlayerId!.Value).Cash);
-                            var withStake = play with { Number = Math.Clamp(duelStake, 1, max) };
-                            <button class="small" @onclick="() => OnAnswer.InvokeAsync(withStake)">Challenge @view.Player(play.TargetPlayerId!.Value).Name for @UiHelpers.Money(withStake.Number)</button>
-                        }
                     }
                     else if (cardPlays.Count == 1 && cardPlays[0].TargetPlayerId == null && cardPlays[0].TargetSpaceId == null)
                     {
@@ -61,8 +49,6 @@
     [Parameter, EditorRequired] public HumanRequest Request { get; set; } = default!;
     [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
     [Parameter] public EventCallback<GameAction> OnAnswer { get; set; }
-
-    private int duelStake = 50;
 
     private string DistrictName(SpaceInfo space) =>
         Content.Board.Districts.FirstOrDefault(d => d.Id == space.DistrictId)?.Name ?? space.Name;

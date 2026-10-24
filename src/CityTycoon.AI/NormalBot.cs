@@ -20,6 +20,8 @@ public class NormalBot(ulong seed, GameContent? content = null, ulong stream = 1
 {
     protected virtual double WorthScale => 1.0;
 
+    protected override PokerSkill CasinoSkill => PokerSkill.ChaseStraights;
+
     /// <summary>Normal and Hard bots are less cautious than Easy about handing over a color group in a trade.</summary>
     protected override double SetCaution => 1.0;
 

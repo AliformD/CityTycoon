@@ -110,22 +110,9 @@ else if (decision.Kind == DecisionKind.ChooseNudge)
         </div>
     </div>
 }
-else if (decision.Kind == DecisionKind.CasinoBet)
+else if (decision.Kind is DecisionKind.CasinoBet or DecisionKind.KeepDice or DecisionKind.CallShowdown or DecisionKind.RespondToShowdown)
 {
     <CasinoPanel Request="Request" Content="Content" OnAnswer="OnAnswer" />
-}
-else if (decision.Kind == DecisionKind.RespondToDuel && decision.Duel is { } duel)
-{
-    <div class="decision duel">
-        <h2>@view.Me.Name, @view.Player(duel.ChallengerId).Name challenges you to a Dice Duel!</h2>
-        <p>You each roll two dice and the higher total wins <strong>@UiHelpers.Money(duel.Stake)</strong> from the other. Ties roll again.</p>
-        <div class="buttons">
-            @foreach (var action in main)
-            {
-                <button class="big @(action is AcceptDuel ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)">@UiHelpers.ActionLabel(action, view, Content)</button>
-            }
-        </div>
-    </div>
 }
 else if (decision.Kind == DecisionKind.ChooseStadiumGroup)
 {
@@ -271,7 +258,7 @@ else if (decision.Kind == DecisionKind.ChooseCharacter)
         </div>
     </div>
 }
-else if (decision.Kind is DecisionKind.ChooseReroll or DecisionKind.RerollMove)
+else if (decision.Kind == DecisionKind.RerollMove)
 {
     <div class="decision reroll">
         <h2>@view.Me.Name, @AfterName(decision.Prompt)</h2>

@@ -1,0 +1,11 @@
+@* A Dice Poker hand: 5 dice in a row (decision #164). *@
+<span class="poker-dice small" aria-label="@string.Join(", ", Dice)">
+    @foreach (int value in Dice)
+    {
+        <Die Value="value" />
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<int> Dice { get; set; } = [];
+}

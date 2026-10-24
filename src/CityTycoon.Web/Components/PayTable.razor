@@ -1,0 +1,51 @@
+@* The Dice Poker pay table (decision #164): what each hand pays back on the money riding on it. *@
+@using CityTycoon.Engine.Rules
+<table class="pay-table">
+    <caption>Pay table (@UiHelpers.Money(Riding) riding)</caption>
+    <thead>
+        <tr><th scope="col">Hand</th><th scope="col">Pays</th><th scope="col">You get back</th></tr>
+    </thead>
+    <tbody>
+        @foreach (var hand in Hands)
+        {
+            int percent = DicePoker.PayPercent(Content.Rules, hand);
+            <tr class="@(hand == Current ? "current" : "")">
+                <th scope="row">@Name(hand)</th>
+                <td>@Times(percent)</td>
+                <td>@UiHelpers.Money(Riding * percent / 100)</td>
+            </tr>
+        }
+        <tr class="@(Current is PokerHand shown && !Hands.Contains(shown) ? "current" : "")">
+            <th scope="row">Anything else</th><td>nothing</td><td>@UiHelpers.Money(0)</td>
+        </tr>
+    </tbody>
+</table>
+
+@code {
+    [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
+    /// <summary>The free chip plus the player's own money.</summary>
+    [Parameter] public int Riding { get; set; }
+    /// <summary>The hand the dice show now, to highlight its row.</summary>
+    [Parameter] public PokerHand? Current { get; set; }
+
+    // Best first, and only the hands that pay something (two pair and a pair are listed only if rules.json pays them).
+    private IEnumerable<PokerHand> Hands => Enum.GetValues<PokerHand>().Reverse().Where(h => DicePoker.PayPercent(Content.Rules, h) > 0);
+
+    private static string Name(PokerHand hand) => hand switch
+    {
+        PokerHand.FiveOfAKind => "Five of a kind",
+        PokerHand.FourOfAKind => "Four of a kind",
+        PokerHand.FullHouse => "Full house (3 + 2)",
+        PokerHand.Straight => "Straight (1-5 or 2-6)",
+        PokerHand.ThreeOfAKind => "Three of a kind",
+        PokerHand.TwoPair => "Two pair",
+        _ => "A pair",
+    };
+
+    private static string Times(int percent) => percent switch
+    {
+        50 => "half back",
+        100 => "money back",
+        _ => percent % 100 == 0 ? $"{percent / 100}×" : $"{percent / 100.0:0.##}×",
+    };
+}

@@ -278,7 +278,7 @@ else
             SpaceKind.Event => "Event: draw an Event card. It happens straight away, and everyone sees it.",
             SpaceKind.Landmark when space.Id == "mall" => $"The Mall: buy one of the three face-up Opportunity cards ({string.Join(", ", Session.Content.Rules.MallPrices.Select(UiHelpers.Money))}), or sell one of yours for {UiHelpers.Money(Session.Content.Rules.MallSellPrice)}.",
             SpaceKind.Landmark when space.Id == "hospital" => $"Hospital: visitors may buy an Insured marker for {UiHelpers.Money(Session.Content.Rules.InsuredMarkerCost)}. It cancels your next hospital bill.",
-            SpaceKind.Landmark when space.Id == "casino" => "Casino: make one bet. High/Low against the bank, or a Dice Duel against another player.",
+            SpaceKind.Landmark when space.Id == "casino" => "Casino: a free chip for a hand of Dice Poker. Keep the dice you like, reroll the rest once. Then call a richer player to a Showdown, if you dare.",
             SpaceKind.Landmark when space.Id == "stadium" => "Stadium: pick a color group. Its rent doubles until your next turn.",
             _ => $"{space.Name}. ",
         };

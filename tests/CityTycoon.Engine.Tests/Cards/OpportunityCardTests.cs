@@ -290,28 +290,6 @@ public class OpportunityCardTests
     }
 
     [Fact]
-    public void DiceDuelCard_ChallengesFromAnywhere()
-    {
-        var game = new TestGame();
-        game.GiveCard(0, "dice-duel");
-        game.Dice.Add(6, 6, 1, 1);
-        game.Do(0, new PlayCard("dice-duel", TargetPlayerId: 1, Number: 300));
-        Assert.Equal(DecisionKind.RespondToDuel, game.DecisionFor(1)!.Kind);
-        game.Do(1, new AcceptDuel());
-        Assert.Equal(1800, game.Player(0).Cash);
-        Assert.Equal(1200, game.Player(1).Cash);
-    }
-
-    [Fact]
-    public void DiceDuelCard_StakeCantBeMoreThanTheSmallerCashPile()
-    {
-        var game = new TestGame();
-        game.GiveCard(0, "dice-duel");
-        game.Player(1).Cash = 100;
-        Assert.False(game.Engine.Submit(0, new PlayCard("dice-duel", TargetPlayerId: 1, Number: 101)).Accepted);
-    }
-
-    [Fact]
     public void TipOff_RearrangesTheTopEventCards_Secretly()
     {
         var game = new TestGame();

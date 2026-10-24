@@ -1,4 +1,5 @@
 using CityTycoon.Engine.Content;
+using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.Views;
 
 namespace CityTycoon.Engine.Events;
@@ -17,6 +18,7 @@ public static class EventDescriber
         string SpaceAt(int index) => view.Spaces[index].Name;
         string GroupName(string id) => content.Groups[id].Name;
         static string Tokens(int n) => n == 1 ? "1 Momentum token" : $"{n} Momentum tokens";
+        static string Faces(IReadOnlyList<int> dice) => string.Join(" ", dice);
         string Card(string id) => content.Cards.TryGetValue(id, out var c) ? c.Name : id;
         string Tile(string id) => content.GovTile(id).Name;
         string District(string id) => content.Board.Districts.First(d => d.Id == id).Name;
@@ -82,6 +84,16 @@ public static class EventDescriber
             DuelRolled d => $"Duel: {Name(d.ChallengerId)} rolled {d.ChallengerTotal}, {Name(d.OpponentId)} rolled {d.OpponentTotal}"
                 + (d.ChallengerTotal == d.OpponentTotal ? " (a tie, roll again)." : "."),
             DuelWon d => $"{Name(d.WinnerId)} won the duel and takes ${d.Stake} from {Name(d.LoserId)}.",
+            PokerDiceRolled r => r.Kept == null
+                ? $"{Name(r.PlayerId)} rolled {Faces(r.Dice)}: {DicePoker.Describe(DicePoker.Score(r.Dice))}."
+                : $"{Name(r.PlayerId)} kept {(r.Kept.Count == 0 ? "nothing" : Faces(r.Kept.Select(i => r.Dice[i]).ToList()))} and rolled again: {Faces(r.Dice)}, {DicePoker.Describe(DicePoker.Score(r.Dice))}.",
+            CasinoHandPaid p => $"{Name(p.PlayerId)} made {DicePoker.Describe(p.Hand)} at the Casino"
+                + (p.Net > 0 ? $" and won ${p.Net}!" : p.Net < 0 ? $" and lost the ${-p.Net} they put on it." : p.Stake > 0 ? " and got their money back." : ", which pays nothing."),
+            ShowdownCalled s => $"{Name(s.ChallengerId)} calls {Name(s.OpponentId)} to a ${s.Stake} Showdown with {DicePoker.Describe(s.Hand)}.",
+            ShowdownFolded f => $"{Name(f.OpponentId)} folded and paid {Name(f.ChallengerId)} ${f.Amount}.",
+            ShowdownWon w => $"{Name(w.WinnerId)}'s {DicePoker.Describe(w.WinnerHand)} beats {DicePoker.Describe(w.LoserHand)}: {Name(w.WinnerId)} takes ${w.Stake} from {Name(w.LoserId)}.",
+            ShowdownCalledOff o => $"{Name(o.ChallengerId)} decided not to call {Name(o.OpponentId)} to a Showdown after all.",
+            ShowdownTied t => $"The Showdown is an exact tie ({DicePoker.Describe(t.Hand)}), so nobody pays.",
             StadiumChosen s => $"{Name(s.PlayerId)} filled the Stadium: {GroupName(s.GroupId)} rent is doubled until their next turn.",
             StadiumEnded s => $"The Stadium boost on {GroupName(s.GroupId)} is over.",
             OpportunityDrawn o => $"{Name(o.PlayerId)} drew an Opportunity card ({o.Source}).",

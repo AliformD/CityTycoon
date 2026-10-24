@@ -46,10 +46,9 @@ public static class ModifierTypes
         // Characters (Section 5)
         ["BidBonus"] = new(c => new BidBonusModifier(c), NeedsValue: true),
         ["DiceTieBreaker"] = new(c => new DiceTieBreakerModifier(c)),
-        ["CasinoReroll"] = new(c => new CasinoRerollModifier(c)),
         ["MoveReroll"] = new(c => new MoveRerollModifier(c)),
         ["StadiumMultiplier"] = new(c => new StadiumMultiplierModifier(c), NeedsValue: true),
-        ["CasinoWinBonus"] = new(c => new CasinoWinBonusModifier(c), NeedsValue: true),
+        ["CasinoChipBonus"] = new(c => new CasinoChipBonusModifier(c), NeedsValue: true),
         ["NudgeRange"] = new(c => new NudgeRangeModifier(c), NeedsValue: true),
         ["StartingMomentum"] = new(c => new StartingMomentumModifier(c), NeedsValue: true),
         ["FreeBail"] = new(c => new FreeBailModifier(c)),

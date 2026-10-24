@@ -70,7 +70,12 @@ public class HistoryTests
     [Fact]
     public async Task EverySpace_CountsItsLandings()
     {
-        var engine = await PlayAsync(4, 4, smartBots: true); // a game where somebody lands on Income Tax
+        // The first game (from seed 4) where somebody lands on Income Tax, so the tax numbers are checked too.
+        GameEngine engine;
+        ulong seed = 4;
+        do
+            engine = await PlayAsync(seed++, 4, smartBots: true);
+        while (!engine.State.Log.OfType<LandedOn>().Any(l => l.SpaceId == "income-tax"));
         var view = engine.GetView(0);
         foreach (var space in engine.State.Board)
         {

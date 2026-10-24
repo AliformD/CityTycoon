@@ -53,7 +53,7 @@ City Tycoon keeps what makes Monopoly fun: moving around the board, landing on o
 | **Interaction everywhere** | Auctions involve everyone. Cards target other players. City Council votes involve everyone. Some actions happen on other players' turns. |
 | **No stalling, no lockouts** | Jail isn't a safe hiding spot. Houses are unlimited. Timed games end on a clock with a score. |
 | **Every game is different** | Government tiles are hidden, random, and in different spots each game. Characters, zoning, and ordinances shift the strategy. |
-| **Catch-up without punishment** | The player in last place sets the City Council agenda. Lobbying lets trailing players block the leader. (There is no GO hand-out for last place; see decision #143.) |
+| **Catch-up without punishment** | The player in last place sets the City Council agenda. Trailing players can outbid the leader for the Politician's vote. (There is no GO hand-out for last place; see decision #143.) |
 
 ### 1.3 Platform goals
 
@@ -73,7 +73,7 @@ For reference, these are Angel's decisions that replaced parts of the first rule
 4. **No Casino betting limit.** You can bet any amount of cash you have.
 5. **All properties are bought by auction** instead of at a set price. Each property keeps an *assessed value* used for rent, mortgages and scoring (Section 8).
 6. **Government tiles are hidden** (face-down) until a player lands on one. Each side of the board has exactly one, in a random non-corner position that changes every game (Section 12).
-7. **Hotels and skyscrapers are limited** by **zoning** and **permits**, which the players can change through **City Council votes** with paid lobbying and a random outcome (Sections 10–11).
+7. **Hotels and skyscrapers are limited** by **zoning** and **permits**, which the players can change through **City Council votes** with equal votes, money paid to the Politician, and a random outcome (Sections 10–11).
 8. **The card system must support adding many more cards later** (Section 21).
 9. The old "Reserve a property" rule is replaced by **Down Payments** on auction wins (Section 8.5).
 
@@ -168,7 +168,7 @@ Each player picks a **different** character. Each one has a single small ability
 | **The Commuter** | Start the game with 3 Momentum tokens instead of 2. Your token limit is 4 instead of 2, and you can Nudge up to 4 spaces instead of 2. | More control over movement. |
 | **The Lawyer** | You never pay Jail bail (leaving early is free). When you're sent to Jail, you still collect half the GO salary. You can't be targeted by Audit. | Jail still halves your rent. |
 | **The Contractor** | Your building costs are 25% lower. | Stacks with other discounts (Section 9.4). |
-| **The Politician** | Your City Council vote is worth 250 influence instead of 100, and each lobbying dollar adds 2 influence instead of 1. **Fundraising:** when an Event or Opportunity card gives you money, the bank gives you the same amount again. | Stronger voice in zoning. |
+| **The Politician** | **Vote contracts:** only you may lobby, and before each City Council vote the other players bid to pay you to vote their way (Section 11.3). You may take the winning offer: the money is yours, you must vote that way, and each dollar you take or lobby adds 2 influence to your vote. Landing on City Hall fills your Momentum tokens. **Fundraising:** when an Event or Opportunity card gives you money, the bank gives you the same amount again. | The city's power broker. |
 | **The City Planner** | At game start, secretly look at 1 hidden Government tile of your choice. Each time you pass GO, secretly look at 1 more that is still hidden. After each look, you may swap that tile for a random one that isn't in play, before anyone else learns what it was. Never pays Government tile fees. Once per game, after a City Council roll, you may reverse the result. | Information advantage. |
 | **The Medic** | If you're sent to the Hospital, you pay no bill and roll normally on your next turn. Insured markers are free for you. When anyone else pays a Hospital bill or buys an Insured marker, the money goes to you instead of the bank. | Shrugs off bad luck. |
 
@@ -425,7 +425,7 @@ Hotels and skyscrapers each need a permit from a citywide supply. Houses are unl
 
 ## 11. City Council and ordinances
 
-The City Council is how players change zoning and city rules. Money can influence the vote, but the outcome is always partly random. Rich players can push the city their way, and trailing players can pool money to block them.
+The City Council is how players change zoning and city rules. Every vote counts the same. Money can only influence the vote through the Politician, and the outcome is always partly random (decision #162).
 
 ### 11.1 When sessions happen
 
@@ -441,29 +441,29 @@ The City Council is how players change zoning and city rules. Money can influenc
 3. If the chosen card needs a target district, the agenda setter picks it.
 4. If a card can't do anything right now (for example, Rezone Up on a district that's already High-Rise), it can't be picked. If neither card can be picked, draw again.
 
-### 11.3 Voting and lobbying
+### 11.3 Voting and vote contracts
 
 Every player who isn't bankrupt takes part, including players in Jail.
 
-0. **Vote deals** (decision #159, `voteDeals` in rules.json). Before voting, each player with at least $10 may offer one other player cash (in steps of $10) to vote Yes or No. Offers are then answered one at a time, biggest first. A player who takes a deal gets the cash at once and must vote that way (they may still lobby). Each player can be held to only one deal; later offers to them are dropped. Deals are public.
+0. **Vote contracts** (decision #162, `voteContracts` in rules.json). Only when the Politician is playing. Before voting, the other players bid for the Politician's vote, like an open auction. Starting with the player after the Politician and going around, each may offer the Politician cash to vote Yes or No, beating the top offer so far by at least $10 (the first offer is at least $10), or pass. **Passing means you are out** of this bidding. It ends when everyone but the top bidder is out (players who can't afford to beat the top offer are out too). Offers are public. Only the top offer counts: the Politician may **take it** (the money moves at once, and they must vote that way) or **turn it down** (no money moves, and they vote freely). If nobody offers, it is a plain vote. Other players can never pay each other for votes.
 1. Each player **secretly** chooses:
    - A vote: **Yes**, **No**, or **Abstain**.
-   - A lobbying amount: any amount of their cash, from $0 up. Players who abstain can't lobby.
+   - The Politician only: a lobbying amount, any amount of their cash, from $0 up. Abstaining means no lobbying.
 2. All votes and lobbying amounts are revealed together.
 3. **Influence** is counted for each side:
-   - Each Yes or No vote adds **100 influence** to its side (the Politician adds 250).
-   - Each lobbying dollar adds **1 influence** to the side that player voted for (2 for the Politician).
+   - Each Yes or No vote adds **100 influence** to its side. Every player's vote is the same size.
+   - Each dollar of the Politician's contract and lobbying adds **2 influence** to the side they voted for.
    - **Public opinion** always adds 100 to Yes and 100 to No, so nothing is ever certain.
-   - The Lobbyist card adds 200 free influence to the player's side.
+   - The Lobbyist card adds 200 free influence to the player's side (anyone may play it).
 4. **Chance of passing** = Yes influence ÷ (Yes influence + No influence). The screen shows this as a percentage before the roll.
 5. A random roll decides the outcome using that chance.
-6. **All lobbying money goes to the bank, whether the ordinance passes or fails.**
+6. **All lobbying money goes to the bank, whether the ordinance passes or fails.** Contract money stays with the Politician.
 7. **The City Planner** may then reverse the result, once per game: a pass becomes a fail, or a fail becomes a pass.
 8. A passed ordinance takes effect immediately. If it has a duration, it lasts that many rounds and ends during the end-of-round checks.
 
-**Example:** Ana votes Yes and lobbies $300. Ben votes No and lobbies $100. Cal abstains.
-Yes = 100 (vote) + 300 (lobbying) + 100 (public) = 500. No = 100 (vote) + 100 (lobbying) + 100 (public) = 300.
-Chance of passing = 500 ÷ 800 = 62.5%.
+**Example:** Ana is the Politician. Ben offers her $50 to vote Yes, Cal offers $80 to vote No, and Ben passes. Ana takes Cal's $80, votes No and lobbies $20 more. Ben votes Yes, Cal votes No.
+Yes = 100 (Ben) + 100 (public) = 200. No = 100 (Ana's vote) + 160 (contract) + 40 (lobbying) + 100 (Cal) + 100 (public) = 500.
+Chance of passing = 200 ÷ 700 = 28.6%. Ana keeps the $80, and her $20 lobbying goes to the bank.
 
 ### 11.4 Ordinance deck (17 cards)
 
@@ -512,7 +512,7 @@ Government tiles are city-owned spaces that affect the properties right next to 
 | **Police Station** | Neighbors can't be targeted by negative Opportunity cards (ones played against someone else) or Hostile Takeover. Helpful cards still work. | Pay a $25 parking ticket to the bank. |
 | **Fire Station** | Neighbors are safe from the Fire! Event. | Gain 1 Momentum token. |
 | **School** | Building on neighbors costs 25% less. | Draw 1 Opportunity card. |
-| **City Hall** | Neighbor rent is +25%. | Pay $10 per building level you own, then start an Emergency Council session with you setting the agenda. |
+| **City Hall** | Neighbor rent is +25%. | Pay $10 per building level you own, then start an Emergency Council session with you setting the agenda. The Politician also fills their Momentum tokens. |
 | **Power Plant** | Neighbor rent is −25%, and building there costs 50% less. | Pay $50 to the player who owns both utilities, or to the bank if nobody does. |
 | **Transit Hub** | When you land on a neighbor owned by someone else, you may pay $25 to the bank and hop onto the Transit Hub **instead of** paying rent. You don't get the Transit Hub's landing effect from hopping. | You may pay $50 to the bank to move to any railroad. Resolve that railroad normally: pay rent if owned, or start an auction if unowned. |
 | **Landfill** | Neighbor rent is −50%. | Pay a $25 cleanup fee to the bank. |
@@ -582,7 +582,7 @@ You go to Jail when you land on Go To Jail, roll doubles 3 times in a row, or dr
 
 - **Frozen assets:** your properties collect only **half rent** (Section 13.1, step 4).
 - You can't build, and you can't spend Momentum tokens.
-- You **can** trade, take or repay loans, mortgage, bid in auctions, vote, lobby, and play Reaction cards.
+- You **can** trade, take or repay loans, mortgage, bid in auctions, vote, bid for the Politician's vote (or lobby, as the Politician), and play Reaction cards.
 - If an opponent owns all of Orange, you pay them $25 at the start of each of your Jail turns.
 
 ### 14.3 Getting out
@@ -766,7 +766,7 @@ You're bankrupt if you owe more than you can raise by selling every building, mo
 
 - No cash hand-out: the GO catch-up bonus is 0 by default (decision #143). You get the bonuses you earn.
 - The player with the lowest net worth **sets the agenda** at regular Council sessions.
-- Lobbying lets trailing players team up to block the leader's ordinances.
+- Trailing players can outbid the leader for the Politician's vote to block the leader's ordinances.
 
 ### 16.3 Net worth
 
@@ -1398,7 +1398,7 @@ Each has a default the builder should use until Angel decides otherwise.
 | **Down payment / pending** | Winning an auction by paying 20% now and the rest at your next GO. |
 | **Grandfathering** | Buildings that existed before a downzoning are allowed to stay. |
 | **Hot-seat** | Several people playing on one device, taking turns. |
-| **Influence** | Voting power in the City Council: votes + lobbying + public opinion. |
+| **Influence** | Voting power in the City Council: votes + the Politician's contract and lobbying money + public opinion. |
 | **Lap** | One full trip around the board. |
 | **Momentum token** | A token you spend to Nudge or Precision Roll. |
 | **Net worth** | The score: cash plus property and building value, minus loans. |

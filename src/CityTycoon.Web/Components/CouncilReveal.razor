@@ -11,14 +11,14 @@
         <p>@ordinance.Text <SpeakButton Text="@Spoken(ordinance)" Label="the result" /></p>
 
         <table class="scoreboard votes">
-            <thead><tr><th>Player</th><th>Vote</th><th>Lobbying</th><th>Influence</th></tr></thead>
+            <thead><tr><th>Player</th><th>Vote</th><th>Paid in</th><th>Influence</th></tr></thead>
             <tbody>
                 @foreach (var vote in Result.Votes)
                 {
                     <tr>
                         <td>@View.Player(vote.PlayerId).Name</td>
                         <td>@(vote.Choice == VoteChoice.Abstain ? "Abstained" : vote.Choice.ToString())@(vote.UsedLobbyist ? " + Lobbyist" : "")</td>
-                        <td>@(vote.Lobby > 0 ? UiHelpers.Money(vote.Lobby) : "")</td>
+                        <td>@PaidIn(vote)</td>
                         <td>@(vote.Influence > 0 ? vote.Influence : "")</td>
                     </tr>
                 }
@@ -46,6 +46,15 @@
     [Parameter, EditorRequired] public PlayerView View { get; set; } = default!;
     [Parameter, EditorRequired] public GameContent Content { get; set; } = default!;
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>The money behind a vote: the Politician's contract and their own lobbying (decision #162).</summary>
+    private static string PaidIn(VoteReveal vote)
+    {
+        var parts = new List<string>();
+        if (vote.Contract > 0) parts.Add($"{UiHelpers.Money(vote.Contract)} contract");
+        if (vote.Lobby > 0) parts.Add($"{UiHelpers.Money(vote.Lobby)} lobbied");
+        return string.Join(", ", parts);
+    }
 
     /// <summary>The result as a sentence or two, for read-aloud.</summary>
     private string Spoken(OrdinanceDefinition ordinance)

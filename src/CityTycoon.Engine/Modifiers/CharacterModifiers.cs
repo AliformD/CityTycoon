@@ -87,16 +87,25 @@ public sealed class BuildDiscountModifier(ModifierContext c) : OwnedModifier(c),
         s.Properties[propertyId].OwnerId == Owner ? Value : 0;
 }
 
-/// <summary>The Politician: a bigger vote in the City Council (the Council arrives in Phase 8).</summary>
+/// <summary>A bigger vote in the City Council. No character uses it since decision #162 (every vote is equal), but content may.</summary>
 public sealed class VoteInfluenceModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
 {
     public int VoteInfluence(GameState s, int playerId) => Mine(playerId) ? Value : 0;
 }
 
-/// <summary>The Politician: each lobbying dollar buys more influence ("value" is the extra percent).</summary>
-public sealed class LobbyBonusModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+/// <summary>
+/// The Politician: the only player who may lobby, and the one other players pay to vote their way
+/// ("value" is the influence each dollar buys, in percent; decision #162).
+/// </summary>
+public sealed class VoteContractsModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
 {
-    public int LobbyBonusPercent(GameState s, int playerId) => Mine(playerId) ? Value : 0;
+    public int ContractPercent(GameState s, int playerId) => Mine(playerId) ? Value : 0;
+}
+
+/// <summary>The Politician: landing on City Hall fills their Momentum tokens (decision #162).</summary>
+public sealed class CityHallMomentumModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+{
+    public bool RefillsMomentumAtCityHall(GameState s, int playerId) => Mine(playerId);
 }
 
 /// <summary>The City Planner: may reverse the result of one City Council vote per game (decision #152).</summary>

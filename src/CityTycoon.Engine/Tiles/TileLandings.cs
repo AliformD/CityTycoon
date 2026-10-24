@@ -82,7 +82,7 @@ public sealed class DrawOpportunityLanding : ITileLanding
 
 /// <summary>
 /// City Hall: pay for every building level you own (a hotel is 5 levels),
-/// then an Emergency Council session.
+/// then an Emergency Council session. The Politician also fills their Momentum tokens (decision #162).
 /// </summary>
 public sealed class PayPerLevelLanding : ITileLanding
 {
@@ -96,6 +96,8 @@ public sealed class PayPerLevelLanding : ITileLanding
         if (c.Tile.Flag("emergencySession"))
             c.Ctx.Push(new CouncilStep { Emergency = true, TriggeredById = c.Player.Id });
         TileLandings.Charge(c, levels * c.Tile.Int("perLevel"));
+        if (c.Tile.Flag("emergencySession") && RuleModifiers.CityHallMomentum(c.State, c.Ctx.Content, c.Player.Id) is string source)
+            MomentumRules.Gain(c.Ctx, c.Player, MomentumRules.Cap(c.Ctx, c.Player), source);
     }
 }
 

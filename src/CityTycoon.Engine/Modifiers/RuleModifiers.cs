@@ -345,10 +345,17 @@ public static class RuleModifiers
     public static int StadiumMultiplier(GameState state, GameContent content, int playerId) =>
         Math.Max(content.Rules.StadiumRentMultiplier, Active(state, content).Select(m => m.StadiumMultiplier(state, playerId)).DefaultIfEmpty(0).Max());
 
-    /// <summary>Influence one lobbying dollar buys this player, in percent (100 normally, the Politician 200).</summary>
-    public static int LobbyPercent(GameState state, GameContent content, int playerId,
+    /// <summary>
+    /// Influence each dollar paid into this player's vote buys, in percent (the Politician 200), or 0 if this player
+    /// can't lobby or take vote contracts (decision #162).
+    /// </summary>
+    public static int ContractPercent(GameState state, GameContent content, int playerId,
         IReadOnlyList<IRuleModifier>? active = null) =>
-        100 + (active ?? Active(state, content)).Sum(m => m.LobbyBonusPercent(state, playerId));
+        (active ?? Active(state, content)).Select(m => m.ContractPercent(state, playerId)).DefaultIfEmpty(0).Max();
+
+    /// <summary>The name of the modifier that refills this player's Momentum at City Hall, or null (the Politician).</summary>
+    public static string? CityHallMomentum(GameState state, GameContent content, int playerId) =>
+        Active(state, content).FirstOrDefault(m => m.RefillsMomentumAtCityHall(state, playerId))?.Source;
 
     /// <summary>The name of the modifier that lets this player reverse a Council result, or null (the City Planner).</summary>
     public static string? VoteReversal(GameState state, GameContent content, int playerId,

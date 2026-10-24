@@ -120,8 +120,11 @@ public sealed class RulesConfig
     public required int CasinoDoublesPayout { get; init; }
     /// <summary>Landing on the Casino flips a coin: win or lose this much (decision #153). 0 turns it off.</summary>
     public int CasinoLandingFlip { get; init; }
-    /// <summary>Before a council vote, players may pay each other to vote a certain way (decision #159).</summary>
-    public bool VoteDeals { get; init; }
+    /// <summary>
+    /// Before a council vote, players may bid to pay the Politician to vote their way (decision #162). Only matters
+    /// when a Politician is playing. Off: the Politician just votes, and may still lobby.
+    /// </summary>
+    public bool VoteContracts { get; init; }
     public required int StadiumRentMultiplier { get; init; }
     /// <summary>Momentum tokens gained at City Park.</summary>
     public required int CityParkMomentum { get; init; }

@@ -156,7 +156,7 @@ public class StrongerAbilityTests
         Assert.Equal(1500, game.Player(0).Cash);
     }
 
-    // ----- The Politician: lobbying buys twice the influence -----
+    // ----- The Politician: lobbying buys twice the influence (decision #162) -----
 
     [Fact]
     public void Politician_LobbyingDollarsCountDouble()
@@ -165,10 +165,10 @@ public class StrongerAbilityTests
         game.ConveneAndPropose("public-works");
         game.Dice.AddCouncilRoll(0);
         game.Vote(0, VoteChoice.Yes, lobby: 100);
-        game.Vote(1, VoteChoice.No, lobby: 100);
+        game.Vote(1, VoteChoice.No);
         CouncilResolved result = game.LastResolved();
-        Assert.Equal(250 + 200 + 100, result.YesInfluence);
-        Assert.Equal(100 + 100 + 100, result.NoInfluence);
+        Assert.Equal(100 + 200 + 100, result.YesInfluence);
+        Assert.Equal(100 + 100, result.NoInfluence);
         Assert.Equal(1400, game.Player(0).Cash); // still pays the real $100
     }
 

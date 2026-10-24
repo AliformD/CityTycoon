@@ -111,6 +111,7 @@ namespace CityTycoon.Engine.Events;
 [JsonDerivedType(typeof(CouncilReversed), nameof(CouncilReversed))]
 [JsonDerivedType(typeof(VoteDealMade), nameof(VoteDealMade))]
 [JsonDerivedType(typeof(VoteDealDeclined), nameof(VoteDealDeclined))]
+[JsonDerivedType(typeof(VoteContractBid), nameof(VoteContractBid))]
 [JsonDerivedType(typeof(CardKept), nameof(CardKept))]
 [JsonDerivedType(typeof(HospitalShrugged), nameof(HospitalShrugged))]
 [JsonDerivedType(typeof(BidEdgeWon), nameof(BidEdgeWon))]
@@ -343,13 +344,19 @@ public sealed record CasinoRerolled(int PlayerId, string What) : GameEvent;
 /// </summary>
 public sealed record MoveRerolled(int PlayerId, int Die1, int Die2, int? Die = null) : GameEvent;
 
-/// <summary>The City Planner reversed a City Council result (once per game). <paramref name="NowPassed"/> is the new result.</summary>
-/// <summary>A vote deal was accepted: the cash moved, and <c>Deal.ToId</c> must vote <c>Deal.Choice</c> (decision #159).</summary>
+/// <summary>
+/// The Politician took a vote contract: the cash moved, and <c>Deal.ToId</c> (the Politician) must vote <c>Deal.Choice</c>,
+/// with the money adding to their vote (decision #162).
+/// </summary>
 public sealed record VoteDealMade(Actions.VoteDeal Deal) : GameEvent;
 
-/// <summary>A vote deal was turned down (decision #159).</summary>
+/// <summary>The Politician turned the top vote contract offer down (decision #162).</summary>
 public sealed record VoteDealDeclined(Actions.VoteDeal Deal) : GameEvent;
 
+/// <summary>A player made the new top offer to the Politician in the contract bidding (decision #162). No money moves yet.</summary>
+public sealed record VoteContractBid(Actions.VoteDeal Deal) : GameEvent;
+
+/// <summary>The City Planner reversed a City Council result (once per game). <paramref name="NowPassed"/> is the new result.</summary>
 public sealed record CouncilReversed(int PlayerId, string OrdinanceId, string? DistrictId, bool NowPassed) : GameEvent;
 
 /// <summary>The Arts District perk: a player drew two Opportunity cards and kept one (the other is discarded, unseen).</summary>
@@ -372,8 +379,11 @@ public sealed record CouncilCancelled(string Reason) : GameEvent;
 /// <summary>The agenda setter chose this ordinance (and district, if it needs one) to put to a vote.</summary>
 public sealed record OrdinanceProposed(int SetterId, string OrdinanceId, string? DistrictId) : GameEvent;
 
-/// <summary>One player's revealed vote. <paramref name="Influence"/> is everything they added to their side.</summary>
-public sealed record VoteReveal(int PlayerId, Actions.VoteChoice Choice, int Lobby, bool UsedLobbyist, int Influence);
+/// <summary>
+/// One player's revealed vote. <paramref name="Influence"/> is everything they added to their side.
+/// <paramref name="Contract"/> is the vote contract money the Politician took to vote this way (decision #162).
+/// </summary>
+public sealed record VoteReveal(int PlayerId, Actions.VoteChoice Choice, int Lobby, bool UsedLobbyist, int Influence, int Contract = 0);
 
 /// <summary>
 /// The votes are in and the roll is made (Section 11.3). <paramref name="Roll"/> is a number from 0

@@ -287,14 +287,17 @@ public sealed class TurnStep : Step
             .Select(p => new ExpressLine(p.PropertyId));
     }
 
-    /// <summary>The Red perk (Section 8.6): every opponent property this player could force to auction, once per lap.</summary>
+    /// <summary>
+    /// The Red perk (Section 8.6): every opponent property this player could force to auction, once per lap,
+    /// as long as they have the cash for its minimum bid (decision #164).
+    /// </summary>
     private static IEnumerable<GameAction> HostileTakeovers(EngineContext ctx, PlayerState player)
     {
         if (player.TakeoverUsed || !RuleModifiers.CanHostileTakeover(ctx.State, ctx.Content, player.Id))
             return [];
         return ctx.State.Board
             .Where(s => ctx.State.Properties.TryGetValue(s.Id, out var p) && p.OwnerId is int owner && owner != player.Id
-                && AuctionStep.CanForceAuction(ctx, s.Id))
+                && AuctionStep.CanForceAuction(ctx, s.Id) && AuctionStep.CanAffordTakeover(ctx, player.Id, s.Id))
             .Select(s => new HostileTakeover(s.Id));
     }
 
@@ -353,6 +356,8 @@ public sealed class TurnStep : Step
                     Kind = AuctionKind.Forced,
                     TieBreakStartId = PlayerId,
                     OwnerId = ctx.State.Properties[takeover.PropertyId].OwnerId,
+                    // Their bid is real: they can't pass (decision #164).
+                    MustBidId = PlayerId,
                 });
                 break;
 

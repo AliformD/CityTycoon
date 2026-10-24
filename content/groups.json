@@ -60,7 +60,7 @@
       "perk": {
         "id": "hostile-takeover",
         "name": "Hostile Takeover",
-        "text": "Once per lap, force an auction on one eligible opponent property.",
+        "text": "Once per lap, force an auction on one eligible opponent property. You need the cash for the minimum bid, and you must bid.",
         "modifiers": [ { "type": "HostileTakeover" } ]
       }
     },

@@ -377,6 +377,7 @@ public enum DecisionKind
 /// <param name="HasLobbyist">City Council: true if this player holds a Lobbyist card.</param>
 /// <param name="Passed">City Council, for the City Planner's reversal: true if the ordinance passed.</param>
 /// <param name="Deal">City Council: the vote deal this player is asked to answer, or (when voting) the one they accepted.</param>
+/// <param name="MustBid">For a silent auction: true if this player can't pass (they started it with Hostile Takeover, decision #164).</param>
 public sealed record PendingDecision(
     int PlayerId,
     DecisionKind Kind,
@@ -408,4 +409,5 @@ public sealed record PendingDecision(
     int MaxLobby = 0,
     bool HasLobbyist = false,
     bool Passed = false,
-    VoteDeal? Deal = null);
+    VoteDeal? Deal = null,
+    bool MustBid = false);

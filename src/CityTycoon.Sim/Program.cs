@@ -258,7 +258,6 @@ static void AddPerkReport(List<string> lines, List<GameStats> finished, SimOptio
     var passedByOrdinance = finished.SelectMany(r => r.OrdinanceCounts).GroupBy(kv => kv.Key).ToDictionary(g => g.Key, g => g.Sum(kv => kv.Value));
     foreach (var ordinance in content.Ordinances)
         lines.Add($"  {ordinance.Name,-28} passed {(double)passedByOrdinance.GetValueOrDefault(ordinance.Id) / finished.Count:0.00} times per game");
-    lines.Add($"Dice Duels in all {finished.Count} games: {finished.Sum(r => r.Duels)}.");
 }
 
 static string Summarize(List<GameStats> results, SimOptions options, TimeSpan elapsed)
@@ -289,20 +288,28 @@ static string Summarize(List<GameStats> results, SimOptions options, TimeSpan el
         var firstRounds = firsts.Select(m => m.Round).OrderBy(x => x).ToList();
         lines.Add($"First color group held by one player: in {(double)firsts.Count / finished.Count:P0} of games; round "
             + (firsts.Count == 0 ? "-" : $"{firstRounds[firstRounds.Count / 2]} (median), {firstRounds.Average():0.0} (average)")
-            + $". Games with one by round 3: {(double)finished.Count(r => r.Monopolies.Any(m => m.Round <= 3)) / finished.Count:P0}, by round 5: {(double)finished.Count(r => r.Monopolies.Any(m => m.Round <= 5)) / finished.Count:P0}"
+            + $". Games with one by round 3: {(double)finished.Count(r => r.Monopolies.Any(m => m.Round <= 3)) / finished.Count:P0}, by round 5: {(double)finished.Count(r => r.Monopolies.Any(m => m.Round <= 5)) / finished.Count:P0}, by round 10: {(double)finished.Count(r => r.Monopolies.Any(m => m.Round <= 10)) / finished.Count:P0}"
             + $". Groups held by round 5: {finished.Average(r => r.Monopolies.Count(m => m.Round <= 5)):0.0}, by round 10: {finished.Average(r => r.Monopolies.Count(m => m.Round <= 10)):0.0} per game"
             + ". The first one came from: " + string.Join(", ", firsts.GroupBy(m => m.How).OrderByDescending(g => g.Count()).Select(g => $"{g.Key} {(double)g.Count() / firsts.Count:P0}")));
+        var s6 = finished.Where(r => r.SpreadAt6 != null).Select(r => r.SpreadAt6!).ToList();
+        var s10 = finished.Where(r => r.SpreadAt10 != null).Select(r => r.SpreadAt10!).ToList();
+        string SpreadText(List<Spread> s) => s.Count == 0 ? "-" : $"{s.Average(x => x.PlayersWithDeeds):0.00} players own a deed, biggest owner has {s.Average(x => x.TopShare):P0} of owned deeds, {s.Average(x => x.SplitGroups):0.0} of 8 color groups split between 2+ owners, {s.Average(x => x.Unsold):0.0} deeds unsold";
+        lines.Add($"Spread after round 6: {SpreadText(s6)}. After round 10: {SpreadText(s10)}.");
+        lines.Add($"First lap ends (first trip past GO): round {finished.Average(r => r.FirstLapEndRound):0.0} on average. "
+            + $"Listed-price offers per game: {finished.Average(r => r.FixedPriceOffers):0.0}, bought: {finished.Average(r => r.FixedPriceBuys):0.0}");
         lines.Add($"Money at the end (players still in): ${finished.Average(r => r.EndCash):0} cash, ${finished.Average(r => r.EndNetWorth):0} net worth. Average rent payment: ${finished.Average(r => r.AverageRent):0}");
         lines.Add($"Per game: {finished.Average(r => r.BuildingsBuilt):0.0} buildings built, {finished.Average(r => r.Mortgages):0.0} mortgages, "
             + $"{finished.Average(r => r.LoansTaken):0.0} loans, {finished.Average(r => r.TradesCompleted):0.0} trades, "
             + $"{finished.Average(r => r.DownPaymentWins):0.0} down-payment wins, {finished.Average(r => r.Forfeits):0.00} forfeits");
         lines.Add($"Per game: {finished.Average(r => r.Nudges):0.0} Nudges, {finished.Average(r => r.PrecisionRolls):0.0} Precision Rolls, "
-            + $"{finished.Average(r => r.InsuranceBought):0.0} Insured markers bought, {finished.Average(r => r.Duels):0.0} Dice Duels");
+            + $"{finished.Average(r => r.InsuranceBought):0.0} Insured markers bought");
         lines.Add($"Cards per game: {finished.Average(r => r.EventsDrawn):0.0} Events drawn, {finished.Average(r => r.OpportunitiesDrawn):0.0} Opportunity cards drawn, "
             + $"{finished.Average(r => r.MallBuys):0.0} bought at the Mall, {finished.Average(r => r.CardsPlayed):0.0} played, "
             + $"{finished.Average(r => r.CardsCancelled):0.00} cancelled by Insurance, {finished.Average(r => r.Reshuffles):0.0} reshuffles");
-        int bets = finished.Sum(r => r.CasinoBets);
-        lines.Add($"Casino: {(double)bets / finished.Count:0.0} High/Low bets per game, players' total result {finished.Sum(r => r.CasinoNet):N0} dollars");
+        lines.Add($"Casino: {finished.Average(r => r.CasinoHands):0.0} Dice Poker hands per game, paying players {finished.Average(r => r.CasinoNet):0} dollars per game in total. "
+            + $"Hands with the player's own money on them: {finished.Average(r => r.CasinoBets):0.00} per game, that money's result {finished.Sum(r => r.CasinoStakeNet):N0} dollars over all games.");
+        int showdowns = finished.Sum(r => r.Showdowns);
+        lines.Add($"Showdowns: {(double)showdowns / finished.Count:0.00} per game, {(showdowns == 0 ? 0 : (double)finished.Sum(r => r.ShowdownFolds) / showdowns):P0} of them folded.");
         lines.Add("Win rate by turn position (1 = goes first). Even share would be " + (1.0 / options.Players).ToString("P0") + ":");
         for (int pos = 0; pos < options.Players; pos++)
         {

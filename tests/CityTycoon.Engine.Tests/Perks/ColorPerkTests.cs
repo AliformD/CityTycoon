@@ -152,7 +152,7 @@ public class ColorPerkTests
     [Fact]
     public void Red_TakeoverBidCantBeAPass()
     {
-        // Decision #164: the player who starts a Hostile Takeover must make a real bid.
+        // Decision #166: the player who starts a Hostile Takeover must make a real bid.
         var game = new TestGame();
         game.Give(0, Red);
         game.Give(1, "mill-street");
@@ -175,7 +175,7 @@ public class ColorPerkTests
     [Fact]
     public void Red_TakeoverNeedsCashForTheMinimumBid()
     {
-        // Decision #164: no takeover you can't pay for. Borrowing first makes it available again.
+        // Decision #166: no takeover you can't pay for. Borrowing first makes it available again.
         var game = new TestGame();
         game.Give(0, Red);
         game.Give(1, "platinum-row");

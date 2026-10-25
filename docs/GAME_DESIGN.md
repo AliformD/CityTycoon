@@ -70,7 +70,7 @@ For reference, these are Angel's decisions that replaced parts of the first rule
 1. **Momentum Nudge is ±2.** One token moves you 1 or 2 spaces more or fewer (was ±1).
 2. **Maximum 6 players.**
 3. **8 playable characters**, each with one small unique ability (Section 5).
-4. **No Casino betting limit.** You can bet any amount of cash you have.
+4. **No Casino betting limit.** You can put any amount of your cash on a Casino hand.
 5. **All properties are bought by auction** instead of at a set price. Each property keeps an *assessed value* used for rent, mortgages and scoring (Section 8).
 6. **Government tiles are hidden** (face-down) until a player lands on one. Each side of the board has exactly one, in a random non-corner position that changes every game (Section 12).
 7. **Hotels and skyscrapers are limited** by **zoning** and **permits**, which the players can change through **City Council votes** with equal votes, money paid to the Politician, and a random outcome (Sections 10–11).
@@ -164,7 +164,7 @@ Each player picks a **different** character. Each one has a single small ability
 | Character | Ability | Design note |
 | --- | --- | --- |
 | **The Mogul** | In silent (sealed-bid) auctions, your bid counts as $10 higher than it is when bids are compared. You still pay your real bid. You win ties and any silent auction where you're within $10 of the top bid. You also win dice ties. | Small edge in the main buying system. |
-| **The Hustler** | Once per lap, when you roll to move (not a Precision Roll), you may roll **one** of your dice again. Your Stadium pick triples rent instead of doubling it. When the Casino coin flip pays you, you get 50% more ($30 instead of $20). | For risk-takers. |
+| **The Hustler** | Once per lap, when you roll to move (not a Precision Roll), you may roll **one** of your dice again. Your Stadium pick triples rent instead of doubling it. Your free Casino chip is 50% bigger ($60 instead of $40). | For risk-takers. |
 | **The Commuter** | Start the game with 3 Momentum tokens instead of 2. Your token limit is 4 instead of 2, and you can Nudge up to 4 spaces instead of 2. | More control over movement. |
 | **The Lawyer** | You never pay Jail bail (leaving early is free). When you're sent to Jail, you still collect half the GO salary. You can't be targeted by Audit. | Jail still halves your rent. |
 | **The Contractor** | Your building costs are 25% lower. | Stacks with other discounts (Section 9.4). |
@@ -245,6 +245,7 @@ Momentum tokens let you steer your movement.
   - Nudging never changes whether you rolled doubles.
 - **Precision Roll:** before you roll, spend **2 tokens** (1 with all 4 railroads) to roll 3 dice and pick which 2 to use. Doubles count only if the 2 dice you pick match.
 - **You can't spend tokens** while in Jail.
+- **First lap (decision #165):** until you pass GO for the first time, nobody may Nudge, Precision Roll, clear Road Work with tokens, take an Express Line or use the Hustler's reroll. Your tokens wait for the second lap. (`firstLapNoMomentum` in rules.json.)
 - **One-die turns:** if you must roll only 1 die (Hospital recovery or Road Work), you can't Precision Roll, but you can still Nudge.
 
 ### 7.4 Moving backwards
@@ -255,15 +256,18 @@ Backward movement (a backward Nudge or Rush Hour) never collects GO when it cros
 
 ## 8. Getting property: auctions
 
-There are **no fixed purchase prices.** Every property has an **assessed value** (Section 8.7), which sets its rent, mortgage value, and minimum bid, and counts toward net worth.
+Apart from the first lap (Section 8.1), there are **no fixed purchase prices.** Every property has an **assessed value** (Section 8.7), which sets its rent, mortgage value, and minimum bid, and counts toward net worth.
 
 ### 8.1 When an auction happens
 
 - A player lands on an **unowned** property (by dice, card, or any other movement).
+  - **First lap (decision #165):** until that player first passes GO, it is offered to them alone at its **listed price** (its assessed value). Yes: they pay it in full (loans allowed, no down payment). No: it goes to auction as below. The last unsold piece of a set is never offered this way; it always goes to a silent auction. (`firstLapFixedPrice`, `firstLapEnds`, `fixedPriceLastPiece` in rules.json.)
 - A **forced auction** is started by the Red perk (Hostile Takeover) or the Hostile Bid card.
 - A property is **forfeited** (unpaid down payment) or goes back to the bank (bankruptcy to the bank).
 
 ### 8.2 Auction format: sealed bids
+
+**Which landing auctions are silent (decision #165):** the **last unsold piece of a set** (a color group, all 4 railroads, or both utilities) is a silent (sealed) auction, and it is **pay in full**. Every other landing auction is **open**: starting with the lander, players take turns to raise by at least $10 or drop out for good, and the last one in pays their bid (decision #91). Bankruptcy, forfeit and forced auctions always stay silent. House rules: `silentAuctionFor` (`"firstOfSet"` was the old order, first piece silent and the rest open) and `lastPieceDownPayments`.
 
 Sealed bids are used because they work the same way for humans on one screen, AI players, and online players.
 
@@ -288,7 +292,7 @@ Sealed bids are used because they work the same way for humans on one screen, AI
 ### 8.4 How much you can bid
 
 - **Pay in full:** your bid can't be more than your current cash.
-- **Down payment:** 20% of your bid (rounded up to $10) can't be more than your cash, and you must have a free pending slot (Section 8.5). Only silent (sealed) auctions take down payments; open auctions are pay in full (docs/DECISIONS.md #163, house rule `openAuctionDownPayments`).
+- **Down payment:** 20% of your bid (rounded up to $10) can't be more than your cash, and you must have a free pending slot (Section 8.5). Only silent (sealed) auctions take down payments; open auctions are pay in full (docs/DECISIONS.md #163, house rule `openAuctionDownPayments`), and so is the silent auction for the last piece of a set (#165).
 - You may take a loan while an auction is open, so you can bid more (Section 15.7).
 
 ### 8.5 Down payments (pending properties)
@@ -311,7 +315,7 @@ The Hostile Takeover perk and the Hostile Bid card can force an auction on an op
 - The property must have no buildings and must not be part of a full color group the owner holds.
 - The property can't be next to a revealed Police Station.
 - The owner may bid too. If the owner wins, they pay the bank. Otherwise the winner pays the owner.
-- Hostile Takeover only: you need the cash for the minimum bid to use it (you may take a loan first), and your own bid in that auction can't be a pass (docs/DECISIONS.md #164).
+- Hostile Takeover only: you need the cash for the minimum bid to use it (you may take a loan first), and your own bid in that auction can't be a pass (docs/DECISIONS.md #166).
 - If nobody bids (including the owner), the owner keeps the property.
 
 ### 8.7 Assessed values and rents
@@ -482,7 +486,7 @@ Chance of passing = 200 ÷ 700 = 28.6%. Ana keeps the $80, and her $20 lobbying 
 | Infrastructure Bond | 1 | Every player pays $50. The lowest-zoned district goes up one level (the agenda setter breaks ties). | Once |
 | Stimulus Check | 1 | Every player collects $100. | Once |
 | Historic Preservation | 1 | The chosen district's zoning can never change again. | Permanent |
-| Casino Regulation | 1 | Casino bets and Dice Duel stakes are capped at $200. | 4 rounds |
+| Casino Regulation | 1 | Your own money on a Casino hand, and Showdown stakes, are capped at $200. | 4 rounds |
 | Public Works | 1 | Every hidden Government tile is revealed. | Once |
 
 ---
@@ -633,14 +637,29 @@ Nobody owns landmarks. Each one gives the player who lands there a choice.
 
 **Casino (end of Midtown)**
 
-When you land here, a coin is flipped first: you win or lose **$20** (heads or tails, from the bank; you never lose more than the cash you have). Then you may make **one** bet. There's **no maximum**: you can bet any amount up to your cash (unless the Casino Regulation ordinance is active).
+When you land here you play a hand of **Dice Poker** (decision #166). The house gives you a free **$40 chip** (the Hustler's is $60). You may add your own money to it: any amount up to your cash, with **no maximum** (unless the Casino Regulation ordinance is active). The chip and your money ride on the same hand. You may also walk on by.
 
-- **High / Low:** call High (8–12) or Low (2–6), then roll 2 dice.
-  - If you're right, you win your bet.
-  - If you roll a 7 or call it wrong, you lose your bet.
-  - If you're right **and** rolled doubles, you win 2 × your bet.
-  - Over many bets, this game loses about 8% of the amount bet, so it's a real risk.
-- **Dice Duel:** challenge another player. Both put in the same amount, up to whichever player has less cash. Each rolls 2 dice, and the higher total takes everything. Reroll ties. The challenged player may say no.
+1. Roll 5 dice.
+2. Pick the dice to keep, and roll the others **once** more.
+3. The pay table pays the hand, times the money riding on it (chip plus your own):
+
+| Hand | Pays | Free $40 chip pays | How often, with good play |
+| --- | --- | --- | --- |
+| Five of a kind | 10 × | $400 | 1 % |
+| Four of a kind | 3 × | $120 | 9 % |
+| Straight (1-2-3-4-5 or 2-3-4-5-6) | 3 × | $120 | 5 % |
+| Full house (three of a kind and a pair) | 2 × | $80 | 18 % |
+| Three of a kind | half back | $20 | 21 % |
+| Two pair or less | nothing | $0 | 47 % |
+
+- The free chip can only win you money. Your own money is a real gamble: with perfect play a dollar comes back as about 98 cents over many hands; a player who always keeps their biggest group of matching dice gets about 84 cents.
+- The skill is in the keep. For example, with 2 3 4 5 5, keep 2 3 4 5 and roll one die: a 1 or a 6 makes a straight (1 time in 3). With 3 4 4 5 6, keep the pair instead: only a 2 would finish that straight.
+
+**Showdown.** After your hand, you may call out **one player who is worth more than you**. Each side puts in **$100** (less if either has less cash; Casino Regulation caps it too). They see your hand and must choose:
+- **Fold:** pay you **$25**, and it's over.
+- **Play:** they roll 5 dice, keep any and roll the rest once. The better hand takes the stake from the other player. Hands rank as in the table (a full house beats a straight), and between the same kind of hand the dice in the biggest group decide, then the next group, then the single dice, highest first. An exact tie pays nobody, except that the Mogul wins ties.
+
+The challenged player can't just say no, but folding is cheap and they see the hand first. So a Showdown pays off only with a good hand (three of a kind or better), and it is a way for a player who is behind to win a little from someone ahead.
 
 **Mall (end of Harbor)**
 
@@ -674,7 +693,7 @@ Choose one: gain 1 Momentum token, or draw 1 Opportunity card.
 | Audit | 1 | Your turn | Pick a player. They pay 10% of their cash to the bank, rounded down. The Lawyer is immune. |
 | Construction Permit | 1 | Your turn | This turn, build up to 2 levels past your build limit, at 25% off. |
 | Get Out of Jail Free | 1 | Jail, or the start of a Hospital recovery turn | Leave Jail for free, or skip the 1-die recovery turn. |
-| Dice Duel | 1 | Your turn | Challenge any player to a Dice Duel from anywhere on the board. |
+| Showdown | 1 | Your turn | Call any player with cash to a Showdown (Section 15.3) from anywhere on the board. Roll your hand first, then decide whether to go ahead; the card is used either way. |
 | Tip-Off | 1 | Your turn | Look at the top 3 Event cards and put them back in any order. |
 | Fast Track | 1 | Your turn | Gain 2 Momentum tokens. |
 | Grand Opening | 1 | Your turn | Pick one of your properties. Its rent is ×2 until your next turn. |

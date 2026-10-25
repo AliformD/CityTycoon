@@ -1,4 +1,5 @@
 using CityTycoon.Engine.Content;
+using CityTycoon.Engine.Rules;
 using CityTycoon.Engine.Views;
 
 namespace CityTycoon.Engine.Events;
@@ -97,7 +98,8 @@ public static class GameHistory
                         Add(w.PlayerId, -w.PaidNow, MoneyKind.Property, $"Deposit on {Space(w.PropertyId)} (won for ${w.Price}, the rest due at GO)");
                     else
                         Move(w.PlayerId, w.PaidToId, w.PaidNow, MoneyKind.Property,
-                            $"Won {Space(w.PropertyId)} at auction" + (w.PaidToId is int owner ? $", paid to {Name(owner)}" : ""),
+                            w.ListedPrice ? $"Bought {Space(w.PropertyId)} at its listed price"
+                            : $"Won {Space(w.PropertyId)} at auction" + (w.PaidToId is int owner ? $", paid to {Name(owner)}" : ""),
                             $"Sold {Space(w.PropertyId)} at a forced auction to {Name(w.PlayerId)}");
                     break;
                 case DownPaymentPaid d:
@@ -158,6 +160,15 @@ public static class GameHistory
                     break;
                 case DuelWon d:
                     Move(d.LoserId, d.WinnerId, d.Stake, MoneyKind.Casino, $"Lost a Dice Duel to {Name(d.WinnerId)}", $"Won a Dice Duel against {Name(d.LoserId)}");
+                    break;
+                case CasinoHandPaid p:
+                    Add(p.PlayerId, p.Net, MoneyKind.Casino, $"Casino Dice Poker: {DicePoker.Describe(p.Hand)}");
+                    break;
+                case ShowdownFolded f:
+                    Move(f.OpponentId, f.ChallengerId, f.Amount, MoneyKind.Casino, $"Folded in a Showdown with {Name(f.ChallengerId)}", $"{Name(f.OpponentId)} folded in a Showdown");
+                    break;
+                case ShowdownWon w:
+                    Move(w.LoserId, w.WinnerId, w.Stake, MoneyKind.Casino, $"Lost a Showdown to {Name(w.WinnerId)}", $"Won a Showdown against {Name(w.LoserId)}");
                     break;
                 case MallCardBought b:
                     Add(b.PlayerId, -b.Price, MoneyKind.Mall, $"Bought {Card(b.CardId)} at the Mall");
@@ -261,7 +272,8 @@ public static class GameHistory
                     break;
                 case AuctionWon w when w.PropertyId == spaceId:
                     Gained(w.PlayerId, HistoryKind.Bought, w.Price,
-                        w.DownPayment ? $"{Name(w.PlayerId)} won it at auction for ${w.Price} with a down payment (${w.PaidNow} now)."
+                        w.ListedPrice ? $"{Name(w.PlayerId)} bought it for its listed price of ${w.Price} (first lap)."
+                        : w.DownPayment ? $"{Name(w.PlayerId)} won it at auction for ${w.Price} with a down payment (${w.PaidNow} now)."
                         : w.PaidToId is int seller ? $"{Name(w.PlayerId)} won it from {Name(seller)} at a forced auction for ${w.Price}."
                         : $"{Name(w.PlayerId)} won it at auction for ${w.Price}.");
                     break;

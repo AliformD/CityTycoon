@@ -154,6 +154,9 @@ public sealed class PlayerState
     /// <summary>True once the City Planner has reversed a City Council result (once per game).</summary>
     public bool VoteReversalUsed { get; set; }
 
+    /// <summary>How many times this player has collected GO. 0 means they are still on their first lap (first-lap house rules).</summary>
+    public int GoPasses { get; set; }
+
     /// <summary>
     /// How many unpaid bank loans the player has (Section 15.7). Setting it (old saves, tests) adds or removes
     /// loans of the old $200 size. It comes before <see cref="LoanBook"/>, so a save that has both reads the real list last.

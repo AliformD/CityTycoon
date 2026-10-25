@@ -19,12 +19,6 @@ public sealed class DiceTieBreakerModifier(ModifierContext c) : OwnedModifier(c)
     public bool WinsDiceTies(GameState s, int playerId) => Mine(playerId);
 }
 
-/// <summary>The Hustler: one reroll per Casino visit.</summary>
-public sealed class CasinoRerollModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
-{
-    public bool CasinoReroll(GameState s, int playerId) => Mine(playerId);
-}
-
 /// <summary>The Hustler: one reroll of their movement dice per lap (decision #152).</summary>
 public sealed class MoveRerollModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
 {
@@ -37,10 +31,10 @@ public sealed class StadiumMultiplierModifier(ModifierContext c) : OwnedModifier
     public int StadiumMultiplier(GameState s, int playerId) => Mine(playerId) ? Value : 0;
 }
 
-/// <summary>The Hustler: a bigger win when the Casino coin flip pays them (decision #161).</summary>
-public sealed class CasinoWinBonusModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
+/// <summary>The Hustler: a bigger free chip at the Casino (decisions #161 and #164).</summary>
+public sealed class CasinoChipBonusModifier(ModifierContext c) : OwnedModifier(c), IRuleModifier
 {
-    public int CasinoWinBonus(GameState s, int playerId) => Mine(playerId) ? Value : 0;
+    public int CasinoChipBonus(GameState s, int playerId) => Mine(playerId) ? Value : 0;
 }
 
 /// <summary>The Commuter: a Nudge can reach further.</summary>

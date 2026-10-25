@@ -108,10 +108,12 @@ public static class UiHelpers
             Nudge { Spaces: 0 } => "Don't Nudge",
             Nudge n => $"Nudge {(n.Spaces > 0 ? "+" : "−")}{Math.Abs(n.Spaces)} ({Tokens(Math.Abs(n.Spaces) * rules.NudgeCost)})",
             NoThanks => "No thanks",
+            BuyAtListedPrice => "Buy it at the listed price",
             BuyInsurance => view.Me.InsuredMarkerCost == 0 ? "Take a free Insured marker" : $"Buy an Insured marker ({Money(view.Me.InsuredMarkerCost)})",
             ReverseVote => "↩ Reverse the result",
-            AcceptDuel => "Accept the duel",
-            DeclineDuel => "No thanks",
+            PlayShowdown => "Play: try to beat it",
+            FoldShowdown => "Fold",
+            CallShowdown c => $"Call out {view.Player(c.OpponentId).Name}",
             PickStadiumGroup g => content.Groups[g.GroupId].Name,
             HopToTransitHub => "Hop onto the Transit Hub instead",
             RideToRailroad r => $"Ride to {Name(r.PropertyId)}",
@@ -161,7 +163,6 @@ public static class UiHelpers
         {
             "Detour" => $" ({(play.Number > 0 ? "+" : "−")}{Math.Abs(play.Number)} space)",
             "Shortcut" => $": move {play.Number} space{(play.Number == 1 ? "" : "s")}",
-            "DiceDuel" => $" for {Money(play.Number)}",
             _ => play.Number != 0 ? $" ({play.Number})" : "",
         };
         return on + number;

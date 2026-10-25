@@ -44,10 +44,15 @@ public sealed record GameStats(
     // Phase 4 numbers: Momentum and landmarks.
     public int Nudges { get; init; }
     public int PrecisionRolls { get; init; }
+    /// <summary>Dice Poker hands played at the Casino, and how many had the player's own money on them too (decision #164).</summary>
+    public int CasinoHands { get; init; }
     public int CasinoBets { get; init; }
-    /// <summary>What players won (positive) or lost (negative) at High/Low in total.</summary>
+    /// <summary>What players won (positive) or lost (negative) at the Casino in total, free chips included.</summary>
     public int CasinoNet { get; init; }
-    public int Duels { get; init; }
+    /// <summary>What players' own money on Casino hands won or lost, leaving out what the free chip alone would have paid.</summary>
+    public int CasinoStakeNet { get; init; }
+    public int Showdowns { get; init; }
+    public int ShowdownFolds { get; init; }
     public int InsuranceBought { get; init; }
 
     // Phase 5 numbers: cards.
@@ -129,7 +134,19 @@ public sealed record GameStats(
     /// <summary>How many times a turn ended on each space, and how many turns were played, for the landing odds.</summary>
     public IReadOnlyDictionary<string, int> Landings { get; init; } = new Dictionary<string, int>();
     public int Turns { get; init; }
+
+    /// <summary>How spread out the deeds were after round 6 and after round 10 (null if the game ended first).</summary>
+    public Spread? SpreadAt6 { get; init; }
+    public Spread? SpreadAt10 { get; init; }
+    /// <summary>The average round in which players first passed GO (the end of their first lap).</summary>
+    public double FirstLapEndRound { get; init; }
+    /// <summary>First-lap house rule: offers to buy at the listed price, and how many were taken.</summary>
+    public int FixedPriceOffers { get; init; }
+    public int FixedPriceBuys { get; init; }
 }
+
+/// <summary>A snapshot of who owns what: players holding at least one deed, the biggest player's share of the owned deeds, color groups split between two or more owners, and deeds still unsold.</summary>
+public sealed record Spread(int PlayersWithDeeds, double TopShare, int SplitGroups, int Unsold);
 
 /// <summary>The first time one player held every property of a color group: the round, and the move that did it.</summary>
 public sealed record MonopolyFormed(string Group, int Round, string How);
@@ -178,8 +195,13 @@ public static class SimulationRunner
             var low = new HashSet<int>();
             int closeCalls = 0;
             var monopolies = new List<MonopolyFormed>();
+            Spread? at6 = null, at10 = null;
             while (!engine.State.IsOver)
             {
+                if (at6 == null && engine.State.Round > 6)
+                    at6 = SpreadNow(engine);
+                if (at10 == null && engine.State.Round > 10)
+                    at10 = SpreadNow(engine);
                 if (engine.State.Round > ClassicRoundCap)
                     return Summarize(game, seed, engine, error: null) with { Stalled = true, CloseCalls = closeCalls, Monopolies = monopolies };
                 await host.StepAsync();
@@ -198,6 +220,8 @@ public static class SimulationRunner
             var winners = engine.State.Result?.WinnerIds ?? [];
             return Summarize(game, seed, engine, error: null) with
             {
+                SpreadAt6 = at6,
+                SpreadAt10 = at10,
                 CloseCalls = closeCalls,
                 Monopolies = monopolies,
                 Levels = engine.State.Players.Select(p => controllers[p.Id].GetType().Name.Replace("Bot", "")).ToList(),
@@ -229,6 +253,30 @@ public static class SimulationRunner
             string how = last switch { AuctionWon { DownPayment: true } => "auction with a down payment", AuctionWon => "auction paid in full", TradeCompleted => "trade", _ => "other" };
             found.Add(new MonopolyFormed(group, engine.State.Round, how));
         }
+    }
+
+    private static Spread SpreadNow(GameEngine engine)
+    {
+        var owners = engine.State.Properties.Values.Select(p => p.OwnerId).ToList();
+        var owned = owners.OfType<int>().ToList();
+        int split = engine.Content.Groups.Keys.Count(g =>
+            engine.Content.GroupMembers(g).Select(id => engine.State.Properties[id].OwnerId).OfType<int>().Distinct().Count() >= 2);
+        double top = owned.Count == 0 ? 0 : owned.GroupBy(id => id).Max(x => x.Count()) / (double)owned.Count;
+        return new Spread(owned.Distinct().Count(), top, split, owners.Count(o => o == null));
+    }
+
+    private static double FirstLapEnd(GameState state)
+    {
+        int round = 0;
+        var firsts = new Dictionary<int, int>();
+        foreach (var e in state.Log)
+        {
+            if (e is TurnStarted t)
+                round = t.Round;
+            else if (e is PassedGo g)
+                firsts.TryAdd(g.PlayerId, round);
+        }
+        return firsts.Count == 0 ? 0 : firsts.Values.Average();
     }
 
     private static int? FirstBuildingRound(IEnumerable<GameEvent> log)
@@ -314,6 +362,23 @@ public static class SimulationRunner
         return outcomes;
     }
 
+    private static int FixedPriceBuys(IReadOnlyList<GameEvent> log)
+    {
+        int buys = 0;
+        string? offered = null;
+        foreach (var e in log)
+        {
+            if (e is AuctionStarted a)
+                offered = a.FixedPrice ? a.PropertyId : null;
+            else if (e is AuctionWon w && w.PropertyId == offered)
+            {
+                buys++;
+                offered = null;
+            }
+        }
+        return buys;
+    }
+
     private static GameStats Summarize(int game, ulong seed, GameEngine engine, string? error)
     {
         GameState state = engine.State;
@@ -341,9 +406,12 @@ public static class SimulationRunner
             TradesCompleted = log.OfType<TradeCompleted>().Count(),
             Nudges = log.OfType<Nudged>().Count(),
             PrecisionRolls = log.OfType<PrecisionRolled>().Count(),
-            CasinoBets = log.OfType<CasinoHighLow>().Count(),
-            CasinoNet = log.OfType<CasinoHighLow>().Sum(c => c.Net),
-            Duels = log.OfType<DuelWon>().Count(),
+            CasinoHands = log.OfType<CasinoHandPaid>().Count(),
+            CasinoBets = log.OfType<CasinoHandPaid>().Count(c => c.Stake > 0),
+            CasinoNet = log.OfType<CasinoHandPaid>().Sum(c => c.Net),
+            CasinoStakeNet = log.OfType<CasinoHandPaid>().Sum(c => c.Net - c.Chip * (c.Net + c.Stake) / Math.Max(1, c.Chip + c.Stake)),
+            Showdowns = log.OfType<ShowdownCalled>().Count(),
+            ShowdownFolds = log.OfType<ShowdownFolded>().Count(),
             InsuranceBought = log.OfType<InsuranceBought>().Count(),
             CardsPlayed = log.OfType<CardPlayed>().Count(),
             CardsCancelled = log.OfType<CardCancelled>().Count(),
@@ -356,7 +424,7 @@ public static class SimulationRunner
             GroupHolders = GroupHoldings(state, engine.Content, state.Players.Select(p => p.Id)),
             GroupWinners = GroupHoldings(state, engine.Content, winners),
             ExpressLines = log.OfType<ExpressLineUsed>().Count(),
-            SealedAuctions = log.OfType<AuctionStarted>().Count(a => !a.Open),
+            SealedAuctions = log.OfType<AuctionStarted>().Count(a => !a.Open && !a.FixedPrice),
             OpenAuctions = log.OfType<AuctionStarted>().Count(a => a.Open),
             TiedSealedAuctions = SealedAuctionOutcomes(state).Count(o => o.Tied),
             MogulEdgeWins = SealedAuctionOutcomes(state).Count(o => o.MogulWonOnEdgeOrTie),
@@ -390,6 +458,9 @@ public static class SimulationRunner
             TradeOffers = log.OfType<TradeProposed>().Count(),
             Landings = log.OfType<LandedOn>().GroupBy(l => l.SpaceId).ToDictionary(g => g.Key, g => g.Count()),
             Turns = log.OfType<TurnStarted>().Count(),
+            FirstLapEndRound = FirstLapEnd(state),
+            FixedPriceOffers = log.OfType<AuctionStarted>().Count(a => a.FixedPrice),
+            FixedPriceBuys = FixedPriceBuys(log),
         };
     }
 }

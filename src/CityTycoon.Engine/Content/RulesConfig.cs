@@ -113,15 +113,29 @@ public sealed class RulesConfig
     // Section 7.3 and 15.3: Precision Roll and landmarks.
     /// <summary>How many dice a Precision Roll rolls (you keep 2).</summary>
     public required int PrecisionRollDice { get; init; }
-    /// <summary>High/Low at the Casino: "Low" is 2 up to this total, "High" is this total up to 12. Anything between loses.</summary>
-    public required int CasinoLowMax { get; init; }
-    public required int CasinoHighMin { get; init; }
-    /// <summary>A right High/Low call with doubles wins this many times the bet.</summary>
-    public required int CasinoDoublesPayout { get; init; }
-    /// <summary>Landing on the Casino flips a coin: win or lose this much (decision #153). 0 turns it off.</summary>
-    public int CasinoLandingFlip { get; init; }
+    /// <summary>Dice Poker at the Casino (decision #164): the free chip the house gives everyone who lands there.</summary>
+    public required int CasinoFreeChip { get; init; }
+    /// <summary>What each Dice Poker hand pays back for every $100 riding on it (the stake included).</summary>
+    public required CasinoPayTable CasinoPays { get; init; }
+    /// <summary>A Showdown (decision #164): what each player puts in, and what the challenged player pays to fold instead.</summary>
+    public required int ShowdownStake { get; init; }
+    public required int ShowdownFoldPayment { get; init; }
     /// <summary>House rule: allow down payments in open auctions too. Off by default, so only silent auctions take them (decision #163).</summary>
     public bool OpenAuctionDownPayments { get; init; }
+
+    // First-lap house rules (being tried out in the Sim, all off by default).
+    /// <summary>On their first lap, a player who lands on an unowned property may buy it at its listed (assessed) price. If they say no, it is auctioned as usual.</summary>
+    public bool FirstLapFixedPrice { get; init; }
+    /// <summary>On their first lap, nobody may spend Momentum or change their roll (no Nudge, Precision Roll, Road Work clearing, Express Line or Hustler reroll).</summary>
+    public bool FirstLapNoMomentum { get; init; }
+    /// <summary>When the first lap ends: "own" (each player's own first trip past GO), "first" (for everyone, when anyone passes GO) or "last" (when everyone has).</summary>
+    public string FirstLapEnds { get; init; } = "own";
+    /// <summary>The fixed-price first-lap buy also covers the last unsold piece of a set. Off: that piece always goes to a silent auction.</summary>
+    public bool FixedPriceLastPiece { get; init; }
+    /// <summary>Which landing auctions are silent: "firstOfSet" (decision #91), "lastOfSet" (only the last unsold piece of a set) or "firstAndLast". The rest are open.</summary>
+    public string SilentAuctionFor { get; init; } = "firstOfSet";
+    /// <summary>A silent auction for the last unsold piece of a set takes down payments. Off: that piece is pay in full.</summary>
+    public bool LastPieceDownPayments { get; init; } = true;
     /// <summary>
     /// Before a council vote, players may bid to pay the Politician to vote their way (decision #162). Only matters
     /// when a Politician is playing. Off: the Politician just votes, and may still lobby.
@@ -154,4 +168,19 @@ public sealed record LoanTerms(int Amount, int Repay)
 {
     /// <summary>What the loan costs on top of the money borrowed.</summary>
     public int Interest => Repay - Amount;
+}
+
+/// <summary>
+/// The Dice Poker pay table, as dollars paid back for every $100 on the hand (300 means 3 times).
+/// Hands left out pay nothing.
+/// </summary>
+public sealed record CasinoPayTable
+{
+    public int FiveOfAKind { get; init; }
+    public int FourOfAKind { get; init; }
+    public int FullHouse { get; init; }
+    public int Straight { get; init; }
+    public int ThreeOfAKind { get; init; }
+    public int TwoPair { get; init; }
+    public int Pair { get; init; }
 }

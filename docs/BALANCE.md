@@ -282,3 +282,42 @@ Before, 22 % of first groups were won with a down payment in an open auction. Th
 Stronger settings were tried and dropped: pushing back on the second of three at 50 % (up to 2.5 times) gave median round 9 but only 1.5 players built per game; making bots twice as unwilling to trade away the first group meant 63 % of games never had a group at all and trades nearly stopped.
 
 Side effects: games are slower and calmer (less building, fewer bankruptcies), the cost of fewer early monopolies. Hard against Easy: Hard seats won 79.9 % before, 68.8 % after, because every bot now blocks hard, so overbidding for sets pays off less. Characters: Hustler 31.1 to 32.3 %, Mogul 27.6 to 29.7 %, Lawyer 23.0 to 27.3 %, Contractor 28.4 to 20.4 %, City Planner 19.7 to 21.1 %; the others moved by 2 points or less.
+
+## Casino Dice Poker and the Showdown (2026-10-24)
+Decision #164. 1,000 games, 4 Hard bots, Timed, 40 rounds, random characters, seed 1, same settings before and after.
+
+| | Before (coin flip, High/Low, Dice Duel) | After (Dice Poker, Showdown) |
+| --- | --- | --- |
+| Turns ending on the Casino | 2.3 % | 3.6 % |
+| Turns ending on City Park (the next space) | 3.8 % | 3.1 % |
+| Casino use per game | 0.3 High/Low bets | 5.6 Dice Poker hands (0.4 with the player's own money) |
+| Paid to players at the Casino per game | about $1 (High/Low; the coin flip evens out) | $242 |
+| Duels / Showdowns per game | 0.0 | 2.2 (77 % folded) |
+| Game length | 39.9 rounds | 39.9 rounds |
+| Games with a bankruptcy | 27 % | 29 % |
+
+Bots now stop on the Casino instead of nudging past it: it is worth about $39 to a Hard bot, City Park's token $25. Characters moved within normal run-to-run noise: Mogul 28.2 to 25.6 %, Hustler 31.9 to 31.5 %, Lawyer 24.4 to 26.5 %, Contractor 21.3 to 24.3 %, Politician 25.3 to 26.5 %, City Planner 22.2 to 19.7 %, Medic 22.6 to 21.9 %, Commuter 24.4 % both times. The Hustler stays just over the 30 % target, as before.
+
+How the pay table was picked: worked out exactly (every keep for every roll). It returns 98.1 cents per $1 with perfect play, 95 cents for a player who also chases straights, 84 cents for one who always keeps their biggest group. With two rerolls it would pay $1.71 per $1, and one extra single-die reroll $1.52, so neither is safe as a Hustler perk. In a Showdown the player called out wins about 53 % of the time if they always play (they see the hand first); with folding, the caller only gains with three of a kind or better (about +$20 per Showdown against good play).
+
+
+## First lap at the listed price, no first-lap Momentum, silent last piece (2026-10-25)
+Decision #165. 4 Hard bots, Timed, 40 rounds, random characters, 1,000 games per run, seeds 1 and 5001. The Sim now also prints how spread out the deeds are after rounds 6 and 10, when first laps end, and listed-price buys.
+
+| | Before (#91 order) | After |
+| --- | --- | --- |
+| First color group, median round | 7 / 8 | 13 / 13 |
+| Games with a group by round 5 | 33 % / 32 % | 7 % / 5 % |
+| Games with a group by round 10 | 57 % / 56 % | 34 % / 34 % |
+| First building, median round | 8 | 14 |
+| Building levels standing at the end | 21.9 | 16.1 |
+| Games with a bankruptcy | 29 % | 14 % |
+| Color groups split between 2+ owners after round 10 (of 8) | 4.4 | 4.8 |
+| Finished trades per game | 1.0 | 0.9 |
+| Listed-price offers / buys per game | - | 12.0 / 11.1 |
+| First lap ends (average round) | 6.9 | 7.2 |
+| Hard seats' wins against Easy (HardVsEasy, seed 1) | 62.5 % | 60.9 % |
+
+Which part does the work (seed 1, first group median round / games with one by round 5): Momentum ban alone 14 / 7 %; listed price alone 8 / 28 %; silent last piece alone 8 / 32 %; listed price and silent last piece with Momentum allowed 8 / 27 %. Bots used their 2 starting tokens to Nudge onto Brown and Light Blue in rounds 1 and 2 and start those auctions while everyone still had $1,200; without the tokens, 4 more deeds are still unsold after round 6 and early groups mostly disappear. Ending the first lap for everyone when anyone passes GO (`firstLapEnds` "first") gave median round 11 and 44 % by round 10. Letting the last piece take down payments (`lastPieceDownPayments`) made no measurable difference.
+
+Characters, averaged over both seeds (before → after): Mogul 28.3 → 21.0 % (its edge only works in silent auctions, now mostly the last piece of a set), Commuter 22.7 → 20.2 % (no Momentum for the first ~7 rounds), Medic 20.7 → 26.2 %, Lawyer 26.4 → 29.2 %, Hustler 31.8 → 32.7 % (still just over the target), Contractor, Politician and City Planner moved 2 points or less. Character win rates move up to about 5 points between seeds, so only the Mogul and Medic changes are clearly real.

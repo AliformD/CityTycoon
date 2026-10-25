@@ -5,7 +5,7 @@ using CityTycoon.Engine.Tests.Helpers;
 
 namespace CityTycoon.Engine.Tests.Characters;
 
-/// <summary>Decision #153: the balance pass after the Hard bot report (Medic, Politician, Casino coin flip).</summary>
+/// <summary>Decision #153: the balance pass after the Hard bot report (Medic, Politician).</summary>
 public class BalancePassTests
 {
     // ----- The Medic is paid what others spend on the Hospital -----
@@ -82,57 +82,5 @@ public class BalancePassTests
         Assert.Equal(1500 + 50 + 50, game.Player(0).Cash);
         Assert.Equal(1475, game.Player(1).Cash); // the others still pay only $25
         Assert.Equal(1475, game.Player(2).Cash);
-    }
-
-    // ----- The Casino coin flip -----
-
-    private static TestGame WithCoinFlip() =>
-        new(2, content: TestContent.With(new() { ["startingCash"] = 1500, ["goSalary"] = 200, ["casinoLandingFlip"] = 20 }));
-
-    [Theory]
-    [InlineData(2, 20)]   // an even die wins
-    [InlineData(5, -20)]  // an odd die loses
-    public void LandingOnTheCasino_FlipsACoin(int die, int net)
-    {
-        var game = WithCoinFlip();
-        game.Player(0).Momentum = 0;
-        game.PlaceBefore(0, "casino", 5);
-        game.Dice.Add(1, 4, die);
-        game.Do(0, new RollDice());
-
-        Assert.Equal(1500 + net, game.Player(0).Cash);
-        Assert.Contains(game.State.Log, e => e is CasinoCoinFlip { PlayerId: 0 } f && f.Net == net);
-        Assert.Equal(DecisionKind.CasinoBet, game.DecisionFor(0)!.Kind); // then the bet, as before
-    }
-
-    [Fact]
-    public void CasinoCoinFlip_NeverTakesMoreThanThePlayerHas()
-    {
-        var game = WithCoinFlip();
-        game.Player(0).Momentum = 0;
-        game.Player(0).Cash = 15;
-        game.PlaceBefore(0, "casino", 5);
-        game.Dice.Add(1, 4, 3);
-        game.Do(0, new RollDice());
-        Assert.Equal(0, game.Player(0).Cash);
-        Assert.Contains(game.State.Log, e => e is CasinoCoinFlip { Net: -15 });
-    }
-
-    [Theory]
-    [InlineData(2, 30)]   // a win pays 50% more (decision #161)
-    [InlineData(5, -20)]  // a loss is the same as for anyone
-    public void TheHustler_WinsHalfAsMuchAgain_OnTheCasinoCoinFlip(int die, int net)
-    {
-        var game = new TestGame(2, characters: ["hustler"],
-            content: TestContent.With(new() { ["startingCash"] = 1500, ["goSalary"] = 200, ["casinoLandingFlip"] = 20 }));
-        game.Player(0).Momentum = 0;
-        game.PlaceBefore(0, "casino", 5);
-        game.Dice.Add(1, 4, die);
-        game.Do(0, new RollDice());
-        if (game.DecisionFor(0)?.Kind == DecisionKind.RerollMove)
-            game.Do(0, new NoThanks());
-
-        Assert.Equal(1500 + net, game.Player(0).Cash);
-        Assert.Contains(game.State.Log, e => e is CasinoCoinFlip { PlayerId: 0 } f && f.Net == net);
     }
 }

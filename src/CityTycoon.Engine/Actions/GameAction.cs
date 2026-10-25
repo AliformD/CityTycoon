@@ -31,11 +31,13 @@ namespace CityTycoon.Engine.Actions;
 [JsonDerivedType(typeof(ChooseDice), nameof(ChooseDice))]
 [JsonDerivedType(typeof(Nudge), nameof(Nudge))]
 [JsonDerivedType(typeof(NoThanks), nameof(NoThanks))]
+[JsonDerivedType(typeof(BuyAtListedPrice), nameof(BuyAtListedPrice))]
 [JsonDerivedType(typeof(BuyInsurance), nameof(BuyInsurance))]
-[JsonDerivedType(typeof(BetHighLow), nameof(BetHighLow))]
-[JsonDerivedType(typeof(ChallengeDuel), nameof(ChallengeDuel))]
-[JsonDerivedType(typeof(AcceptDuel), nameof(AcceptDuel))]
-[JsonDerivedType(typeof(DeclineDuel), nameof(DeclineDuel))]
+[JsonDerivedType(typeof(PlayDicePoker), nameof(PlayDicePoker))]
+[JsonDerivedType(typeof(KeepDice), nameof(KeepDice))]
+[JsonDerivedType(typeof(CallShowdown), nameof(CallShowdown))]
+[JsonDerivedType(typeof(FoldShowdown), nameof(FoldShowdown))]
+[JsonDerivedType(typeof(PlayShowdown), nameof(PlayShowdown))]
 [JsonDerivedType(typeof(PickStadiumGroup), nameof(PickStadiumGroup))]
 [JsonDerivedType(typeof(PlayCard), nameof(PlayCard))]
 [JsonDerivedType(typeof(DiscardCard), nameof(DiscardCard))]
@@ -114,23 +116,35 @@ public sealed record ChooseDice(int First, int Second) : GameAction;
 /// </summary>
 public sealed record Nudge(int Spaces) : GameAction;
 
-/// <summary>Turn down an optional offer, like an Insured marker or a Casino bet.</summary>
+/// <summary>Turn down an optional offer, like an Insured marker or a Casino hand.</summary>
 public sealed record NoThanks : GameAction;
+
+/// <summary>First lap: buy the property you landed on at its listed price (decision #165). <see cref="NoThanks"/> sends it to auction.</summary>
+public sealed record BuyAtListedPrice : GameAction;
 
 /// <summary>At the Hospital: buy an Insured marker (Section 15.3).</summary>
 public sealed record BuyInsurance : GameAction;
 
-/// <summary>At the Casino: bet that the next 2 dice total High (8-12) or Low (2-6).</summary>
-public sealed record BetHighLow(int Amount, bool High) : GameAction;
+/// <summary>
+/// At the Casino: play a Dice Poker hand with the house's free chip, plus <paramref name="Stake"/> of your own
+/// money riding on it too (0 plays with the free chip only). Decision #164.
+/// </summary>
+public sealed record PlayDicePoker(int Stake) : GameAction;
 
-/// <summary>At the Casino: challenge another player to a Dice Duel for this stake.</summary>
-public sealed record ChallengeDuel(int OpponentId, int Amount) : GameAction;
+/// <summary>
+/// Dice Poker: keep these dice and roll the others again. Each number is a position (0 to 4) in the dice you were
+/// shown, so [0, 3] keeps the first and fourth dice. An empty list rolls all five again; all five keeps the hand.
+/// </summary>
+public sealed record KeepDice(IReadOnlyList<int> Keep) : GameAction;
 
-/// <summary>Say yes to a Dice Duel.</summary>
-public sealed record AcceptDuel : GameAction;
+/// <summary>After a Casino hand: call a Showdown against this player, who is worth more than you.</summary>
+public sealed record CallShowdown(int OpponentId) : GameAction;
 
-/// <summary>Say no to a Dice Duel.</summary>
-public sealed record DeclineDuel : GameAction;
+/// <summary>Answer a Showdown by giving up: pay the small fold payment instead of playing.</summary>
+public sealed record FoldShowdown : GameAction;
+
+/// <summary>Answer a Showdown by playing: roll your own hand to beat theirs.</summary>
+public sealed record PlayShowdown : GameAction;
 
 /// <summary>At the Stadium: double this color group's rent until your next turn.</summary>
 public sealed record PickStadiumGroup(string GroupId) : GameAction;
@@ -138,7 +152,7 @@ public sealed record PickStadiumGroup(string GroupId) : GameAction;
 /// <summary>
 /// Play an Opportunity card from your hand (Section 15.4). Which extra fields
 /// are used depends on the card: a player to target, a space or property to
-/// target, or a number (spaces for Shortcut and Detour, the stake for Dice Duel).
+/// target, or a number (spaces for Shortcut and Detour).
 /// </summary>
 public sealed record PlayCard(string CardId, int? TargetPlayerId = null, string? TargetSpaceId = null, int Number = 0) : GameAction;
 
@@ -175,9 +189,8 @@ public sealed record HostileTakeover(string PropertyId) : GameAction;
 /// <summary>
 /// The Hustler: roll again instead of keeping a bad roll. For a movement roll (once per lap) only one die
 /// is rolled again, and <paramref name="Die"/> says which (0 for the first, 1 for the second; decision #153).
-/// Null rolls all the dice again (a Dice Duel roll).
 /// </summary>
-public sealed record RerollDice(int? Die = null) : GameAction;
+public sealed record RerollDice(int Die) : GameAction;
 
 /// <summary>The City Planner: turn this City Council result around (passed becomes failed, and failed becomes passed). Once per game.</summary>
 public sealed record ReverseVote : GameAction;
@@ -234,8 +247,11 @@ public sealed record ArrangeCards(IReadOnlyList<int> Order) : GameAction;
 /// <summary>Road Work: spend Momentum tokens to roll both dice this turn after all.</summary>
 public sealed record ClearRoadWork : GameAction;
 
-/// <summary>A Dice Duel challenge waiting for an answer.</summary>
-public sealed record DuelChallenge(int ChallengerId, int OpponentId, int Stake);
+/// <summary>
+/// A Showdown (decision #166): the challenger's hand that the other player must beat, and what is at stake.
+/// <paramref name="FoldPayment"/> is what folding costs the challenged player.
+/// </summary>
+public sealed record ShowdownChallenge(int ChallengerId, int OpponentId, int Stake, int FoldPayment, IReadOnlyList<int> ChallengerDice);
 
 /// <summary>
 /// "Management" actions: things you can do in between the main choices, like
@@ -320,7 +336,9 @@ public enum DecisionKind
     ChooseNudge,
     HospitalVisit,
     CasinoBet,
-    RespondToDuel,
+    KeepDice,
+    CallShowdown,
+    RespondToShowdown,
     ChooseStadiumGroup,
     PlayReaction,
     DiscardCards,
@@ -331,7 +349,6 @@ public enum DecisionKind
     TransitHop,
     TransitRide,
     ChooseCharacter,
-    ChooseReroll,
     KeepCard,
     PeekTile,
     ChooseOrdinance,
@@ -342,6 +359,7 @@ public enum DecisionKind
     SwapTile,
     OfferVoteDeal,
     AnswerVoteDeal,
+    BuyAtListedPrice,
 }
 
 /// <summary>
@@ -359,8 +377,8 @@ public enum DecisionKind
 /// <param name="Trade">For trade replies: the offer.</param>
 /// <param name="CountersLeft">For trade replies: how many more counter-offers this trade can have (0 means only accept or decline).</param>
 /// <param name="Dice">For Precision Rolls: the dice rolled. For Nudges: the dice being used.</param>
-/// <param name="MaxBet">For the Casino: the most this player can bet.</param>
-/// <param name="Duel">For Dice Duel replies: the challenge.</param>
+/// <param name="MaxBet">For the Casino: the most of their own money this player can put on the hand.</param>
+/// <param name="Showdown">For a Showdown: the challenge (the hand to beat and the stake).</param>
 /// <param name="Cards">Card IDs to show: the triggering card for a reaction, or the Event cards a Tip-Off reveals.</param>
 /// <param name="OtherPlayerId">For a Detour: the player about to move.</param>
 /// <param name="Spaces">For a Detour: how far that player is about to move.</param>
@@ -377,7 +395,9 @@ public enum DecisionKind
 /// <param name="HasLobbyist">City Council: true if this player holds a Lobbyist card.</param>
 /// <param name="Passed">City Council, for the City Planner's reversal: true if the ordinance passed.</param>
 /// <param name="Deal">City Council: the vote deal this player is asked to answer, or (when voting) the one they accepted.</param>
-/// <param name="MustBid">For a silent auction: true if this player can't pass (they started it with Hostile Takeover, decision #164).</param>
+/// <param name="FreeChip">At the Casino: the free chip the house puts on this hand.</param>
+/// <param name="Stake">At the Casino: the player's own money on this hand (for Dice Poker rerolls).</param>
+/// <param name="MustBid">For a silent auction: true if this player can't pass (they started it with Hostile Takeover, decision #166).</param>
 public sealed record PendingDecision(
     int PlayerId,
     DecisionKind Kind,
@@ -393,7 +413,7 @@ public sealed record PendingDecision(
     int CountersLeft = 0,
     IReadOnlyList<int>? Dice = null,
     int MaxBet = 0,
-    DuelChallenge? Duel = null,
+    ShowdownChallenge? Showdown = null,
     IReadOnlyList<string>? Cards = null,
     int? OtherPlayerId = null,
     int Spaces = 0,
@@ -410,4 +430,6 @@ public sealed record PendingDecision(
     bool HasLobbyist = false,
     bool Passed = false,
     VoteDeal? Deal = null,
+    int FreeChip = 0,
+    int Stake = 0,
     bool MustBid = false);

@@ -25,6 +25,16 @@
   "bidIncrement": 10,
   "downPaymentPercent": 20,
   "openAuctionDownPayments": false,
+  // First lap (decision #165): until you first pass GO, buy what you land on at its listed price
+  // (say no and it is auctioned), and no Momentum or roll changes. firstLapEnds: "own", "first" or "last".
+  "firstLapFixedPrice": true,
+  "firstLapNoMomentum": true,
+  "firstLapEnds": "own",
+  "fixedPriceLastPiece": false,
+  // Which landing auctions are silent: "lastOfSet" (decision #165), "firstOfSet" (the old way, #91) or "firstAndLast".
+  // The rest are open. The last piece of a set is pay in full unless lastPieceDownPayments is true.
+  "silentAuctionFor": "lastOfSet",
+  "lastPieceDownPayments": false,
   "maxPendingProperties": 2,
 
   "mortgagePercent": 50,
@@ -88,11 +98,13 @@
   "maxTradeCounters": 3,
 
   "precisionRollDice": 3,
-  "casinoLowMax": 6,
-  "casinoHighMin": 8,
-  "casinoDoublesPayout": 2,
-  // Landing on the Casino flips a coin: win or lose this much (decision #153).
-  "casinoLandingFlip": 20,
+  // Dice Poker at the Casino (decision #164). Everyone who lands gets a free chip; a hand pays this much
+  // back per $100 riding on it (300 = 3 times). With perfect play a dollar of your own returns about 98 cents.
+  "casinoFreeChip": 40,
+  "casinoPays": { "fiveOfAKind": 1000, "fourOfAKind": 300, "straight": 300, "fullHouse": 200, "threeOfAKind": 50 },
+  // A Showdown: each side puts in this much; the challenged player may fold and pay this instead.
+  "showdownStake": 100,
+  "showdownFoldPayment": 25,
   // Before a council vote, players may bid to pay the Politician to vote their way (decision #162).
   "voteContracts": true,
   "stadiumRentMultiplier": 2,

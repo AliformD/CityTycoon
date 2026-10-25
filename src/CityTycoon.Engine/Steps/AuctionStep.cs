@@ -21,6 +21,9 @@ public enum AuctionKind
 
     /// <summary>A Hostile Bid forces an auction on another player's property (Section 8.6).</summary>
     Forced,
+
+    /// <summary>First-lap house rule: only the player who landed is asked, and the price is the listed one. Saying no starts a normal auction.</summary>
+    FixedPrice,
 }
 
 /// <summary>
@@ -47,7 +50,7 @@ public sealed class AuctionStep : Step
     /// <summary>For a forced auction: the player who owns the property now.</summary>
     public int? OwnerId { get; set; }
 
-    /// <summary>The player who started a Hostile Takeover: they must bid at least the minimum and can't pass (decision #164).</summary>
+    /// <summary>The player who started a Hostile Takeover: they must bid at least the minimum and can't pass (decision #166).</summary>
     public int? MustBidId { get; set; }
 
     public bool Started { get; set; }
@@ -87,6 +90,12 @@ public sealed class AuctionStep : Step
         if (waitingOn.Count > 0)
         {
             string name = ctx.Content.Property(PropertyId).Name;
+            if (Kind == AuctionKind.FixedPrice)
+                return StepResult.WaitFor(new PendingDecision(
+                    TieBreakStartId, DecisionKind.BuyAtListedPrice,
+                    $"First lap: buy {name} for its listed price of ${MinBid}? If you say no, everyone bids for it.",
+                    PropertyId, MinBid, MaxBidFor(ctx, TieBreakStartId), ctx.Rules.BidIncrement,
+                    Management: ManagementOptions.TakeLoan));
             return StepResult.WaitFor(waitingOn.Select(id => new PendingDecision(
                 id, DecisionKind.SubmitBid, $"Silent auction for {name}: bid in secret (minimum ${MinBid}) or pass.",
                 PropertyId, MinBid, MaxBidFor(ctx, id), ctx.Rules.BidIncrement,
@@ -105,6 +114,16 @@ public sealed class AuctionStep : Step
         Started = true;
         PropertyDefinition def = ctx.Content.Property(PropertyId);
         MinBid = MinimumBid(ctx.Rules, def.AssessedValue, Kind);
+
+        if (Kind == AuctionKind.FixedPrice)
+        {
+            MinBid = def.AssessedValue;
+            Bidders = [TieBreakStartId];
+            if (!CouldEverBid(ctx, TieBreakStartId))
+                Bids[TieBreakStartId] = null;
+            ctx.Emit(new AuctionStarted(PropertyId, MinBid, FixedPrice: true));
+            return;
+        }
 
         // Every player who isn't bankrupt may bid, including players in Jail.
         Bidders = ctx.State.ActivePlayers.Where(p => p.Id != ExcludedPlayerId).Select(p => p.Id).ToList();
@@ -138,11 +157,29 @@ public sealed class AuctionStep : Step
     {
         if (kind != AuctionKind.Normal)
             return false;
+        var others = SetMates(ctx, propertyId);
+        bool anyOwned = others.Any(p => ctx.State.Properties[p.Id].OwnerId != null);
+        bool lastPiece = others.All(p => ctx.State.Properties[p.Id].OwnerId != null);
+        return ctx.Rules.SilentAuctionFor switch
+        {
+            "lastOfSet" => !lastPiece,
+            "firstAndLast" => anyOwned && !lastPiece,
+            _ => anyOwned,
+        };
+    }
+
+    /// <summary>The other properties in this property's set (its color group, the other railroads, or the other utility).</summary>
+    private static List<PropertyDefinition> SetMates(EngineContext ctx, string propertyId)
+    {
         PropertyDefinition def = ctx.Content.Property(propertyId);
         return ctx.Content.Properties.Values
             .Where(p => p.Id != propertyId && (def.Group != null ? p.Group == def.Group : p.Group == null && p.Type == def.Type))
-            .Any(p => ctx.State.Properties[p.Id].OwnerId != null);
+            .ToList();
     }
+
+    /// <summary>True when every other property of this one's set already has an owner.</summary>
+    public static bool IsLastPiece(EngineContext ctx, string propertyId) =>
+        SetMates(ctx, propertyId).All(p => ctx.State.Properties[p.Id].OwnerId != null);
 
     /// <summary>The minimum bid, rounded up to the bid step (Section 8.3).</summary>
     public static int MinimumBid(RulesConfig rules, int assessedValue, AuctionKind kind)
@@ -185,7 +222,9 @@ public sealed class AuctionStep : Step
     /// Open auctions are paid in full too, unless the house rule allows down payments there (decision #163),
     /// so only cash and loans count when someone is racing to finish a color group.
     /// </summary>
-    private bool AllowsDownPayment(EngineContext ctx) => Kind != AuctionKind.Forced && (!Open || ctx.Rules.OpenAuctionDownPayments);
+    private bool AllowsDownPayment(EngineContext ctx) => Kind != AuctionKind.Forced && Kind != AuctionKind.FixedPrice
+        && (!Open || ctx.Rules.OpenAuctionDownPayments)
+        && (Open || Kind != AuctionKind.Normal || ctx.Rules.LastPieceDownPayments || !IsLastPiece(ctx, PropertyId));
 
     /// <summary>
     /// Can a forced auction be held on this property (Section 8.6)? It must be
@@ -207,7 +246,7 @@ public sealed class AuctionStep : Step
 
     /// <summary>
     /// Can this player use Hostile Takeover on this property? They need the cash for the minimum bid right now,
-    /// because their own bid can't be a pass (decision #164). They can take a loan first.
+    /// because their own bid can't be a pass (decision #166). They can take a loan first.
     /// </summary>
     public static bool CanAffordTakeover(EngineContext ctx, int playerId, string propertyId) =>
         MaxFullBid(ctx.Rules, ctx.Player(playerId).Cash)
@@ -238,6 +277,8 @@ public sealed class AuctionStep : Step
 
     public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision)
     {
+        if (decision.Kind == DecisionKind.BuyAtListedPrice)
+            return ctx.Player(decision.PlayerId).Cash >= MinBid ? [new BuyAtListedPrice(), new NoThanks()] : [new NoThanks()];
         // Any multiple of the bid step from MinBid up to the max is legal too (see IsLegal).
         var actions = new List<GameAction>();
         if (!decision.MustBid)
@@ -251,6 +292,9 @@ public sealed class AuctionStep : Step
 
     public override bool IsLegal(EngineContext ctx, PendingDecision decision, GameAction action)
     {
+        if (decision.Kind == DecisionKind.BuyAtListedPrice)
+            // Checked against cash right now: the player may have taken a loan since the question was asked.
+            return action is NoThanks || (action is BuyAtListedPrice && ctx.Player(decision.PlayerId).Cash >= MinBid);
         if (action is PassBid)
             return !decision.MustBid;
         if (action is not PlaceBid bid || bid.Amount < decision.MinBid || bid.Amount % ctx.Rules.BidIncrement != 0)
@@ -271,6 +315,11 @@ public sealed class AuctionStep : Step
             ReceiveOpen(ctx, decision, action);
             return;
         }
+        if (decision.Kind == DecisionKind.BuyAtListedPrice)
+        {
+            Bids[decision.PlayerId] = action is BuyAtListedPrice ? MinBid : null;
+            return;
+        }
         Bids[decision.PlayerId] = action is PlaceBid bid ? bid.Amount : null;
         if (action is PlaceBid { DownPayment: true })
             DownPaymentBidders.Add(decision.PlayerId);
@@ -282,6 +331,15 @@ public sealed class AuctionStep : Step
         ctx.Emit(new BidsRevealed(PropertyId, Bidders.Select(id => new RevealedBid(id, Bids[id])).ToList()));
 
         var realBids = Bids.Where(b => b.Value != null).ToList();
+        if (Kind == AuctionKind.FixedPrice)
+        {
+            // Yes: they pay the listed price. No: everyone gets to bid for it, by the usual auction rules.
+            if (realBids.Count > 0)
+                Award(ctx, TieBreakStartId, MinBid);
+            else
+                ctx.Push(new AuctionStep { PropertyId = PropertyId, Kind = AuctionKind.Normal, TieBreakStartId = TieBreakStartId });
+            return;
+        }
         if (realBids.Count == 0)
         {
             // Nobody bid: the property stays with the bank (Section 8.2, rule 7),
@@ -344,7 +402,7 @@ public sealed class AuctionStep : Step
         else
         {
             ctx.Player(winnerId).Cash -= highest;
-            ctx.Emit(new AuctionWon(PropertyId, winnerId, highest, assessed, PaidNow: highest));
+            ctx.Emit(new AuctionWon(PropertyId, winnerId, highest, assessed, PaidNow: highest, ListedPrice: Kind == AuctionKind.FixedPrice));
         }
     }
 

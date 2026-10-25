@@ -79,8 +79,11 @@ public sealed class ResolveSpaceStep : Step
         PropertyState owned = ctx.State.Properties[propertyId];
         if (owned.OwnerId == null)
         {
-            // Nobody owns it: everyone gets a chance to bid (Section 8.1).
-            ctx.Push(new AuctionStep { PropertyId = propertyId, Kind = AuctionKind.Normal, TieBreakStartId = PlayerId });
+            // Nobody owns it: everyone gets a chance to bid (Section 8.1). With the first-lap house rule,
+            // the lander may first buy it at the listed price (the last piece of a set still goes to auction).
+            bool fixedPrice = ctx.Rules.FirstLapFixedPrice && FirstLap.IsOn(ctx, player)
+                && (ctx.Rules.FixedPriceLastPiece || !AuctionStep.IsLastPiece(ctx, propertyId));
+            ctx.Push(new AuctionStep { PropertyId = propertyId, Kind = fixedPrice ? AuctionKind.FixedPrice : AuctionKind.Normal, TieBreakStartId = PlayerId });
             return;
         }
 

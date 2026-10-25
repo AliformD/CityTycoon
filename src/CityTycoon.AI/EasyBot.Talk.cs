@@ -88,10 +88,10 @@ public partial class EasyBot : ITableTalker
             case CardPlayed c when c.TargetPlayerId == me:
                 Add(c.PlayerId, -1.5);
                 break;
-            case DuelChallenged d when d.OpponentId == me:
+            case ShowdownCalled d when d.OpponentId == me:
                 Add(d.ChallengerId, -0.5);
                 break;
-            case DuelWon d when d.LoserId == me:
+            case ShowdownWon d when d.LoserId == me:
                 Add(d.WinnerId, -1);
                 break;
             case VoteDealMade v when v.Deal.FromId == me || v.Deal.ToId == me:

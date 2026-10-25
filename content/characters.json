@@ -13,8 +13,8 @@
     {
       "id": "hustler",
       "name": "The Hustler",
-      "text": "Once per lap, when you roll to move, you may roll one of your dice again. Your Stadium pick triples rent instead of doubling it. When the Casino coin flip pays you, you get 50% more.",
-      "modifiers": [ { "type": "MoveReroll" }, { "type": "StadiumMultiplier", "value": 3 }, { "type": "CasinoWinBonus", "value": 50 } ]
+      "text": "Once per lap, when you roll to move, you may roll one of your dice again. Your Stadium pick triples rent instead of doubling it. Your free Casino chip is 50% bigger.",
+      "modifiers": [ { "type": "MoveReroll" }, { "type": "StadiumMultiplier", "value": 3 }, { "type": "CasinoChipBonus", "value": 50 } ]
     },
     {
       "id": "commuter",

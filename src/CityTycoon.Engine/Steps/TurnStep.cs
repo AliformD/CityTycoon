@@ -249,6 +249,8 @@ public sealed class TurnStep : Step
     private List<GameAction> MoveChoices(EngineContext ctx, PlayerState player)
     {
         var choices = new List<GameAction> { new RollDice() };
+        if (FirstLap.NoMomentum(ctx, player))
+            return [.. choices, .. HostileTakeovers(ctx, player)];
         if (!OneDieTurn && MomentumRules.CanSpend(player, MomentumRules.PrecisionRollCost(ctx, player)))
             choices.Add(new PrecisionRoll());
         if (RoadWorkCost > 0 && !RecoveringThisTurn && MomentumRules.CanSpend(player, RoadWorkCost))
@@ -289,7 +291,7 @@ public sealed class TurnStep : Step
 
     /// <summary>
     /// The Red perk (Section 8.6): every opponent property this player could force to auction, once per lap,
-    /// as long as they have the cash for its minimum bid (decision #164).
+    /// as long as they have the cash for its minimum bid (decision #166).
     /// </summary>
     private static IEnumerable<GameAction> HostileTakeovers(EngineContext ctx, PlayerState player)
     {
@@ -356,7 +358,7 @@ public sealed class TurnStep : Step
                     Kind = AuctionKind.Forced,
                     TieBreakStartId = PlayerId,
                     OwnerId = ctx.State.Properties[takeover.PropertyId].OwnerId,
-                    // Their bid is real: they can't pass (decision #164).
+                    // Their bid is real: they can't pass (decision #166).
                     MustBidId = PlayerId,
                 });
                 break;
@@ -364,7 +366,7 @@ public sealed class TurnStep : Step
             case RerollDice reroll:
                 // The Hustler rolls one die of this roll again (decisions #152 and #153). It's used up until the next GO.
                 player.MoveRerollUsed = true;
-                RerolledDie = reroll.Die ?? 0;
+                RerolledDie = reroll.Die;
                 ctx.Emit(new MoveRerolled(PlayerId, Die1, Die2, RerolledDie));
                 Stage = TurnStage.RerollOne;
                 break;
@@ -439,7 +441,7 @@ public sealed class TurnStep : Step
         DetourWindow = null;
         DetourPlayed = false;
 
-        if (fromRoll && !player.MoveRerollUsed && RuleModifiers.MoveReroll(ctx.State, ctx.Content, PlayerId) != null)
+        if (fromRoll && !player.MoveRerollUsed && RuleModifiers.MoveReroll(ctx.State, ctx.Content, PlayerId) != null && !FirstLap.NoMomentum(ctx, player))
         {
             Stage = TurnStage.MoveReroll;
             return StepResult.Continue;
@@ -470,7 +472,7 @@ public sealed class TurnStep : Step
         ExtraTurnEarned = roll.IsDoubles && !LeftJailThisTurn;
 
         // Only offer a Nudge when there's a real choice (a token to spend).
-        bool canNudge = MomentumRules.NudgeOptions(ctx, player, roll.Total).Any(n => n != 0);
+        bool canNudge = !FirstLap.NoMomentum(ctx, player) && MomentumRules.NudgeOptions(ctx, player, roll.Total).Any(n => n != 0);
         Stage = canNudge ? TurnStage.Nudge : TurnStage.Detour;
         return StepResult.Continue;
     }

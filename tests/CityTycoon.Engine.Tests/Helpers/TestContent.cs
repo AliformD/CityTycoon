@@ -19,6 +19,12 @@ public static class TestContent
         ["catchUpBonus"] = 100,
         // Politician vote contracts (decision #162) add questions before a council vote. CouncilDealTests turns them on.
         ["voteContracts"] = false,
+        // Most auction and movement tests were written for the old landing rules (decision #91), so they keep them.
+        // FirstLapTests turns the first-lap rules on (decision #165).
+        ["firstLapFixedPrice"] = false,
+        ["firstLapNoMomentum"] = false,
+        ["silentAuctionFor"] = "firstOfSet",
+        ["lastPieceDownPayments"] = true,
     });
 
     /// <summary>A copy of the default content with some rules.json numbers changed.</summary>

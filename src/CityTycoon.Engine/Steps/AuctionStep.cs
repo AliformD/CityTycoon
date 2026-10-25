@@ -87,10 +87,14 @@ public sealed class AuctionStep : Step
         if (waitingOn.Count > 0)
         {
             string name = ctx.Content.Property(PropertyId).Name;
+            if (Kind == AuctionKind.FixedPrice)
+                return StepResult.WaitFor(new PendingDecision(
+                    TieBreakStartId, DecisionKind.BuyAtListedPrice,
+                    $"First lap: buy {name} for its listed price of ${MinBid}? If you say no, everyone bids for it.",
+                    PropertyId, MinBid, MaxBidFor(ctx, TieBreakStartId), ctx.Rules.BidIncrement,
+                    Management: ManagementOptions.TakeLoan));
             return StepResult.WaitFor(waitingOn.Select(id => new PendingDecision(
-                id, DecisionKind.SubmitBid, Kind == AuctionKind.FixedPrice
-                    ? $"First lap: buy {name} at its listed price of ${MinBid}? Any bid buys it at that price; pass to send it to auction."
-                    : $"Silent auction for {name}: bid in secret (minimum ${MinBid}) or pass.",
+                id, DecisionKind.SubmitBid, $"Silent auction for {name}: bid in secret (minimum ${MinBid}) or pass.",
                 PropertyId, MinBid, MaxBidFor(ctx, id), ctx.Rules.BidIncrement,
                 MaxDownPaymentBid: MaxDownPaymentBidFor(ctx, id),
                 // Taking a loan is the only other thing you can do mid-auction (Section 8.4).
@@ -261,6 +265,8 @@ public sealed class AuctionStep : Step
 
     public override IReadOnlyList<GameAction> LegalActions(EngineContext ctx, PendingDecision decision)
     {
+        if (decision.Kind == DecisionKind.BuyAtListedPrice)
+            return ctx.Player(decision.PlayerId).Cash >= MinBid ? [new BuyAtListedPrice(), new NoThanks()] : [new NoThanks()];
         // Any multiple of the bid step from MinBid up to the max is legal too (see IsLegal).
         var actions = new List<GameAction> { new PassBid() };
         if (decision.MaxBid >= decision.MinBid)
@@ -272,6 +278,9 @@ public sealed class AuctionStep : Step
 
     public override bool IsLegal(EngineContext ctx, PendingDecision decision, GameAction action)
     {
+        if (decision.Kind == DecisionKind.BuyAtListedPrice)
+            // Checked against cash right now: the player may have taken a loan since the question was asked.
+            return action is NoThanks || (action is BuyAtListedPrice && ctx.Player(decision.PlayerId).Cash >= MinBid);
         if (action is PassBid)
             return true;
         if (action is not PlaceBid bid || bid.Amount < decision.MinBid || bid.Amount % ctx.Rules.BidIncrement != 0)
@@ -292,6 +301,11 @@ public sealed class AuctionStep : Step
             ReceiveOpen(ctx, decision, action);
             return;
         }
+        if (decision.Kind == DecisionKind.BuyAtListedPrice)
+        {
+            Bids[decision.PlayerId] = action is BuyAtListedPrice ? MinBid : null;
+            return;
+        }
         Bids[decision.PlayerId] = action is PlaceBid bid ? bid.Amount : null;
         if (action is PlaceBid { DownPayment: true })
             DownPaymentBidders.Add(decision.PlayerId);
@@ -305,7 +319,7 @@ public sealed class AuctionStep : Step
         var realBids = Bids.Where(b => b.Value != null).ToList();
         if (Kind == AuctionKind.FixedPrice)
         {
-            // Any bid means "yes, I'll buy it", at the listed price. No means everyone gets to bid for it.
+            // Yes: they pay the listed price. No: everyone gets to bid for it, by the usual auction rules.
             if (realBids.Count > 0)
                 Award(ctx, TieBreakStartId, MinBid);
             else
@@ -374,7 +388,7 @@ public sealed class AuctionStep : Step
         else
         {
             ctx.Player(winnerId).Cash -= highest;
-            ctx.Emit(new AuctionWon(PropertyId, winnerId, highest, assessed, PaidNow: highest));
+            ctx.Emit(new AuctionWon(PropertyId, winnerId, highest, assessed, PaidNow: highest, ListedPrice: Kind == AuctionKind.FixedPrice));
         }
     }
 

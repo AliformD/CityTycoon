@@ -154,7 +154,7 @@ public sealed record RevealedBid(int PlayerId, int? Amount);
 public sealed record BidsRevealed(string PropertyId, IReadOnlyList<RevealedBid> Bids) : GameEvent;
 /// <param name="PaidNow">The whole price, or just the deposit for a down payment.</param>
 /// <param name="PaidToId">In a forced auction won by someone else, the owner who was paid. Otherwise null (the bank).</param>
-public sealed record AuctionWon(string PropertyId, int PlayerId, int Price, int AssessedValue, bool DownPayment = false, int PaidNow = 0, int? PaidToId = null) : GameEvent;
+public sealed record AuctionWon(string PropertyId, int PlayerId, int Price, int AssessedValue, bool DownPayment = false, int PaidNow = 0, int? PaidToId = null, bool ListedPrice = false) : GameEvent;
 public sealed record AuctionNoBids(string PropertyId) : GameEvent;
 public sealed record RentPaid(int FromId, int ToId, string PropertyId, int Amount) : GameEvent;
 public sealed record TaxPaid(int PlayerId, string SpaceId, int Amount) : GameEvent;

@@ -31,6 +31,7 @@ namespace CityTycoon.Engine.Actions;
 [JsonDerivedType(typeof(ChooseDice), nameof(ChooseDice))]
 [JsonDerivedType(typeof(Nudge), nameof(Nudge))]
 [JsonDerivedType(typeof(NoThanks), nameof(NoThanks))]
+[JsonDerivedType(typeof(BuyAtListedPrice), nameof(BuyAtListedPrice))]
 [JsonDerivedType(typeof(BuyInsurance), nameof(BuyInsurance))]
 [JsonDerivedType(typeof(PlayDicePoker), nameof(PlayDicePoker))]
 [JsonDerivedType(typeof(KeepDice), nameof(KeepDice))]
@@ -117,6 +118,9 @@ public sealed record Nudge(int Spaces) : GameAction;
 
 /// <summary>Turn down an optional offer, like an Insured marker or a Casino hand.</summary>
 public sealed record NoThanks : GameAction;
+
+/// <summary>First lap: buy the property you landed on at its listed price (decision #165). <see cref="NoThanks"/> sends it to auction.</summary>
+public sealed record BuyAtListedPrice : GameAction;
 
 /// <summary>At the Hospital: buy an Insured marker (Section 15.3).</summary>
 public sealed record BuyInsurance : GameAction;
@@ -355,6 +359,7 @@ public enum DecisionKind
     SwapTile,
     OfferVoteDeal,
     AnswerVoteDeal,
+    BuyAtListedPrice,
 }
 
 /// <summary>

@@ -44,8 +44,10 @@ public class CouncilBotTests
     [Fact]
     public async Task HardBots_PlayFullGames_WithVoteContracts()
     {
+        // Contracts are rare (about 1 in 10 games), and the first-lap rules (decision #165) make early votes
+        // matter less, so look at enough games to see some.
         int bids = 0, contracts = 0;
-        for (ulong seed = 1; seed <= 10; seed++)
+        for (ulong seed = 1; seed <= 30; seed++)
         {
             var engine = await Play(seed, id => new HardBot(seed * 13 + (ulong)id), characters: ["politician", "lawyer", "medic", "mogul"]);
             bids += engine.State.Log.OfType<VoteContractBid>().Count();

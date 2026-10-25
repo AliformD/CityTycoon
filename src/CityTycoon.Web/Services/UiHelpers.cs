@@ -108,6 +108,7 @@ public static class UiHelpers
             Nudge { Spaces: 0 } => "Don't Nudge",
             Nudge n => $"Nudge {(n.Spaces > 0 ? "+" : "−")}{Math.Abs(n.Spaces)} ({Tokens(Math.Abs(n.Spaces) * rules.NudgeCost)})",
             NoThanks => "No thanks",
+            BuyAtListedPrice => "Buy it at the listed price",
             BuyInsurance => view.Me.InsuredMarkerCost == 0 ? "Take a free Insured marker" : $"Buy an Insured marker ({Money(view.Me.InsuredMarkerCost)})",
             ReverseVote => "↩ Reverse the result",
             PlayShowdown => "Play: try to beat it",

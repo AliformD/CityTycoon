@@ -40,6 +40,7 @@ public static class EventDescriber
             AuctionPassed p => $"{Name(p.PlayerId)} dropped out of the auction for {Space(p.PropertyId)}.",
             DiceTieWon t => $"The dice tied, and {Name(t.PlayerId)} wins the tie ({t.Source}).",
             BidsRevealed b => "Bids: " + string.Join(", ", b.Bids.Select(x => $"{Name(x.PlayerId)} {(x.Amount is int amount ? "$" + amount : "passed")}")) + ".",
+            AuctionWon { ListedPrice: true } w => $"{Name(w.PlayerId)} bought {Space(w.PropertyId)} for its listed price of ${w.Price}.",
             AuctionWon w => w.DownPayment
                 ? $"{Name(w.PlayerId)} won {Space(w.PropertyId)} for ${w.Price} with a down payment: ${w.PaidNow} now, ${w.Price - w.PaidNow} at their next GO."
                 : w.PaidToId is int owner ? $"{Name(w.PlayerId)} won {Space(w.PropertyId)} for ${w.Price}, paid to {Name(owner)}."

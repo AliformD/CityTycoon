@@ -245,6 +245,7 @@ Momentum tokens let you steer your movement.
   - Nudging never changes whether you rolled doubles.
 - **Precision Roll:** before you roll, spend **2 tokens** (1 with all 4 railroads) to roll 3 dice and pick which 2 to use. Doubles count only if the 2 dice you pick match.
 - **You can't spend tokens** while in Jail.
+- **First lap (decision #165):** until you pass GO for the first time, nobody may Nudge, Precision Roll, clear Road Work with tokens, take an Express Line or use the Hustler's reroll. Your tokens wait for the second lap. (`firstLapNoMomentum` in rules.json.)
 - **One-die turns:** if you must roll only 1 die (Hospital recovery or Road Work), you can't Precision Roll, but you can still Nudge.
 
 ### 7.4 Moving backwards
@@ -255,15 +256,18 @@ Backward movement (a backward Nudge or Rush Hour) never collects GO when it cros
 
 ## 8. Getting property: auctions
 
-There are **no fixed purchase prices.** Every property has an **assessed value** (Section 8.7), which sets its rent, mortgage value, and minimum bid, and counts toward net worth.
+Apart from the first lap (Section 8.1), there are **no fixed purchase prices.** Every property has an **assessed value** (Section 8.7), which sets its rent, mortgage value, and minimum bid, and counts toward net worth.
 
 ### 8.1 When an auction happens
 
 - A player lands on an **unowned** property (by dice, card, or any other movement).
+  - **First lap (decision #165):** until that player first passes GO, it is offered to them alone at its **listed price** (its assessed value). Yes: they pay it in full (loans allowed, no down payment). No: it goes to auction as below. The last unsold piece of a set is never offered this way; it always goes to a silent auction. (`firstLapFixedPrice`, `firstLapEnds`, `fixedPriceLastPiece` in rules.json.)
 - A **forced auction** is started by the Red perk (Hostile Takeover) or the Hostile Bid card.
 - A property is **forfeited** (unpaid down payment) or goes back to the bank (bankruptcy to the bank).
 
 ### 8.2 Auction format: sealed bids
+
+**Which landing auctions are silent (decision #165):** the **last unsold piece of a set** (a color group, all 4 railroads, or both utilities) is a silent (sealed) auction, and it is **pay in full**. Every other landing auction is **open**: starting with the lander, players take turns to raise by at least $10 or drop out for good, and the last one in pays their bid (decision #91). Bankruptcy, forfeit and forced auctions always stay silent. House rules: `silentAuctionFor` (`"firstOfSet"` was the old order, first piece silent and the rest open) and `lastPieceDownPayments`.
 
 Sealed bids are used because they work the same way for humans on one screen, AI players, and online players.
 
@@ -288,7 +292,7 @@ Sealed bids are used because they work the same way for humans on one screen, AI
 ### 8.4 How much you can bid
 
 - **Pay in full:** your bid can't be more than your current cash.
-- **Down payment:** 20% of your bid (rounded up to $10) can't be more than your cash, and you must have a free pending slot (Section 8.5). Only silent (sealed) auctions take down payments; open auctions are pay in full (docs/DECISIONS.md #163, house rule `openAuctionDownPayments`).
+- **Down payment:** 20% of your bid (rounded up to $10) can't be more than your cash, and you must have a free pending slot (Section 8.5). Only silent (sealed) auctions take down payments; open auctions are pay in full (docs/DECISIONS.md #163, house rule `openAuctionDownPayments`), and so is the silent auction for the last piece of a set (#165).
 - You may take a loan while an auction is open, so you can bid more (Section 15.7).
 
 ### 8.5 Down payments (pending properties)

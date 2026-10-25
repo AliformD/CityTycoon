@@ -74,6 +74,7 @@ public partial class EasyBot : IPlayerController
         GameAction choice = decision.Kind switch
         {
             DecisionKind.SubmitBid => ChooseBid(view, decision, legalActions),
+            DecisionKind.BuyAtListedPrice => BuyAtListedPrice(view, decision, legalActions),
             DecisionKind.RaiseMoney => RaiseMoney(view, decision, legalActions),
             DecisionKind.RespondToTrade => RespondToTrade(view, decision),
             DecisionKind.ChoosePrecisionDice => ChooseBestDice(view, decision),
@@ -377,6 +378,18 @@ public partial class EasyBot : IPlayerController
         }
 
         return new PassBid();
+    }
+
+    /// <summary>
+    /// First lap (decision #165): buy at the listed price when the bot would bid at least that much
+    /// in an auction, with the same cash it would keep back there.
+    /// </summary>
+    private GameAction BuyAtListedPrice(PlayerView view, PendingDecision decision, IReadOnlyList<GameAction> legalActions)
+    {
+        int worth = (int)PropertyWorth(view, decision);
+        int affordable = view.Me.Cash - (BlocksFirstGroup(view, decision.PropertyId!) ? Reserve(view) / 2 : Reserve(view));
+        bool buy = legalActions.Contains(new BuyAtListedPrice()) && Math.Min(affordable, worth) >= decision.MinBid;
+        return buy ? new BuyAtListedPrice() : new NoThanks();
     }
 
     /// <summary>

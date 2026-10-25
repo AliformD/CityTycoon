@@ -32,6 +32,7 @@ Status: Phases 0 to 10 done. Phase 11 (online multiplayer) is on hold by Angel's
 | Change | Touch |
 | --- | --- |
 | A number (cash, rent, costs) | `content/rules.json`, `Content/RulesConfig.cs` |
+| First-lap rules, which auctions are silent (decision #165) | `firstLap*`, `silentAuctionFor`, `lastPieceDownPayments` in `content/rules.json`; `Rules/FirstLap.cs`; `AuctionStep` (`FixedPrice`, `ShouldBeOpen`); `TestContent` keeps the old order for older tests |
 | An Opportunity or Event card | `content/opportunity.json` or `events.json`; new effect: `Cards/CardEffects.cs` (explicit list) |
 | An ordinance | `content/ordinances.json`; new effect: `Ordinances/OrdinanceEffects.cs` (explicit list) |
 | The Casino (Dice Poker, Showdown) | `casinoFreeChip`, `casinoPays`, `showdown*` in `content/rules.json`; hands in `Rules/DicePoker.cs`; `CasinoStep` and `ShowdownStep` in `Steps/LandmarkSteps.cs` |
@@ -45,7 +46,7 @@ Status: Phases 0 to 10 done. Phase 11 (online multiplayer) is on hold by Angel's
 | How an event is shown (pause, icon, sound, money, token walk) | `src/CityTycoon.Web/Services/Playback.cs`; pictures in `Components/Icon.razor`, sounds in `wwwroot/js/app.js` (`ct.sound`) |
 
 ## Commands
-- Build and test: `dotnet test` (all projects). Last known: 546 engine tests and 157 bot tests, all passing.
+- Build and test: `dotnet test` (all projects). Last known: 559 engine tests and 158 bot tests, all passing.
 - Run the game: `dotnet run --project src/CityTycoon.Web`.
 - Balance Sim: `dotnet run -c Release --project src/CityTycoon.Sim -- --games 1000 --players 4 --bots HardVsEasy --mode timed --characters random --seed 1 --out <NEW folder>`. `--out` must be a folder that does not exist yet. Try other numbers without editing `rules.json` with `--set goSalary=300` (any rules.json name, repeatable) and `--rounds 50`. The report includes pacing (first building, first color group held and how, close calls, bankruptcies, money at the end), a trade report card and landing odds; it also writes `trades.csv`, `bot-notes.csv` and `landing.csv`.
 - CI (`.github/workflows/ci.yml`) builds and tests on every push and PR.

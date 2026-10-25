@@ -122,6 +122,20 @@ public sealed class RulesConfig
     public required int ShowdownFoldPayment { get; init; }
     /// <summary>House rule: allow down payments in open auctions too. Off by default, so only silent auctions take them (decision #163).</summary>
     public bool OpenAuctionDownPayments { get; init; }
+
+    // First-lap house rules (being tried out in the Sim, all off by default).
+    /// <summary>On their first lap, a player who lands on an unowned property may buy it at its listed (assessed) price. If they say no, it is auctioned as usual.</summary>
+    public bool FirstLapFixedPrice { get; init; }
+    /// <summary>On their first lap, nobody may spend Momentum or change their roll (no Nudge, Precision Roll, Road Work clearing, Express Line or Hustler reroll).</summary>
+    public bool FirstLapNoMomentum { get; init; }
+    /// <summary>When the first lap ends: "own" (each player's own first trip past GO), "first" (for everyone, when anyone passes GO) or "last" (when everyone has).</summary>
+    public string FirstLapEnds { get; init; } = "own";
+    /// <summary>The fixed-price first-lap buy also covers the last unsold piece of a set. Off: that piece always goes to a silent auction.</summary>
+    public bool FixedPriceLastPiece { get; init; }
+    /// <summary>Which landing auctions are silent: "firstOfSet" (decision #91), "lastOfSet" (only the last unsold piece of a set) or "firstAndLast". The rest are open.</summary>
+    public string SilentAuctionFor { get; init; } = "firstOfSet";
+    /// <summary>A silent auction for the last unsold piece of a set takes down payments. Off: that piece is pay in full.</summary>
+    public bool LastPieceDownPayments { get; init; } = true;
     /// <summary>
     /// Before a council vote, players may bid to pay the Politician to vote their way (decision #162). Only matters
     /// when a Politician is playing. Off: the Politician just votes, and may still lobby.

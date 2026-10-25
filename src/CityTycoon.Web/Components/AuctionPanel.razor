@@ -49,6 +49,10 @@
         {
             <p class="hint">Open auctions are pay in full: no down payments.</p>
         }
+        else if (IsLastPieceInFull)
+        {
+            <p class="hint">This is the last unsold piece of its set, so it's pay in full: no down payments.</p>
+        }
         else
         {
             <fieldset class="pay-choice">
@@ -113,6 +117,20 @@
     private bool CanDownPay => Request.Decision.MaxDownPaymentBid >= Request.Decision.MinBid;
     private bool CanBid => CanPayInFull || CanDownPay;
     private int MaxBid => downPayment ? Request.Decision.MaxDownPaymentBid : Request.Decision.MaxBid;
+    /// <summary>A silent auction for the last unsold piece of a set, which is pay in full (decision #165).</summary>
+    private bool IsLastPieceInFull
+    {
+        get
+        {
+            if (Request.Decision.OpenAuction || Content.Rules.LastPieceDownPayments || Content.Rules.SilentAuctionFor == "firstOfSet")
+                return false;
+            var def = Content.Property(Request.Decision.PropertyId!);
+            return Content.Properties.Values
+                .Where(p => p.Id != def.Id && (def.Group != null ? p.Group == def.Group : p.Group == null && p.Type == def.Type))
+                .All(p => Request.View.Properties[p.Id].OwnerId != null);
+        }
+    }
+
     private int Deposit => CityTycoon.Engine.Steps.AuctionStep.Deposit(Content.Rules, bid);
 
     private string? Problem =>

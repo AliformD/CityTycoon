@@ -249,6 +249,8 @@ public sealed class TurnStep : Step
     private List<GameAction> MoveChoices(EngineContext ctx, PlayerState player)
     {
         var choices = new List<GameAction> { new RollDice() };
+        if (FirstLap.NoMomentum(ctx, player))
+            return [.. choices, .. HostileTakeovers(ctx, player)];
         if (!OneDieTurn && MomentumRules.CanSpend(player, MomentumRules.PrecisionRollCost(ctx, player)))
             choices.Add(new PrecisionRoll());
         if (RoadWorkCost > 0 && !RecoveringThisTurn && MomentumRules.CanSpend(player, RoadWorkCost))
@@ -434,7 +436,7 @@ public sealed class TurnStep : Step
         DetourWindow = null;
         DetourPlayed = false;
 
-        if (fromRoll && !player.MoveRerollUsed && RuleModifiers.MoveReroll(ctx.State, ctx.Content, PlayerId) != null)
+        if (fromRoll && !player.MoveRerollUsed && RuleModifiers.MoveReroll(ctx.State, ctx.Content, PlayerId) != null && !FirstLap.NoMomentum(ctx, player))
         {
             Stage = TurnStage.MoveReroll;
             return StepResult.Continue;
@@ -465,7 +467,7 @@ public sealed class TurnStep : Step
         ExtraTurnEarned = roll.IsDoubles && !LeftJailThisTurn;
 
         // Only offer a Nudge when there's a real choice (a token to spend).
-        bool canNudge = MomentumRules.NudgeOptions(ctx, player, roll.Total).Any(n => n != 0);
+        bool canNudge = !FirstLap.NoMomentum(ctx, player) && MomentumRules.NudgeOptions(ctx, player, roll.Total).Any(n => n != 0);
         Stage = canNudge ? TurnStage.Nudge : TurnStage.Detour;
         return StepResult.Continue;
     }

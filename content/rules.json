@@ -25,6 +25,16 @@
   "bidIncrement": 10,
   "downPaymentPercent": 20,
   "openAuctionDownPayments": false,
+  // First lap (decision #165): until you first pass GO, buy what you land on at its listed price
+  // (say no and it is auctioned), and no Momentum or roll changes. firstLapEnds: "own", "first" or "last".
+  "firstLapFixedPrice": true,
+  "firstLapNoMomentum": true,
+  "firstLapEnds": "own",
+  "fixedPriceLastPiece": false,
+  // Which landing auctions are silent: "lastOfSet" (decision #165), "firstOfSet" (the old way, #91) or "firstAndLast".
+  // The rest are open. The last piece of a set is pay in full unless lastPieceDownPayments is true.
+  "silentAuctionFor": "lastOfSet",
+  "lastPieceDownPayments": false,
   "maxPendingProperties": 2,
 
   "mortgagePercent": 50,

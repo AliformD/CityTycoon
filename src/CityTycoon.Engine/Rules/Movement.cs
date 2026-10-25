@@ -51,6 +51,7 @@ public static class Movement
     public static void CollectGo(EngineContext ctx, PlayerState player)
     {
         // Step 1: the salary.
+        player.GoPasses++;
         player.Cash += ctx.Rules.GoSalary;
         ctx.Emit(new PassedGo(player.Id, ctx.Rules.GoSalary));
 

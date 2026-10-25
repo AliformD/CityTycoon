@@ -280,9 +280,15 @@ static string Summarize(List<GameStats> results, SimOptions options, TimeSpan el
         var firstRounds = firsts.Select(m => m.Round).OrderBy(x => x).ToList();
         lines.Add($"First color group held by one player: in {(double)firsts.Count / finished.Count:P0} of games; round "
             + (firsts.Count == 0 ? "-" : $"{firstRounds[firstRounds.Count / 2]} (median), {firstRounds.Average():0.0} (average)")
-            + $". Games with one by round 3: {(double)finished.Count(r => r.Monopolies.Any(m => m.Round <= 3)) / finished.Count:P0}, by round 5: {(double)finished.Count(r => r.Monopolies.Any(m => m.Round <= 5)) / finished.Count:P0}"
+            + $". Games with one by round 3: {(double)finished.Count(r => r.Monopolies.Any(m => m.Round <= 3)) / finished.Count:P0}, by round 5: {(double)finished.Count(r => r.Monopolies.Any(m => m.Round <= 5)) / finished.Count:P0}, by round 10: {(double)finished.Count(r => r.Monopolies.Any(m => m.Round <= 10)) / finished.Count:P0}"
             + $". Groups held by round 5: {finished.Average(r => r.Monopolies.Count(m => m.Round <= 5)):0.0}, by round 10: {finished.Average(r => r.Monopolies.Count(m => m.Round <= 10)):0.0} per game"
             + ". The first one came from: " + string.Join(", ", firsts.GroupBy(m => m.How).OrderByDescending(g => g.Count()).Select(g => $"{g.Key} {(double)g.Count() / firsts.Count:P0}")));
+        var s6 = finished.Where(r => r.SpreadAt6 != null).Select(r => r.SpreadAt6!).ToList();
+        var s10 = finished.Where(r => r.SpreadAt10 != null).Select(r => r.SpreadAt10!).ToList();
+        string SpreadText(List<Spread> s) => s.Count == 0 ? "-" : $"{s.Average(x => x.PlayersWithDeeds):0.00} players own a deed, biggest owner has {s.Average(x => x.TopShare):P0} of owned deeds, {s.Average(x => x.SplitGroups):0.0} of 8 color groups split between 2+ owners, {s.Average(x => x.Unsold):0.0} deeds unsold";
+        lines.Add($"Spread after round 6: {SpreadText(s6)}. After round 10: {SpreadText(s10)}.");
+        lines.Add($"First lap ends (first trip past GO): round {finished.Average(r => r.FirstLapEndRound):0.0} on average. "
+            + $"Listed-price offers per game: {finished.Average(r => r.FixedPriceOffers):0.0}, bought: {finished.Average(r => r.FixedPriceBuys):0.0}");
         lines.Add($"Money at the end (players still in): ${finished.Average(r => r.EndCash):0} cash, ${finished.Average(r => r.EndNetWorth):0} net worth. Average rent payment: ${finished.Average(r => r.AverageRent):0}");
         lines.Add($"Per game: {finished.Average(r => r.BuildingsBuilt):0.0} buildings built, {finished.Average(r => r.Mortgages):0.0} mortgages, "
             + $"{finished.Average(r => r.LoansTaken):0.0} loans, {finished.Average(r => r.TradesCompleted):0.0} trades, "

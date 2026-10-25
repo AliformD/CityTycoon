@@ -10,6 +10,35 @@
 {
     <AuctionPanel Request="Request" Content="Content" OnAnswer="OnAnswer" />
 }
+else if (decision.Kind == DecisionKind.BuyAtListedPrice)
+{
+    @* First lap (decision #165): buy at the price on the card, or say no and everyone bids for it. *@
+    <div class="decision listed-price">
+        <h2>First lap: buy @Content.Property(decision.PropertyId!).Name?</h2>
+        <p>
+            <strong>@view.Me.Name</strong>, until you pass GO for the first time you can buy what you land on for its listed price:
+            <strong>@UiHelpers.Money(decision.MinBid)</strong>. You have <strong>@UiHelpers.Money(view.Me.Cash)</strong>.
+        </p>
+        <p class="hint">If you say no, it goes to auction and everyone can bid, you too.</p>
+        @if (!main.OfType<BuyAtListedPrice>().Any() && manage.OfType<TakeLoan>().Any())
+        {
+            <p>
+                @foreach (var loan in manage.OfType<TakeLoan>())
+                {
+                    <button class="small" @onclick="() => OnAnswer.InvokeAsync(loan)">@UiHelpers.ActionLabel(loan, view, Content)</button>
+                }
+                to afford it.
+            </p>
+        }
+        <div class="buttons">
+            @foreach (var action in main)
+            {
+                <button class="big @(action is BuyAtListedPrice ? "primary" : "")" @onclick="() => OnAnswer.InvokeAsync(action)">@ListedPriceLabel(action, decision)</button>
+            }
+        </div>
+        <PropertyCard PropertyId="@(decision.PropertyId!)" View="view" Content="Content" />
+    </div>
+}
 else if (decision.Kind is DecisionKind.ChooseOrdinance or DecisionKind.ChooseDistrict or DecisionKind.CouncilVote or DecisionKind.OfferVoteDeal or DecisionKind.AnswerVoteDeal)
 {
     <CouncilPanel Request="Request" Content="Content" OnAnswer="OnAnswer" />
@@ -372,6 +401,9 @@ else
     };
 
     /// <summary>"Roll the 2 again" for the Hustler's one-die reroll (decision #153), "Roll again" for a whole roll, "Keep it" otherwise.</summary>
+    private static string ListedPriceLabel(GameAction action, PendingDecision decision) =>
+        action is BuyAtListedPrice ? $"Buy it for {UiHelpers.Money(decision.MinBid)}" : "No, auction it";
+
     private string RerollLabel(GameAction action, PendingDecision decision) => action switch
     {
         RerollDice { Die: int die } when decision.Dice is { } dice && die < dice.Count => $"🔁 Roll the {dice[die]} again",

@@ -138,7 +138,7 @@ public sealed record DiceRolled(int PlayerId, int Die1, int Die2) : GameEvent
 public sealed record PlayerMoved(int PlayerId, int From, int To) : GameEvent;
 public sealed record PassedGo(int PlayerId, int Salary) : GameEvent;
 public sealed record LandedOn(int PlayerId, string SpaceId) : GameEvent;
-public sealed record AuctionStarted(string PropertyId, int MinBid, bool Open = false) : GameEvent;
+public sealed record AuctionStarted(string PropertyId, int MinBid, bool Open = false, bool FixedPrice = false) : GameEvent;
 
 /// <summary>In an open auction, a player raised the bid.</summary>
 public sealed record BidRaised(string PropertyId, int PlayerId, int Amount, bool DownPayment = false) : GameEvent;
@@ -154,7 +154,7 @@ public sealed record RevealedBid(int PlayerId, int? Amount);
 public sealed record BidsRevealed(string PropertyId, IReadOnlyList<RevealedBid> Bids) : GameEvent;
 /// <param name="PaidNow">The whole price, or just the deposit for a down payment.</param>
 /// <param name="PaidToId">In a forced auction won by someone else, the owner who was paid. Otherwise null (the bank).</param>
-public sealed record AuctionWon(string PropertyId, int PlayerId, int Price, int AssessedValue, bool DownPayment = false, int PaidNow = 0, int? PaidToId = null) : GameEvent;
+public sealed record AuctionWon(string PropertyId, int PlayerId, int Price, int AssessedValue, bool DownPayment = false, int PaidNow = 0, int? PaidToId = null, bool ListedPrice = false) : GameEvent;
 public sealed record AuctionNoBids(string PropertyId) : GameEvent;
 public sealed record RentPaid(int FromId, int ToId, string PropertyId, int Amount) : GameEvent;
 public sealed record TaxPaid(int PlayerId, string SpaceId, int Amount) : GameEvent;

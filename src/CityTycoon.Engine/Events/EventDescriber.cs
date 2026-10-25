@@ -33,12 +33,14 @@ public static class EventDescriber
             PlayerMoved m => $"{Name(m.PlayerId)} moved to {SpaceAt(m.To)}.",
             PassedGo g => $"{Name(g.PlayerId)} passed GO and collected ${g.Salary}.",
             LandedOn _ => "",
+            AuctionStarted { FixedPrice: true } a => $"{Space(a.PropertyId)} is offered at its listed price of ${a.MinBid} (first lap).",
             AuctionStarted { Open: true } a => $"Open auction for {Space(a.PropertyId)} (opening bid ${a.MinBid}). Players take turns to raise or drop out.",
             AuctionStarted a => $"Silent auction for {Space(a.PropertyId)} (minimum bid ${a.MinBid}). Everyone bids in secret at the same time.",
             BidRaised r => $"{Name(r.PlayerId)} bid ${r.Amount}{(r.DownPayment ? " with a down payment" : "")}.",
             AuctionPassed p => $"{Name(p.PlayerId)} dropped out of the auction for {Space(p.PropertyId)}.",
             DiceTieWon t => $"The dice tied, and {Name(t.PlayerId)} wins the tie ({t.Source}).",
             BidsRevealed b => "Bids: " + string.Join(", ", b.Bids.Select(x => $"{Name(x.PlayerId)} {(x.Amount is int amount ? "$" + amount : "passed")}")) + ".",
+            AuctionWon { ListedPrice: true } w => $"{Name(w.PlayerId)} bought {Space(w.PropertyId)} for its listed price of ${w.Price}.",
             AuctionWon w => w.DownPayment
                 ? $"{Name(w.PlayerId)} won {Space(w.PropertyId)} for ${w.Price} with a down payment: ${w.PaidNow} now, ${w.Price - w.PaidNow} at their next GO."
                 : w.PaidToId is int owner ? $"{Name(w.PlayerId)} won {Space(w.PropertyId)} for ${w.Price}, paid to {Name(owner)}."

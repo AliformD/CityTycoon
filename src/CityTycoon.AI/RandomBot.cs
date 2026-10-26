@@ -60,6 +60,6 @@ public sealed class RandomBot(ulong seed) : IPlayerController
         if (decision.MaxDownPaymentBid >= decision.MinBid && rng.NextInt(100) < 25)
             return new PlaceBid(decision.MinBid, DownPayment: true);
 
-        return new PassBid();
+        return decision.MustBid ? new PlaceBid(decision.MinBid) : new PassBid();
     }
 }

@@ -82,7 +82,7 @@ public partial class EasyBot : IPlayerController
             // Insurance only when there's plenty of spare cash.
             // (A free one, for the Medic, is always worth taking: it still covers a Fire!.)
             DecisionKind.HospitalVisit => view.Me.InsuredMarkerCost == 0 || view.Me.Cash - view.Me.InsuredMarkerCost >= Reserve(view) * 2 ? new BuyInsurance() : new NoThanks(),
-            // Dice Poker at the Casino (decision #164): see EasyBot.Casino.cs.
+            // Dice Poker at the Casino (decision #166): see EasyBot.Casino.cs.
             DecisionKind.CasinoBet => CasinoStake(view, decision),
             DecisionKind.KeepDice => KeepDiceChoice(view, decision),
             DecisionKind.CallShowdown => ShowdownCall(view, decision, legalActions),
@@ -377,7 +377,8 @@ public partial class EasyBot : IPlayerController
             return new PlaceBid(decision.MinBid, DownPayment: true);
         }
 
-        return new PassBid();
+        // It started a Hostile Takeover, so it must bid (decision #166).
+        return decision.MustBid ? new PlaceBid(decision.MinBid) : new PassBid();
     }
 
     /// <summary>

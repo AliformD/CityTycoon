@@ -50,6 +50,9 @@ public sealed class AuctionStep : Step
     /// <summary>For a forced auction: the player who owns the property now.</summary>
     public int? OwnerId { get; set; }
 
+    /// <summary>The player who started a Hostile Takeover: they must bid at least the minimum and can't pass (decision #166).</summary>
+    public int? MustBidId { get; set; }
+
     public bool Started { get; set; }
     public int MinBid { get; set; }
 
@@ -98,7 +101,8 @@ public sealed class AuctionStep : Step
                 PropertyId, MinBid, MaxBidFor(ctx, id), ctx.Rules.BidIncrement,
                 MaxDownPaymentBid: MaxDownPaymentBidFor(ctx, id),
                 // Taking a loan is the only other thing you can do mid-auction (Section 8.4).
-                Management: ManagementOptions.TakeLoan)));
+                Management: ManagementOptions.TakeLoan,
+                MustBid: id == MustBidId)));
         }
 
         Resolve(ctx);
@@ -240,6 +244,14 @@ public sealed class AuctionStep : Step
         return def.Group == null || !ctx.Content.GroupMembers(def.Group).All(id => ctx.State.Properties[id].IsOwnedOutright(ownerId));
     }
 
+    /// <summary>
+    /// Can this player use Hostile Takeover on this property? They need the cash for the minimum bid right now,
+    /// because their own bid can't be a pass (decision #166). They can take a loan first.
+    /// </summary>
+    public static bool CanAffordTakeover(EngineContext ctx, int playerId, string propertyId) =>
+        MaxFullBid(ctx.Rules, ctx.Player(playerId).Cash)
+            >= MinimumBid(ctx.Rules, ctx.Content.Property(propertyId).AssessedValue, AuctionKind.Forced);
+
     private static int MaxDepositBid(RulesConfig rules, int cash)
     {
         // Start from a guess that is a little too high, then step down until the deposit fits.
@@ -268,7 +280,9 @@ public sealed class AuctionStep : Step
         if (decision.Kind == DecisionKind.BuyAtListedPrice)
             return ctx.Player(decision.PlayerId).Cash >= MinBid ? [new BuyAtListedPrice(), new NoThanks()] : [new NoThanks()];
         // Any multiple of the bid step from MinBid up to the max is legal too (see IsLegal).
-        var actions = new List<GameAction> { new PassBid() };
+        var actions = new List<GameAction>();
+        if (!decision.MustBid)
+            actions.Add(new PassBid());
         if (decision.MaxBid >= decision.MinBid)
             actions.Add(new PlaceBid(decision.MinBid));
         else if (decision.MaxDownPaymentBid >= decision.MinBid)
@@ -282,7 +296,7 @@ public sealed class AuctionStep : Step
             // Checked against cash right now: the player may have taken a loan since the question was asked.
             return action is NoThanks || (action is BuyAtListedPrice && ctx.Player(decision.PlayerId).Cash >= MinBid);
         if (action is PassBid)
-            return true;
+            return !decision.MustBid;
         if (action is not PlaceBid bid || bid.Amount < decision.MinBid || bid.Amount % ctx.Rules.BidIncrement != 0)
             return false;
 

@@ -248,7 +248,7 @@ public sealed record ArrangeCards(IReadOnlyList<int> Order) : GameAction;
 public sealed record ClearRoadWork : GameAction;
 
 /// <summary>
-/// A Showdown (decision #164): the challenger's hand that the other player must beat, and what is at stake.
+/// A Showdown (decision #166): the challenger's hand that the other player must beat, and what is at stake.
 /// <paramref name="FoldPayment"/> is what folding costs the challenged player.
 /// </summary>
 public sealed record ShowdownChallenge(int ChallengerId, int OpponentId, int Stake, int FoldPayment, IReadOnlyList<int> ChallengerDice);
@@ -397,6 +397,7 @@ public enum DecisionKind
 /// <param name="Deal">City Council: the vote deal this player is asked to answer, or (when voting) the one they accepted.</param>
 /// <param name="FreeChip">At the Casino: the free chip the house puts on this hand.</param>
 /// <param name="Stake">At the Casino: the player's own money on this hand (for Dice Poker rerolls).</param>
+/// <param name="MustBid">For a silent auction: true if this player can't pass (they started it with Hostile Takeover, decision #166).</param>
 public sealed record PendingDecision(
     int PlayerId,
     DecisionKind Kind,
@@ -430,4 +431,5 @@ public sealed record PendingDecision(
     bool Passed = false,
     VoteDeal? Deal = null,
     int FreeChip = 0,
-    int Stake = 0);
+    int Stake = 0,
+    bool MustBid = false);

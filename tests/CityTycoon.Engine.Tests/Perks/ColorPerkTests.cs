@@ -141,11 +141,50 @@ public class ColorPerkTests
         game.Give(0, Red);
         game.Give(1, "mill-street");
         game.Do(0, new HostileTakeover("mill-street"));
+        game.Do(0, new PlaceBid(60));
         game.EveryonePasses();
         Assert.DoesNotContain(game.Engine.GetLegalActions(0), a => a is HostileTakeover);
 
         PassGo(game, 0);
         Assert.False(game.Player(0).TakeoverUsed);
+    }
+
+    [Fact]
+    public void Red_TakeoverBidCantBeAPass()
+    {
+        // Decision #166: the player who starts a Hostile Takeover must make a real bid.
+        var game = new TestGame();
+        game.Give(0, Red);
+        game.Give(1, "mill-street");
+        game.Do(0, new HostileTakeover("mill-street"));
+
+        PendingDecision mine = game.DecisionFor(0)!;
+        Assert.True(mine.MustBid);
+        Assert.DoesNotContain(game.Engine.GetLegalActions(0), a => a is PassBid);
+        Assert.False(game.Engine.Submit(0, new PassBid()).Accepted);
+        // Everyone else may still pass, the owner too.
+        Assert.False(game.DecisionFor(1)!.MustBid);
+        Assert.Contains(game.Engine.GetLegalActions(1), a => a is PassBid);
+
+        game.Do(0, new PlaceBid(60));
+        game.EveryonePasses();
+        Assert.Equal(0, game.Property("mill-street").OwnerId);
+        Assert.Equal(1500 + 60, game.Player(1).Cash);
+    }
+
+    [Fact]
+    public void Red_TakeoverNeedsCashForTheMinimumBid()
+    {
+        // Decision #166: no takeover you can't pay for. Borrowing first makes it available again.
+        var game = new TestGame();
+        game.Give(0, Red);
+        game.Give(1, "platinum-row");
+        int minimum = game.Engine.Content.Property("platinum-row").AssessedValue;
+        game.Player(0).Cash = minimum - 10;
+        Assert.DoesNotContain(new HostileTakeover("platinum-row"), game.Engine.GetLegalActions(0));
+
+        game.Do(0, new TakeLoan(100));
+        Assert.Contains(new HostileTakeover("platinum-row"), game.Engine.GetLegalActions(0));
     }
 
     [Fact]

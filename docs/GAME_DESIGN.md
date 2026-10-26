@@ -315,6 +315,7 @@ The Hostile Takeover perk and the Hostile Bid card can force an auction on an op
 - The property must have no buildings and must not be part of a full color group the owner holds.
 - The property can't be next to a revealed Police Station.
 - The owner may bid too. If the owner wins, they pay the bank. Otherwise the winner pays the owner.
+- Hostile Takeover only: you need the cash for the minimum bid to use it (you may take a loan first), and your own bid in that auction can't be a pass (docs/DECISIONS.md #166).
 - If nobody bids (including the owner), the owner keeps the property.
 
 ### 8.7 Assessed values and rents
@@ -554,7 +555,7 @@ A perk stays on as long as you own the whole group with none of it mortgaged or 
 | Light Blue | **Commuter Belt** | Gain 1 Momentum token when you pass GO. Your token limit goes up by 1. |
 | Pink | **Arts District** | When you draw an Opportunity card, draw 2 and keep 1. Your hand limit becomes 4. |
 | Orange | **Neighborhood Watch** | Any opponent in Jail or recovering from the Hospital pays you $25 at the start of each of their turns there. |
-| Red | **Hostile Takeover** | Once per lap (resets when you pass GO), force an auction on one eligible opponent property (Section 8.6). |
+| Red | **Hostile Takeover** | Once per lap (resets when you pass GO), force an auction on one eligible opponent property. You need the cash for the minimum bid, and you must bid (Section 8.6). |
 | Yellow | **Bank Partner** | Your loans cost half the usual interest (a $200 loan costs $225 to repay instead of $250), and you can hold 3 instead of 2. |
 | Green | **Dividends** | At the start of each of your turns, collect $20 for every hotel or skyscraper you own anywhere. |
 | Dark Blue | **Prime Real Estate** | Immune to negative rent modifiers (Section 13.1). Skyscraper levels cost 1 × house cost. |
@@ -636,7 +637,7 @@ Nobody owns landmarks. Each one gives the player who lands there a choice.
 
 **Casino (end of Midtown)**
 
-When you land here you play a hand of **Dice Poker** (decision #164). The house gives you a free **$40 chip** (the Hustler's is $60). You may add your own money to it: any amount up to your cash, with **no maximum** (unless the Casino Regulation ordinance is active). The chip and your money ride on the same hand. You may also walk on by.
+When you land here you play a hand of **Dice Poker** (decision #166). The house gives you a free **$40 chip** (the Hustler's is $60). You may add your own money to it: any amount up to your cash, with **no maximum** (unless the Casino Regulation ordinance is active). The chip and your money ride on the same hand. You may also walk on by.
 
 1. Roll 5 dice.
 2. Pick the dice to keep, and roll the others **once** more.

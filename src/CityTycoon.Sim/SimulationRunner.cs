@@ -81,6 +81,12 @@ public sealed record GameStats(
     public int TiedSealedAuctions { get; init; }
     public int MogulEdgeWins { get; init; }
     public int HostileTakeovers { get; init; }
+    /// <summary>What happened after each Hostile Takeover: nobody bid, the owner bought it back (and the money they paid), or someone else bought it.</summary>
+    public int TakeoverNoBids { get; init; }
+    public int TakeoverBuybacks { get; init; }
+    public int TakeoverBuybackMoney { get; init; }
+    public int TakeoverSales { get; init; }
+    public int TakeoverSaleMoney { get; init; }
 
     /// <summary>City Council sessions held, how many ordinances passed, the total lobbying money spent, and the most any one vote swung (Yes percent).</summary>
     public int CouncilSessions { get; init; }
@@ -331,6 +337,31 @@ public static class SimulationRunner
         return outcomes;
     }
 
+    private sealed record TakeoverOutcome(int Kind, int Price);
+
+    /// <summary>Follows each Hostile Takeover to its auction result. Kind: 0 nobody bid, 1 owner bought back, 2 sold.</summary>
+    private static List<TakeoverOutcome> TakeoverOutcomes(IEnumerable<GameEvent> log)
+    {
+        var outcomes = new List<TakeoverOutcome>();
+        HostileTakeoverUsed? open = null;
+        foreach (var e in log)
+        {
+            if (e is HostileTakeoverUsed h)
+                open = h;
+            else if (e is OwnerKeptProperty k && k.PropertyId == open?.PropertyId)
+            {
+                outcomes.Add(new(0, 0));
+                open = null;
+            }
+            else if (e is AuctionWon w && w.PropertyId == open?.PropertyId)
+            {
+                outcomes.Add(new(w.PaidToId == null ? 1 : 2, w.Price));
+                open = null;
+            }
+        }
+        return outcomes;
+    }
+
     private static int FixedPriceBuys(IReadOnlyList<GameEvent> log)
     {
         int buys = 0;
@@ -398,6 +429,11 @@ public static class SimulationRunner
             TiedSealedAuctions = SealedAuctionOutcomes(state).Count(o => o.Tied),
             MogulEdgeWins = SealedAuctionOutcomes(state).Count(o => o.MogulWonOnEdgeOrTie),
             HostileTakeovers = log.OfType<HostileTakeoverUsed>().Count(),
+            TakeoverNoBids = TakeoverOutcomes(log).Count(o => o.Kind == 0),
+            TakeoverBuybacks = TakeoverOutcomes(log).Count(o => o.Kind == 1),
+            TakeoverBuybackMoney = TakeoverOutcomes(log).Where(o => o.Kind == 1).Sum(o => o.Price),
+            TakeoverSales = TakeoverOutcomes(log).Count(o => o.Kind == 2),
+            TakeoverSaleMoney = TakeoverOutcomes(log).Where(o => o.Kind == 2).Sum(o => o.Price),
             CouncilSessions = log.OfType<CouncilResolved>().Count(),
             // The City Planner's reversal (decision #152) can turn a result around after the roll.
             OrdinancesPassed = log.OfType<CouncilResolved>().Count(r => r.Passed)
